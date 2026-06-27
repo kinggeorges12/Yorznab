@@ -1,6 +1,8 @@
-export/**
+**/torrents.json
 yorznab-main.tar.gz
 yorznab-main.zip
 config/**/*.yaml
 .venv
-server/logs
+logs/**
+scripts
+__pycache__/

@@ -11,10 +11,11 @@ from typing import Any
 # Import classes
 from server.rss.QBitFilter import QBitFilter
 from server.rss.QBitClient import QBitClient
-from server.rss.ArrClient import ArrClient, ArrType, LibraryUndefined
+from server.rss.ArrClient import ArrClient, ArrType
 
 # Import utilities
 from server.utils.keystore import KeyStore
+from server.utils.settings import AppSettingsUndefined
 from utils.customlogger import CustomLogger
 from utils.filelock import FileLock
 from utils.timeformatter import IsoTimeFormatter
@@ -116,8 +117,8 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
     """
     try:
         qBit, arr = init_library(server_type=server_type)
-    except LibraryUndefined as e:
-        logger.info(f"{e}")
+    except AppSettingsUndefined as e:
+        logger.warning(f"{e}")
         return
 
     qFilter = QBitFilter()
@@ -195,8 +196,6 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
     # Execute searches, optimize, optionally add top torrent
     all_top: list[dict[str, Any]] = []
     for item in search_requests:
-        print("####################")
-        print(item["string"])
         query = item["string"]
         match_pat = item.get("match")
         ignore_pat = item.get("ignore")
@@ -341,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     script_name = os.path.splitext(os.path.basename(__file__))[0]
     logger = CustomLogger(name=script_name, noninteractive=args.noninteractive, enable_log=args.log)
     
-    lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key("UNIQUE_APPID") or 'yorznab'}.lock")
+    lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key('UNIQUE_APPID') or 'yorznab'}.lock")
     lock = FileLock(lock_path)
     
     try:

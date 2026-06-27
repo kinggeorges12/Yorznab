@@ -34,7 +34,7 @@ class QBitClient:
     def __init__(self, logger: CustomLogger):
         self.logger = logger
         # Resolve config file settings.yaml
-        config_raw = AppSettings(self._config_file).get(self.Name)
+        config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(self.Name)
         config_raw["ServerType"] = self.Name # Required field
         self._config = from_dict(data_class=QBitConfig, data=config_raw)
 

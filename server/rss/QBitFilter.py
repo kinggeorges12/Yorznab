@@ -51,7 +51,7 @@ class QBitFilter:
         filter_file = ConfigFile(os.getenv("SEARCH_FILTER", self._config_file))
         # Resolve config file filters.yaml
         if filter_file.exists:
-            config_raw = AppSettings(self._config_file).get()
+            config_raw = AppSettings(filename=self._config_file).get()
             self._config = from_dict(data_class=FilterConfig, data=config_raw)
             self._config.Movies.unknown_runtime = 100 if self._config.Movies.unknown_runtime is None else self._config.Movies.unknown_runtime
             self._config.TV.unknown_runtime = 20 if self._config.TV.unknown_runtime is None else self._config.TV.unknown_runtime

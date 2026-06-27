@@ -1,5 +1,6 @@
+#!/bin/bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r .\server\requirements.txt
+python -m pip install -r ./server/requirements.txt
 # deactivate

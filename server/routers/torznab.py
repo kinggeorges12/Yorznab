@@ -13,7 +13,7 @@ from utils.keystore import KeyStore
 router = APIRouter()
 
 # Export config vars to globals
-SETTINGS = AppSettings('app.yaml')
+SETTINGS = AppSettings(filename='yorznab.yaml')
 API_KEY = KeyStore.get_key("API_KEY")
 NS = {"torznab": "http://torznab.com/schemas/2015/feed"},
 

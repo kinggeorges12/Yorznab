@@ -8,6 +8,7 @@ with emoji-based formatting for console output and detailed file logging.
 import logging
 import os
 import sys
+from datetime import datetime
 import tempfile
 import uuid
 
@@ -70,7 +71,7 @@ class CustomLogger(logging.Logger):
                     os.makedirs(LOG_DIR, exist_ok=True)
                 else:
                     LOG_DIR = tempfile.gettempdir()
-                log_file = os.path.join(LOG_DIR, f"{script_name}-{log_id}.log")
+                log_file = os.path.join(LOG_DIR, f"{script_name}(id-{log_id})-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
                 
                 file_handler = logging.FileHandler(log_file, encoding='utf-8')
                 file_handler.setLevel(logging.DEBUG)

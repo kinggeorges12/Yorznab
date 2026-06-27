@@ -1,6 +1,6 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-import enum
 from typing import Any, Optional
 from dacite import Config, from_dict
 import httpx
@@ -24,13 +24,10 @@ class LibraryConfig:
     ServerName: Optional[str] = None
     ProperName: Optional[str] = None
     ProperNames: Optional[str] = None
-   
-class LibraryUndefined(Exception):
-    """Exception raised when a library is not defined or configured."""
-    pass
 
 @dataclass
 class ArrClient:
+
     _session = None
     _config: LibraryConfig = None
     _config_file = "settings.yaml"
@@ -38,9 +35,7 @@ class ArrClient:
     def __init__(self, server_type: ArrType, logger: CustomLogger = None):
         self.logger = logger
         # Resolve config file settings.yaml
-        config_raw = AppSettings(ArrClient._config_file).get(server_type.value)
-        if not config_raw:
-            raise LibraryUndefined(f"⚠️ The library '{server_type.value}' is not defined in the configuration: {ArrClient._config_file}")
+        config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(server_type.value)
         config_raw["ServerType"] = server_type.value
         self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
 

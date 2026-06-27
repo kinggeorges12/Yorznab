@@ -12,10 +12,10 @@ from server.rss.ArrClient import ArrClient, ArrType
 router = APIRouter()
 
 # Export config vars to globals
-SETTINGS = AppSettings('app.yaml')
+SETTINGS = AppSettings(filename='yorznab.yaml')
 from server.utils.config import ConfigFile
 
-async def run_requests(server_type: ArrClient.ArrType | None = None, external_id: str = None) -> int:
+async def run_requests(server_type: ArrType | None = None, external_id: str = None) -> int:
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
     try:
         # Build command arguments

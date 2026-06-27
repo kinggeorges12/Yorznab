@@ -4,3 +4,5 @@
 API_KEY: 
 # Webhook key for Jellyseerr
 WEBHOOK_KEY: 
+# Defines the logger filename for this instance
+UNIQUE_APPID: 

@@ -1,9 +1,13 @@
 from __future__ import annotations
+from typing import Self
 import yaml
 from threading import Lock
 
 from server.utils.config import ConfigFile
 
+class AppSettingsUndefined(Exception):
+    """Exception raised when a library is not defined or configured."""
+    pass
 
 class AppSettings:
     _instances: dict[str, AppSettings] = {}
@@ -46,3 +50,9 @@ class AppSettings:
         # Get all attributes including private ones
         attrs = {k: v for k, v in self.__dict__.items()}
         return f"AppSettings({attrs})"
+    
+    def exists(self, name: str) -> Self:
+        """Check if the configuration file exists"""
+        if not self._config_file.path.exists():
+            raise AppSettingsUndefined(f"🚩 The settings file for {name} is not configured: {self._config_file.path}")
+        return self

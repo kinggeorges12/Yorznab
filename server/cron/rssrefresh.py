@@ -31,7 +31,7 @@ import asyncio
 logger = CustomLogger()
 
 # Load settings from config file
-SETTINGS = AppSettings('app.yaml')
+SETTINGS = AppSettings(filename='yorznab.yaml')
 
 def get_file_age_hours(file_path: str) -> float:
     """
