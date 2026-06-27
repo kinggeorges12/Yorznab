@@ -134,7 +134,7 @@ If you need to provide special seeding requirements for trackers, be sure to set
 3. Apply rules in Sonarr to continue seeding after downloading.
 
 ## Jackett
-Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename and .
+Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename.
 
 # Development
 Setup the local Python environment for running locally without Docker.
