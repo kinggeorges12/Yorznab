@@ -16,6 +16,7 @@ class QBitConfig:
     QApiKey: Optional[str] = None
     QUsername: Optional[str] = None
     QPassword: Optional[str] = None
+    QEndpoint: Optional[str] = None
     SearchTimeout: Optional[int] = 60
     SearchLimit: Optional[int] = 0
     SearchPing: Optional[int] = 10
@@ -48,6 +49,9 @@ class QBitClient:
     def Url(self) -> str: return self._config.QUrl
     
     @property
+    def Endpoint(self) -> str: return self._config.QEndpoint if self._config.QEndpoint else "/api/v2"
+    
+    @property
     def Filters(self) -> bool | None: return self._config.Filters
     
     @property
@@ -75,7 +79,7 @@ class QBitClient:
     def _login(self) -> None:
         """Private login function"""
         self.LOGGER.info(f"🛜 Authenticating {self.ServerName} server")
-        url = f"{self.Url}/api/v2/auth/login"
+        url = f"{self.Url}{self.Endpoint}/auth/login"
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
         session = self._get_session()
         data = {}
@@ -107,7 +111,7 @@ class QBitClient:
 
     def version(self) -> str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
-        url = f"{self.Url}/api/v2/app/version"
+        url = f"{self.Url}{self.Endpoint}/app/version"
         resp = self.session.post(url, headers=self._headers, timeout=30)
         resp.raise_for_status()
         result = resp.text.strip()
@@ -116,7 +120,7 @@ class QBitClient:
 
     def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
-        url = f"{self.Url}/api/v2/search/start"
+        url = f"{self.Url}{self.Endpoint}/search/start"
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
         resp.raise_for_status()
@@ -124,7 +128,7 @@ class QBitClient:
         return int(payload.get("id"))
 
     def search_status(self, job_id: int) -> dict[str, Any]:
-        url = f"{self.Url}/api/v2/search/status"
+        url = f"{self.Url}{self.Endpoint}/search/status"
         params = {"id": str(job_id)}
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -133,7 +137,7 @@ class QBitClient:
         return status_data
 
     def search_results(self, job_id: int) -> list[dict[str, Any]]:
-        url = f"{self.Url}/api/v2/search/results"
+        url = f"{self.Url}{self.Endpoint}/search/results"
         params = {"id": str(job_id)} # Optional limit parameter
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -142,13 +146,13 @@ class QBitClient:
         return list(payload.get("results", []))
 
     def search_stop(self, job_id: int) -> None:
-        url = f"{self.Url}/api/v2/search/stop"
+        url = f"{self.Url}{self.Endpoint}/search/stop"
         data = {"id": str(job_id)}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=self._response_timeout)
         resp.raise_for_status()
 
     def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
-        url = f"{self.Url}/api/v2/torrents/add"
+        url = f"{self.Url}{self.Endpoint}/torrents/add"
         form = {"urls": torrent_url, "rename": rename or "", "tags": tags or "", "category": category}
         resp = self.session.post(url, data=form, headers=self._headers, timeout=self._response_timeout)
         resp.raise_for_status()

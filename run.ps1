@@ -1,4 +1,9 @@
-clear
+if (-not (Test-Path ".venv" -PathType Container)) {
+    ./build.ps1
+}
+if (-not (Test-Path "config/settings.yaml" -PathType Leaf)) {
+    ./setup.ps1
+}
 $env:SEARCH_FILTER = "filters.yaml"
 $env:PYTHONPATH = "${pwd}"
 $env:CONFIG_DIR="${pwd}\config"

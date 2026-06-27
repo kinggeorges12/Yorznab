@@ -26,9 +26,7 @@ cd /srv/dev/yorznab
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
-for file in ./app/config/*.yaml.sample; do
-    cp --update=none "$file" "${file%.sample}"
-done
+cp --update=none ./app/config/filters.yaml.sample ./app/config/filters.yaml.sample # Recommended
 ```
 
 ## Windows
@@ -38,14 +36,14 @@ Set-Location C:\Docker\yorznab
 Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.zip" -OutFile "yorznab-main.zip"
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
-Get-ChildItem ./app/config/*.yaml.sample | ForEach-Object {
-    Copy-Item -Confirm -Path $_.FullName -Destination $($_.FullName -replace '\.sample$', '')
-}
+Copy-Item -Confirm -Path ./app/config/filters.yaml.sample -Destination ./app/config/filters.yaml.sample
 ```
 
 # Setup API Keys
 
-Fill-in this information in `./config/yorznab.yaml``.
+Fill-in this information in `settings.yaml` using the automated setup tool. Instructions for each app are found in the subsections below.
+- \[Linux Shell\] `cd /srv/dev/yorznab/app && sudo chmod +x setup.sh && ./setup.sh`
+- \[Windows PowerShell\] `cd C:\Docker\yorznab && ./setup.ps1`
 
 ## Radarr/Sonarr
 This allows Yorznab to pull lists of Wanted items from Sonarr and Radarr.
@@ -141,7 +139,7 @@ Setup the local Python environment for running locally without Docker.
 
 1. Install [Python](https://www.python.org/downloads/) \(test on 3.11+\) on your server or PC. Ensure this is available in your shell: `python --version`
 2. Run the following commands for your OS:
-    - \[Linux Shell\] `cd /srv/dev/yorznab/app && sudo chmod +x build.sh run.sh && ./build.sh && ./run.sh`
+    - \[Linux Shell\] `cd /srv/dev/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
     - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
 3. Visit https://localhost:9118/status
 

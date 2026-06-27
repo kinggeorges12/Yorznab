@@ -8,9 +8,6 @@ Radarr:
   ApiKey: RADARR_API_KEY
   # Only useful for custom Radarr web urls
   Endpoint: /api/v3/movie
-  # Proper names are shown in logs
-  ProperName: Movie
-  ProperNames: Movie(s)
 
 # Do not change the root "Sonarr"
 Sonarr:
@@ -22,9 +19,6 @@ Sonarr:
   ApiKey: SONARR_API_KEY
   # Only useful for custom Sonarr web urls
   Endpoint: /api/v3/series
-  # Proper names are shown in logs
-  ProperName: Show
-  ProperNames: Show(s)
 
 # Do not change the root "qBittorrent"
 qBittorrent:
@@ -37,6 +31,8 @@ qBittorrent:
   # Delete the QApiKey if using username/password authentication
   QUsername: qbittorrent
   QPassword: password
+  # Only useful for custom qBittorrent web urls
+  Endpoint: /api/v2
   # [default=60] Time to wait for search to complete (in seconds)
   SearchTimeout: 60
   # [default=0] Maximum number of results to wait for before returning, use 0 for unlimited
