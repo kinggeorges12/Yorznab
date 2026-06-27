@@ -84,6 +84,5 @@ class CustomLogger(logging.Logger):
                 )
                 file_handler.setFormatter(file_formatter)
                 self.addHandler(file_handler)
-                
                 self.info(f"🔒 Logging enabled: {log_file}")
 

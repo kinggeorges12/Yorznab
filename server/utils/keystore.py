@@ -1,6 +1,5 @@
 import secrets
 from threading import Lock
-import uuid
 import yaml
 
 # Import classes

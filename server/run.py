@@ -3,9 +3,9 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+import cron.rssrefresh
 from routers import status, torznab, webhook
 import asyncio
-import cron.rssrefresh
 from contextlib import asynccontextmanager
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")

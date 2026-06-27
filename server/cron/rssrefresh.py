@@ -23,7 +23,10 @@ from pathlib import Path
 # Add the parent directory to the path so we can import utils
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# First time message
 from server.utils.keystore import KeyStore
+HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.exists() else None
+
 from utils.customlogger import CustomLogger
 from utils.settings import AppSettings
 import asyncio
@@ -263,9 +266,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
     p.add_argument("--feed-file", default=SETTINGS.get('feed', 'file'), help="Path to the feed file to refresh")
     p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('rss', 'refresh_max_age'), help="Minimum age in hours before refresh is needed")
-    p.add_argument("--force", action="store_true", help="Force refresh regardless of file age")
     p.add_argument("--schedule", default=SETTINGS.get('rss', 'refresh_schedule'), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
     p.add_argument("--daemon", action="store_true", help="Run as a daemon (continuous background process)")
+    p.add_argument("--force", action="store_true", help="Force refresh regardless of file age")
     return p.parse_args(argv)
 
 
@@ -273,18 +276,22 @@ async def main(argv: list[str] | None = None) -> int:
     """Main function for the cron job."""
     args = parse_args(argv)
     
-    # Convert relative paths to absolute paths
-    feed_file = SETTINGS.get('feed', 'file')
-    force_run = args.force or not KeyStore.exists()
+    # Get feed file from config
+    feed_file = args.feed_file or SETTINGS.get('feed', 'file')
+
+    # Determine whether we need to refresh the feed
+    force_msg = HELLO_WORLD
+    force_msg = 'Command line argument "--force"' if not force_msg and args.force else force_msg
+    force_msg = 'RSS Feed missing' if not force_msg and not Path(feed_file).exists() else force_msg
     
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
+    LOGGER.info(f"⚡ Run now: {force_msg or 'Nope'}")
     LOGGER.info(f"📁 Feed file: {feed_file}")
     LOGGER.info(f"⏰ Max age: {args.min_age_hours or 0} hours")
     LOGGER.info(f"🕐 Schedule: {args.schedule}")
-    LOGGER.info(f"⚡ Run now: {force_run}")
     
     # Force refresh on first run
-    if force_run:
+    if force_msg:
         success = await refresh_rss()
     
     if args.daemon:
