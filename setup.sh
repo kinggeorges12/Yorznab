@@ -58,6 +58,38 @@ if [ -f "$output_file" ]; then
         exit 1
     fi
     echo "Continuing..."
+
+    r_Url=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  Url: +/ s/^  Url: //p }' config/settings.yaml)
+    r_ApiKey=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  ApiKey: +/ s/^  ApiKey: //p }' config/settings.yaml)
+    r_Endpoint=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  Endpoint: +/ s/^  Endpoint: //p }' config/settings.yaml)
+    s_Url=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  Url: +/ s/^  Url: //p }' config/settings.yaml)
+    s_ApiKey=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  ApiKey: +/ s/^  ApiKey: //p }' config/settings.yaml)
+    s_Endpoint=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  Endpoint: +/ s/^  Endpoint: //p }' config/settings.yaml)
+    QUrl=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QUrl: +/ s/^  QUrl: //p }' config/settings.yaml)
+    QApiKey=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QApiKey: +/ s/^  QApiKey: //p }' config/settings.yaml)
+    QUsername=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QUsername: +/ s/^  QUsername: //p }' config/settings.yaml)
+    QPassword=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QPassword: +/ s/^  QPassword: //p }' config/settings.yaml)
+    QEndpoint=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QEndpoint: +/ s/^  QEndpoint: //p }' config/settings.yaml)
+
+fi
+
+if [ -z "$r_Url" ]; then
+    r_Url="http://localhost:7878"
+fi
+if [ -z "$r_Endpoint" ]; then
+    r_Endpoint="/api/v3/movie"
+fi
+if [ -z "$s_Url" ]; then
+    s_Url="http://localhost:8989"
+fi
+if [ -z "$s_Endpoint" ]; then
+    s_Endpoint="/api/v3/series"
+fi
+if [ -z "$QUrl" ]; then
+    QUrl="http://localhost:8080"
+fi
+if [ -z "$QEndpoint" ]; then
+    QEndpoint="/api/v2"
 fi
 
 read_password() {
@@ -89,36 +121,6 @@ read_password() {
     printf '\n'
     REPLY=$password
 }
-
-r_Url=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  Url: +/ s/^  Url: //p }' config/settings.yaml)
-if [ -z "$r_Url" ]; then
-    r_Url="http://localhost:7878"
-fi
-r_ApiKey=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  ApiKey: +/ s/^  ApiKey: //p }' config/settings.yaml)
-r_Endpoint=$(sed -n '/^Radarr:/,/^[^ ]/ { /^  Endpoint: +/ s/^  Endpoint: //p }' config/settings.yaml)
-if [ -z "$r_Endpoint" ]; then
-    r_Endpoint="/api/v3/movie"
-fi
-s_Url=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  Url: +/ s/^  Url: //p }' config/settings.yaml)
-if [ -z "$s_Url" ]; then
-    s_Url="http://localhost:8989"
-fi
-s_ApiKey=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  ApiKey: +/ s/^  ApiKey: //p }' config/settings.yaml)
-s_Endpoint=$(sed -n '/^Sonarr:/,/^[^ ]/ { /^  Endpoint: +/ s/^  Endpoint: //p }' config/settings.yaml)
-if [ -z "$s_Endpoint" ]; then
-    s_Endpoint="/api/v3/series"
-fi
-QUrl=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QUrl: +/ s/^  QUrl: //p }' config/settings.yaml)
-if [ -z "$QUrl" ]; then
-    QUrl="http://localhost:8080"
-fi
-QApiKey=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QApiKey: +/ s/^  QApiKey: //p }' config/settings.yaml)
-QUsername=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QUsername: +/ s/^  QUsername: //p }' config/settings.yaml)
-QPassword=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QPassword: +/ s/^  QPassword: //p }' config/settings.yaml)
-QEndpoint=$(sed -n '/^qBittorrent:/,/^[^ ]/ { /^  QEndpoint: +/ s/^  QEndpoint: //p }' config/settings.yaml)
-if [ -z "$QEndpoint" ]; then
-    QEndpoint="/api/v2"
-fi
 
 # Prompt user for inputs
 echo

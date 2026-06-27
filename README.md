@@ -26,7 +26,7 @@ cd /srv/dev/yorznab
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
-cp --update=none ./app/config/filters.yaml.sample ./app/config/filters.yaml.sample # Recommended
+cp --update=none ./app/config/filters.yaml.sample ./app/config/filters.yaml # Recommended
 ```
 
 ## Windows
