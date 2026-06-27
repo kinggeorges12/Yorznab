@@ -10,7 +10,9 @@ import os
 import sys
 from datetime import datetime
 import tempfile
-import uuid
+
+# Import classes
+from utils.keystore import KeyStore
 
 class EmojiFormatter(logging.Formatter):
     """Custom formatter that adds emojis based on log level."""
@@ -34,7 +36,7 @@ class EmojiFormatter(logging.Formatter):
 class CustomLogger(logging.Logger):
     """Custom logger with emoji formatting and file logging support."""
     
-    def __init__(self, name: str = None, noninteractive: bool = False, enable_log: bool = False, logger: logging.Logger = None):
+    def __init__(self, name: str = None, silent: bool = False, enable_log: bool = True, logger: logging.Logger = None):
         # If a logger is provided, use it as the base
         if logger is not None:
             super().__init__(logger.name)
@@ -53,8 +55,8 @@ class CustomLogger(logging.Logger):
             # Set log level
             self.setLevel(logging.DEBUG)
             
-            # Console handler (only if interactive)
-            if not noninteractive:
+            # Console handler (also goes to Docker logs)
+            if not silent:
                 console_handler = logging.StreamHandler(sys.stdout)
                 console_handler.setLevel(logging.INFO)
                 
@@ -64,21 +66,20 @@ class CustomLogger(logging.Logger):
             
             # File handler (if logging enabled)
             if enable_log:
-                script_name = name
-                log_id = str(uuid.uuid4())[:8]
+                app_id = KeyStore.get_key('UNIQUE_APPID')[:7]  # Use first 7 chars of UNIQUE_APPID for log file naming
                 LOG_DIR = os.getenv("LOG_DIR")
                 if LOG_DIR:
                     os.makedirs(LOG_DIR, exist_ok=True)
                 else:
                     LOG_DIR = tempfile.gettempdir()
-                log_file = os.path.join(LOG_DIR, f"{script_name}(id-{log_id})-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+                log_file = os.path.join(LOG_DIR, f"{app_id}-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
                 
                 file_handler = logging.FileHandler(log_file, encoding='utf-8')
                 file_handler.setLevel(logging.DEBUG)
                 
                 # Detailed formatter for file logging
                 file_formatter = logging.Formatter(
-                    '[%(asctime)s *%(levelname)s*] %(message)s',
+                    '[%(asctime)s *%(levelname)s*] [%(name)s] %(message)s',
                     datefmt='%Y-%m-%dT%H:%M:%S.%SZ'
                 )
                 file_handler.setFormatter(file_formatter)
@@ -86,7 +87,3 @@ class CustomLogger(logging.Logger):
                 
                 self.info(f"🔒 Logging enabled: {log_file}")
 
-
-def setup_logging(noninteractive: bool = False, enable_log: bool = False) -> CustomLogger:
-    """Set up and return a CustomLogger instance."""
-    return CustomLogger(__name__, noninteractive=noninteractive, enable_log=enable_log)

@@ -1,3 +1,4 @@
+import secrets
 from threading import Lock
 import uuid
 import yaml
@@ -5,6 +6,7 @@ import yaml
 # Import classes
 from server.utils.config import ConfigFile
 KEY_LIST = ["API_KEY", "WEBHOOK_KEY", "UNIQUE_APPID"]
+KEY_FILE = "keys.yaml"
 
 class KeyStore:
     _instance = None
@@ -24,9 +26,14 @@ class KeyStore:
         if getattr(self, "_initialized", False):
             return
 
-        self._config_file = ConfigFile("keys.yaml")
+        self._config_file = ConfigFile(KEY_FILE)
         self._keys = self._load_or_create_keys()
         self._initialized = True
+
+    @classmethod
+    def exists(cls) -> bool:
+        """Check if the keys.yaml file exists."""
+        return ConfigFile(KEY_FILE).path.exists()
 
     def _load_or_create_keys(self) -> dict[str, str]:
         isKeyGenerated = False
@@ -40,7 +47,7 @@ class KeyStore:
         for key_name in KEY_LIST:
             key_value = raw_config.get(key_name)
             if not key_value:
-                key_value = str(uuid.uuid4())
+                key_value = "yz_" + secrets.token_urlsafe(16).rstrip("=")
                 isKeyGenerated = True
             keys[key_name] = key_value
 

@@ -32,7 +32,7 @@ class QBitClient:
     _response_timeout: int = 60
     
     def __init__(self, logger: CustomLogger):
-        self.logger = logger
+        self.LOGGER = CustomLogger(name=self.Name, logger=logger)
         # Resolve config file settings.yaml
         config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(self.Name)
         config_raw["ServerType"] = self.Name # Required field
@@ -74,7 +74,7 @@ class QBitClient:
     
     def _login(self) -> None:
         """Private login function"""
-        self.logger.info(f"🛜 Authenticating {self.ServerName} server")
+        self.LOGGER.info(f"🛜 Authenticating {self.ServerName} server")
         url = f"{self.Url}/api/v2/auth/login"
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
         session = self._get_session()
@@ -86,7 +86,7 @@ class QBitClient:
             resp = session.post(url, data=data, headers=headers, timeout=30)
             resp.raise_for_status()
         self._set_session_header(headers)
-        self.logger.info(f"✅ Received authentication session from {self.ServerName} server")
+        self.LOGGER.info(f"✅ Received authentication session from {self.ServerName} server")
     
     @property
     def session(self) -> httpx.Client:
@@ -106,16 +106,16 @@ class QBitClient:
         self._authenticated = False
 
     def version(self) -> str:
-        self.logger.info(f"🛜 Pinging {self.ServerName} server")
+        self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
         url = f"{self.Url}/api/v2/app/version"
         resp = self.session.post(url, headers=self._headers, timeout=30)
         resp.raise_for_status()
         result = resp.text.strip()
-        self.logger.info(f"✅ Received ping response from {self.ServerName} server")
+        self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
         return result
 
     def search_start(self, pattern: str) -> int:
-        self.logger.info(f"🔍 Starting search query: {pattern}")
+        self.LOGGER.info(f"🔍 Starting search query: {pattern}")
         url = f"{self.Url}/api/v2/search/start"
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
@@ -129,7 +129,7 @@ class QBitClient:
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
         status_data = resp.json()[0]
-        self.logger.debug(f"🔍 Search job {job_id} reports {status_data.get('status', 'Unknown')} status with {status_data.get('total', 0)} results...")
+        self.LOGGER.debug(f"🔍 Search job {job_id} reports {status_data.get('status', 'Unknown')} status with {status_data.get('total', 0)} results...")
         return status_data
 
     def search_results(self, job_id: int) -> list[dict[str, Any]]:
@@ -138,7 +138,7 @@ class QBitClient:
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
         payload = resp.json()
-        self.logger.info(f"📥 Received {len(payload.get('results', []))} search results from {self.ServerName} server.")
+        self.LOGGER.info(f"📥 Received {len(payload.get('results', []))} search results from {self.ServerName} server.")
         return list(payload.get("results", []))
 
     def search_stop(self, job_id: int) -> None:

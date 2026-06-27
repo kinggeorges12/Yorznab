@@ -21,7 +21,7 @@ from utils.filelock import FileLock
 from utils.timeformatter import IsoTimeFormatter
 
 # Global logger instance
-logger = CustomLogger()
+LOGGER = None  # Will be initialized in main() with command line arguments
 
 def load_json(path: str) -> Any:
     with open(path, "r", encoding="utf-8") as f:
@@ -70,12 +70,12 @@ def publish_results(publish_path: str, retention_days: int, results: list[dict[s
 
 def init_library(server_type: ArrType) -> tuple[QBitClient, ArrClient]:
     """Initialize library configuration and clients with health checks"""
-    logger.info(f"💡 Loading configuration file for {QBitClient.Name} and {server_type.value}")
-    qBit = QBitClient(logger=logger)
-    arr = ArrClient(server_type=server_type, logger=logger)
+    LOGGER.info(f"💡 Loading configuration file for {QBitClient.Name} and {server_type.value}")
+    qBit = QBitClient(logger=LOGGER)
+    arr = ArrClient(server_type=server_type, logger=LOGGER)
 
-    logger.info(f"💡 Using {arr.ServerName} server: {arr.Url}")
-    logger.info(f"💡 Using {qBit.ServerName} server: {qBit.Url}")
+    LOGGER.info(f"💡 Using {arr.ServerName} server: {arr.Url}")
+    LOGGER.info(f"💡 Using {qBit.ServerName} server: {qBit.Url}")
 
     # Health checks with retries
     def retry_until_ok(fn, label: str, pause: int, timeout: int):
@@ -86,9 +86,9 @@ def init_library(server_type: ArrType) -> tuple[QBitClient, ArrClient]:
                 return
             except Exception as e:
                 if waited >= timeout:
-                    logger.error(f"❌ Failed to connect to {label} server after {timeout}s: {e}")
+                    LOGGER.error(f"❌ Failed to connect to {label} server after {timeout}s: {e}")
                     raise
-                logger.warning(f"⏳ Waiting for {label} server to start for {waited}s. Pausing for {pause}s...")
+                LOGGER.warning(f"⏳ Waiting for {label} server to start for {waited}s. Pausing for {pause}s...")
                 time.sleep(pause)
                 waited += pause
 
@@ -118,7 +118,7 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
     try:
         qBit, arr = init_library(server_type=server_type)
     except AppSettingsUndefined as e:
-        logger.warning(f"{e}")
+        LOGGER.warning(f"{e}")
         return
 
     qFilter = QBitFilter()
@@ -135,9 +135,9 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
     if arr.ServerType is ArrType.Radarr:
         for rec in wanted.get("records", []):
             if queued and rec.get("id") in [q.get("movieId") for q in queued if q.get("status") != "completed"]:
-                logger.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {rec.get('title')}")
+                LOGGER.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {rec.get('title')}")
                 continue
-            logger.info(f"🧲 Grabbing {arr.ProperName.lower()}: {rec.get('title')}")
+            LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {rec.get('title')}")
             search_requests.append({
                 "string": f"{rec.get('title')} {rec.get('year')}",
                 "match": str(rec.get("year")),
@@ -160,7 +160,7 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
                     episodes_missing.append(ep)
                 else:
                     episode_label = f"S{ep.get('seasonNumber'):02d}E{ep.get('episodeNumber'):02d}"
-                    logger.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {episode_label}")
+                    LOGGER.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {episode_label}")
             if not episodes_missing:
                 continue
             # Group by season
@@ -183,7 +183,7 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
                 else:
                     for ep in eps:
                         label = f"S{ep.get('seasonNumber'):02d}E{ep.get('episodeNumber'):02d}"
-                        logger.info(f"🧲 Grabbing {arr.ProperName.lower()}: {label}")
+                        LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {label}")
                         search_requests.append({
                             "string": f"{series.get('sortTitle')} {label}",
                             "match": label,
@@ -220,21 +220,21 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
         if optimized:
             if do_qbit and not whatif:
                 top = optimized[0]
-                logger.info(f"🔍 Adding torrent to {qBit.ServerName} server: {top.get('fileName')}")
+                LOGGER.info(f"🔍 Adding torrent to {qBit.ServerName} server: {top.get('fileName')}")
                 qBit.add_torrent(torrent_url=top.get("fileUrl"), rename=top.get("fileName"), tags=top.get("tags") or "", category=arr.TypeName)
-                logger.info(f"✅ Received torrent response from {qBit.ServerName} server")
+                LOGGER.info(f"✅ Received torrent response from {qBit.ServerName} server")
             elif do_qbit and whatif:
-                logger.info(f"📺 Would add {arr.ProperName.lower()} torrents to {qBit.ServerName} server: {optimized[0].get('fileName')}")
+                LOGGER.info(f"📺 Would add {arr.ProperName.lower()} torrents to {qBit.ServerName} server: {optimized[0].get('fileName')}")
             # add metadata to each optimized result
             for k, v in meta.items():
                 for o in optimized:
                     o[k] = v
             all_top.extend(optimized)
-            logger.info(f"🎯 Found {len(optimized)} suitable torrents on {qBit.ServerName} server for request: {query}")
+            LOGGER.info(f"🎯 Found {len(optimized)} suitable torrents on {qBit.ServerName} server for request: {query}")
         else:
-            logger.warning(f"🚫 No suitable {arr.ProperName.lower()} torrents found for request: {query}")
+            LOGGER.warning(f"🚫 No suitable {arr.ProperName.lower()} torrents found for request: {query}")
 
-    logger.info(f"📝 Writing {len(all_top)} total records to JSON file: {publish_path}")
+    LOGGER.info(f"📝 Writing {len(all_top)} total records to JSON file: {publish_path}")
     publish_results(publish_path=publish_path, retention_days=retention_days, results=all_top, whatif=whatif)
     arr.update_rss()
 
@@ -259,7 +259,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--retention", type=int, default=365, help="Number of days to retain individual records in published JSON")
     p.add_argument("--qbit", action="store_true", help="Send top result directly to qBittorrent")
     p.add_argument("--whatif", action="store_true", help="Dry-run mode. Simulates execution without making actual changes")
-    p.add_argument("--noninteractive", action="store_true", help="Non-interactive mode does not print to console")
+    p.add_argument("--silent", action="store_true", help="Silent mode does not print to console")
     p.add_argument("--log", action="store_true", help="Log all output for debugging. Enabling this option will significantly increase execution time.")
     return p.parse_args(argv)
 
@@ -311,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
             - Reduces search timeouts for testing
             - Shows what would be done without adding torrents or writing files
             
-        --noninteractive: Non-interactive mode
+        --silent: Silent mode
             - Suppresses console output to avoid conflicts with return statements in nested scripts
             - Useful when calling this script from other automation tools
             
@@ -336,28 +336,28 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     
     # Update global logger with command line arguments
-    global logger
+    global LOGGER
     script_name = os.path.splitext(os.path.basename(__file__))[0]
-    logger = CustomLogger(name=script_name, noninteractive=args.noninteractive, enable_log=args.log)
+    LOGGER = CustomLogger(name=script_name, silent=args.silent, enable_log=args.log)
     
     lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key('UNIQUE_APPID') or 'yorznab'}.lock")
     lock = FileLock(lock_path)
     
     try:
-        logger.info("🔒 Waiting for lock (blocking)...")
+        LOGGER.info("🔒 Waiting for lock (blocking)...")
         with lock:
-            logger.info("🔒 Lock acquired")
+            LOGGER.info("🔒 Lock acquired")
             if args.server == "Both":
                 run_for_library(server_type=ArrType.Radarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
                 run_for_library(server_type=ArrType.Sonarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
             else:
                 run_for_library(server_type=ArrType(args.server), publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
     except Exception as e:
-        logger.error(f"❌ Task runner failed: {e}", exc_info=True)
+        LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
         return 1
     finally:
-        logger.info("🔓 Lock released")
-        logger.info("👋 Exiting script...")
+        LOGGER.info("🔓 Lock released")
+        LOGGER.info("👋 Exiting script...")
     return 0
 
 

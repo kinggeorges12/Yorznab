@@ -33,7 +33,7 @@ class ArrClient:
     _config_file = "settings.yaml"
 
     def __init__(self, server_type: ArrType, logger: CustomLogger = None):
-        self.logger = logger
+        self.LOGGER = CustomLogger(name=server_type.value, logger=logger)
         # Resolve config file settings.yaml
         config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(server_type.value)
         config_raw["ServerType"] = server_type.value
@@ -107,56 +107,56 @@ class ArrClient:
         return self._get_session()
 
     def status(self) -> dict[str, Any]:
-        self.logger.info(f"🛜 Pinging {self.ServerName} Arr server")
+        self.LOGGER.info(f"🛜 Pinging {self.ServerName} Arr server")
         url = f"{self.Url}/api/v3/system/status"
         headers = {"X-Api-Key": self._config.ApiKey}
         resp = self.session.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         result = resp.json()
-        self.logger.info(f"✅ Received ping response from {self.ServerName} Arr server")
+        self.LOGGER.info(f"✅ Received ping response from {self.ServerName} Arr server")
         return result
 
     def wanted_missing(self, page_size: int = 250) -> dict[str, Any]:
-        self.logger.info(f"🔍 Searching for missing videos.")
+        self.LOGGER.info(f"🔍 Searching for missing videos.")
         url = f"{self.Url}/api/v3/wanted/missing"
         headers = {"X-Api-Key": self._config.ApiKey}
         params = {"page": 1, "pageSize": page_size}
         resp = self.session.get(url, headers=headers, params=params, timeout=60)
         resp.raise_for_status()
         result = resp.json()
-        self.logger.info(f"📺 Found {len(result.get('records', []))} missing {self.ProperNames.lower()}.")
+        self.LOGGER.info(f"📺 Found {len(result.get('records', []))} missing {self.ProperNames.lower()}.")
         return result
 
     def queue(self, page_size: int = 250) -> dict[str, Any]:
-        self.logger.info(f"🔍 Searching for queued videos.")
+        self.LOGGER.info(f"🔍 Searching for queued videos.")
         url = f"{self.Url}/api/v3/queue"
         headers = {"X-Api-Key": self._config.ApiKey}
         params = {"page": 1, "pageSize": page_size}
         resp = self.session.get(url, headers=headers, params=params, timeout=60)
         resp.raise_for_status()
         result = resp.json()
-        self.logger.info(f"📺 Found {len(result.get('records', []))} queued {self.ProperNames.lower()}.")
+        self.LOGGER.info(f"📺 Found {len(result.get('records', []))} queued {self.ProperNames.lower()}.")
         return result
 
     # TODO: Why is this unused?
     def lookup_video(self, external_id: str) -> dict[str, Any]:
         external_db = self.ExternalDb
-        self.logger.info(f"🔍 Looking for {self.ProperName} using database {external_db}.")
+        self.LOGGER.info(f"🔍 Looking for {self.ProperName} using database {external_db}.")
         url = f"{self.Url}{self.Endpoint}?{external_db}Id={external_id}"
         headers = {"X-Api-Key": self._config.ApiKey}
         resp = self.session.get(url, headers=headers, timeout=60)
         resp.raise_for_status()
-        self.logger.info(f"📺 Looked up {self.ProperName} from {self.ServerName} server: {resp.get('title')}")
+        self.LOGGER.info(f"📺 Looked up {self.ProperName} from {self.ServerName} server: {resp.get('title')}")
         return resp.json()
 
     def get_video(self, item_id: str) -> dict[str, Any]:
-        self.logger.info(f"🔍 Fetching {self.ProperName} from {self.ServerName} server.")
+        self.LOGGER.info(f"🔍 Fetching {self.ProperName} from {self.ServerName} server.")
         url = f"{self.Url}{self.Endpoint}/{item_id}"
         headers = {"X-Api-Key": self._config.ApiKey}
         resp = self.session.get(url, headers=headers, timeout=60)
         resp.raise_for_status()
         data = resp.json()
-        self.logger.info(f"📺 Fetched {self.ProperName} from {self.ServerName} server: {data.get('title')}")
+        self.LOGGER.info(f"📺 Fetched {self.ProperName} from {self.ServerName} server: {data.get('title')}")
         return data
 
     def update_rss(self) -> dict[str, Any]:
@@ -165,7 +165,7 @@ class ArrClient:
         body = {
             "name": "RssSync"
         }
-        self.logger.info(f"🌐 Sending RSS sync command to {self.ServerName} server.")
+        self.LOGGER.info(f"🌐 Sending RSS sync command to {self.ServerName} server.")
         resp = self.session.post(url, headers=headers, json=body, timeout=60)
         resp.raise_for_status()
         return resp.json()

@@ -3,7 +3,7 @@ clear
 export SEARCH_FILTER="filters.yaml"
 export PYTHONPATH="${PWD}"
 export CONFIG_DIR="${PWD}/config"
-export LOG_DIR="${PWD}/server/logs"
+export LOG_DIR="${PWD}/logs"
 (
     source .venv/bin/activate
     cd server || exit

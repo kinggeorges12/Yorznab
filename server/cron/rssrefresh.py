@@ -23,12 +23,13 @@ from pathlib import Path
 # Add the parent directory to the path so we can import utils
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from server.utils.keystore import KeyStore
 from utils.customlogger import CustomLogger
 from utils.settings import AppSettings
 import asyncio
 
 # Global logger instance
-logger = CustomLogger()
+LOGGER = CustomLogger(name="cron", enable_log=True)
 
 # Load settings from config file
 SETTINGS = AppSettings(filename='yorznab.yaml')
@@ -68,14 +69,14 @@ def should_refresh(file_path: str, min_age_hours: int = 24) -> bool:
     age_hours = get_file_age_hours(file_path)
     
     if age_hours == float('inf'):
-        logger.info(f"📁 File {file_path} doesn't exist - refresh needed")
+        LOGGER.info(f"📁 File {file_path} doesn't exist - refresh needed")
         return True
     
     if age_hours > min_age_hours:
-        logger.info(f"⏰ File {file_path} is {age_hours:.1f} hours old (>{min_age_hours}h) - refresh needed")
+        LOGGER.info(f"⏰ File {file_path} is {age_hours:.1f} hours old (>{min_age_hours}h) - refresh needed")
         return True
     
-    logger.info(f"✅ File {file_path} is {age_hours:.1f} hours old (≤{min_age_hours}h) - no refresh needed")
+    LOGGER.info(f"✅ File {file_path} is {age_hours:.1f} hours old (≤{min_age_hours}h) - no refresh needed")
     return False
 
 
@@ -87,7 +88,7 @@ async def refresh_rss() -> bool:
         True if refresh was successful, False otherwise
     """
     try:
-        logger.info(f"🔄 Starting RSS refresh via webhook run_requests")
+        LOGGER.info(f"🔄 Starting RSS refresh via webhook run_requests")
         
         # Import the webhook module and call run_requests
         from routers import webhook
@@ -96,14 +97,14 @@ async def refresh_rss() -> bool:
         result = await webhook.run_requests()
         
         if result == 0:
-            logger.info(f"✅ RSS refresh completed successfully")
+            LOGGER.info(f"✅ RSS refresh completed successfully")
             return True
         else:
-            logger.error(f"❌ RSS refresh failed with exit code {result}")
+            LOGGER.error(f"❌ RSS refresh failed with exit code {result}")
             return False
             
     except Exception as e:
-        logger.error(f"❌ RSS refresh failed with exception: {e}", exc_info=True)
+        LOGGER.error(f"❌ RSS refresh failed with exception: {e}", exc_info=True)
         return False
 
 
@@ -229,9 +230,9 @@ async def rss_refresh_cron():
     schedule = SETTINGS.get('rss', 'refresh_schedule')
     min_age_hours = SETTINGS.get('rss', 'refresh_max_age')
 
-    logger.info(f"🚀 RSS refresh cron job started (schedule: {schedule})")
-    logger.info(f"📁 Feed file: {feed_file}")
-    logger.info(f"⏰ Max age: {min_age_hours} hours")
+    LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
+    LOGGER.info(f"📁 Feed file: {feed_file}")
+    LOGGER.info(f"⏰ Max age: {min_age_hours or 0} hours")
     
     while True:
         try:
@@ -243,17 +244,17 @@ async def rss_refresh_cron():
             seconds_until_next = (next_run - now).total_seconds()
             
             if seconds_until_next > 0:
-                logger.info(f"⏰ Next RSS refresh check in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
+                LOGGER.info(f"⏰ Next RSS refresh check in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
                 await asyncio.sleep(seconds_until_next)
             
             # Check if refresh is needed
             if should_refresh(feed_file, min_age_hours):
                 await refresh_rss()
             else:
-                logger.info("😴 No RSS refresh needed")
+                LOGGER.info("😴 No RSS refresh needed")
                 
         except Exception as e:
-            logger.error(f"❌ RSS refresh cron job error: {e}", exc_info=True)
+            LOGGER.error(f"❌ RSS refresh cron job error: {e}", exc_info=True)
             # Wait 5 minutes before retrying on error
             await asyncio.sleep(300)
 
@@ -273,30 +274,34 @@ async def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     
     # Convert relative paths to absolute paths
-    feed_file = os.path.abspath(args.feed_file)
+    feed_file = SETTINGS.get('feed', 'file')
+    force_run = args.force or not KeyStore.exists()
     
-    logger.info(f"🚀 RSS Refresh Cron Job started")
-    logger.info(f"📁 Feed file: {feed_file}")
-    logger.info(f"⏰ Max age: {args.min_age_hours} hours")
-    logger.info(f"🕐 Schedule: {args.schedule}")
+    LOGGER.info(f"🚀 RSS Refresh Cron initializing")
+    LOGGER.info(f"📁 Feed file: {feed_file}")
+    LOGGER.info(f"⏰ Max age: {args.min_age_hours or 0} hours")
+    LOGGER.info(f"🕐 Schedule: {args.schedule}")
+    LOGGER.info(f"⚡ Run now: {force_run}")
     
-    # Run once on start
-    success = await refresh_rss()
-    if success:
-        logger.info("🎉 RSS refresh cron job completed successfully")
-        return 0
-    else:
-        logger.error("💥 RSS refresh cron job failed")
-        return 1
+    # Force refresh on first run
+    if force_run:
+        success = await refresh_rss()
     
     if args.daemon:
         # Run as a daemon (continuous background process)
-        logger.info("🔄 Running as daemon...")
+        LOGGER.info("🔄 Running as daemon...")
         try:
             await rss_refresh_cron()
         except KeyboardInterrupt:
-            logger.info("🛑 Daemon stopped by user")
+            LOGGER.info("🛑 Daemon stopped by user")
             return 0
+    else:
+        if success:
+            LOGGER.info("🎉 RSS refresh completed successfully")
+            return 0
+        else:
+            LOGGER.error("💥 RSS refresh failed")
+            return 1
 
 def main_cron(argv: list[str] | None = None) -> int:
     """Synchronous wrapper for cron compatibility."""
