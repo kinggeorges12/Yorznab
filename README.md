@@ -67,11 +67,11 @@ This starts the service in Docker. You must follow steps in external apps to mak
     - \[Linux Shell\] `cd /srv/dev/yorznab`
     - \[Windows PowerShell\] `cd C:\Docker\yorznab`
 2. Create the data for Yorznab extract and home directory to persist Python files \[optional\]:
-    - \[Linux Shell\] `mkdir -p home export python && sudo chown -R $(id -un):$(id -gn) .`
+    - \[Linux Shell\] `mkdir -p logs export python && sudo chown -R $(id -un):$(id -gn) .`
 3. Run Docker file: `docker compose -f ./app/docker-compose.yml up -d`
 
 # Indexer
-This allows Radarr and Sonarr to query Yorznab for torrents. The settings for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`.
+This allows Radarr and Sonarr to query Yorznab for torrents. The settings for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`. Note: You can ignore the `UNIQUE_APPID`, as this is used for internal logging.
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → Indexers → + → Torznab**.

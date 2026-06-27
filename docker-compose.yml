@@ -16,7 +16,7 @@ services:
       - "host.docker.internal:host-gateway" # Expose Yorznab to other containers
     volumes:
       # Only for root user to persist Python installation
-      - /srv/dev/yorznab/python:/home
+      # - /srv/dev/yorznab/python:/home
       # Writing RSS feed
       - type: bind
         source: /srv/dev/yorznab/export/
