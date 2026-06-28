@@ -510,12 +510,39 @@ button[type="submit"]:active {
     align-items: center;
     justify-content: center;
     overflow: hidden; /* Prevents overflow */
+    position: relative; /* ← ADD THIS - needed for absolute positioning of badge */
 }
 
 .icon-wrapper img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+}
+
+.icon-wrapper .warning-badge {
+    display: none;
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 10;
+    font-size: 1.2em;
+    cursor: help;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    /* Make it a perfect circle */
+    width: 28px;
+    height: 28px;
+    display: none; /* Keep this, we'll override with .visible */
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
+    line-height: 1;
+    text-align: center;
+}
+
+.icon-wrapper .warning-badge.visible {
+    display: block;
 }
 
 .app-info {

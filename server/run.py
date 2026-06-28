@@ -7,10 +7,11 @@ import asyncio
 from contextlib import asynccontextmanager
 
 # Start cron job first
-import cron.rssrefresh
+import server.cron.rssrefresh
 
 # Import routers after cron
-from routers import login, status, torznab, webhook
+from server.routers import status, torznab, webhook
+from server.web.routers import web_routers
 from server.routers.handler import RouteHandler
 
 # Set static directory handling
@@ -22,7 +23,7 @@ async def lifespan(app: FastAPI):
     # Startup
     try:
         # Start RSS refresh cron job in daemon mode
-        asyncio.create_task(cron.rssrefresh.main(["--daemon"]))
+        asyncio.create_task(server.cron.rssrefresh.main(["--daemon"]))
         print("🚀 Background RSS refresh cron job started")
     except Exception as e:
         print(f"❌ Failed to start RSS refresh cron job: {e}")
@@ -35,10 +36,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Include routers
-app.include_router(login.router)
 app.include_router(status.router)
 app.include_router(torznab.router)
 app.include_router(webhook.router)
+app.include_router(web_routers)
+#app.include_router(login.router)
+
 
 # Mount static directory
 app.mount(RouteHandler.STATIC, StaticFiles(directory=STATIC_DIR), name="static")
@@ -51,5 +54,4 @@ async def favicon():
 # Default route - redirects root to /login
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/login", status_code=302)
-
+    return RedirectResponse(url=RouteHandler.LOGIN, status_code=302)
