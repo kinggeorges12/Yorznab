@@ -1,0 +1,7 @@
+feedgen
+fastapi
+uvicorn
+httpx
+filelock
+pyyaml
+dacite

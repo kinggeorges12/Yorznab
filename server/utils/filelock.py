@@ -13,10 +13,6 @@ import sys
 import time
 from typing import Optional
 
-
- 
-
-
 # Try to import the filelock library first
 try:
     from filelock import FileLock as ExternalFileLock

@@ -1,0 +1,96 @@
+############# TAG OPTIONS #############
+
+tags:
+  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett"
+  remove_jackett_tags: true
+  # Only output torrents matching TrackerTags entries below
+  tracker_tags_only: false
+  # Add tags in qBittorrent to downloads from these trackers
+  tracker_tags:
+    Private Tracker Name 1: privatetracker1.com
+    Private Tracker Name 2: privatetracker2.com
+    Private Tracker Name 3: privatetracker3.com
+
+############# SCORING TORRENTS #############
+
+# The built-in optimizer uses this filter to create a scoring metric.
+# Minimum scores and sizes to determine which torrents to publish.
+# Torrents are sorted on score (greatest) and pubDate (newest).
+# To convert to file size in mbps, use the formula: (file size in MB) = mbps * (runtime minutes) * 7.5
+
+# min_score: Drops anything lower than this. Score can be any number, but should be based on the weights.
+min_score: 5
+
+# Movies/TV category provides mbps estimates for each quality level. Enter the minimum size for the category. Leave one category blank as the lowest quality (default=SD).
+#   TV categories: WEB-DL, SD, HD, Other. Not supported by mbps filtering: Foreign, Sport, Anime, Documentary.
+#   Movie categories: Other, SD, HD, UHD, BluRay, 3D. Not supported by mbps filtering: Foreign.
+# Movies/TV weights provide the aggregate scores for each torrent.
+#   min_score: Drops anything lower than this. Score can be any number, but should be based on the weights.
+#   seeders_10pct: number of seeders is in the top 10% of seeders for this show/movie
+#   seeders_50pct: number of seeders is in the top 50% of seeders for this show/movie
+#   size_preferred: size is within 10% of the average size for the show/movie
+#   favorite: is marked as a favorite in the config
+#   quality: is marked as a quality in the config
+# Movies/TV options provide information for the optimizer
+#   unknown_runtime (Movies default=100, TV default=20): if runtime is unknown in Jellyseerr, use this value for size heuristics
+#   quality_search: any search strings found add the quality score
+#   required_mbps: Drops anything outside this range (in MB/s).
+#   best_mbps: Preferred quality (in MB/s).
+
+Movies:
+  category:
+    - "WEB-DL": 
+    - "SD": 3.33
+    - "HD": 5.33
+    - "UHD": 8
+  weights:
+    min_score: 5
+    seeders_10pct: 7
+    size_preferred: 5
+    favorite: 3
+    seeders_50pct: 2
+    quality: 1.17
+  unknown_runtime: 100
+  quality_search:
+    - YTS
+    - 1080p
+    - 2160p
+  favorite_sites:
+    - "https://archive.org"
+    - "https://www.publicdomaintorrents.info"
+  required_mbps:
+    # For 90 minute movie, 1.33 to 8 mbps ~ 900MB to 5.4GB
+    lower: 1.33
+    upper: 8
+  best_mbps:
+    # For 90 minute movie, 3.33 to 5.66 mbps ~ 2.25GB to 3.8GB
+    lower: 3.33
+    upper: 5.66
+
+TV:
+  category:
+    - "SD": 
+    - "HD": 3.33
+    - "UHD": 8
+  weights:
+    min_score: 5
+    seeders_10pct: 6.7
+    size_preferred: 5
+    favorite: 3
+    seeders_50pct: 2
+    quality: 1
+  unknown_runtime: 20
+  quality_search:
+    - 1080p
+    - EZTV
+  favorite_sites:
+    - "https://archive.org"
+    - "https://www.publicdomaintorrents.info"
+  required_mbps:
+    # For a 20 minute show, 1.33mbps ~ 200MB to 1.2GB
+    lower: 1.33
+    upper: 8
+  best_mbps:
+    # For a 20 minute show, 3.33 to 5.66 mbps ~ 500MB to 850MB
+    lower: 3.33
+    upper: 5.66

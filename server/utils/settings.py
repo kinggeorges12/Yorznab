@@ -1,29 +1,48 @@
-from pathlib import Path
-import json
-import os
-import uuid
+from __future__ import annotations
+import yaml
+from threading import Lock
 
-def load_settings(defaults: dict[str, str], keys: list[str]) -> dict[str, str]:
-    """Accepts a dict containing strings for named global variables. Will not accept user variables not found in the default config."""
-    # Load user config if it exists
-    config_file = Path(os.getenv("SETTINGS_JSON", "/app/config/settings.json"))
-    if config_file.exists():
-        with config_file.open() as f:
-            user_config = json.load(f)
-    else:
-        user_config = {}
+from server.utils.config import ConfigFile
 
-    # Generate random UUID if a required key is missing or empty
-    for gen_key in keys:
-        if not user_config.get(gen_key):
-            user_config[gen_key] = str(uuid.uuid4())
-            # Save updated config back to file
-            config_file.parent.mkdir(parents=True, exist_ok=True)  # ensure directory exists
-            with config_file.open("w") as f:
-                json.dump(user_config, f, indent=2)
-            print(f"Generated new {gen_key} and saved to {config_file}")
 
-    # Only take keys from user_config that exist in defaults
-    filtered_user_config = {k: v for k, v in user_config.items() if k in defaults}
+class AppSettings:
+    _instances: dict[str, AppSettings] = {}
+    _lock = Lock()
 
-    return {**defaults, **filtered_user_config}
+    def __new__(cls, filename: str):
+        with cls._lock:
+            if filename not in cls._instances:
+                instance = super().__new__(cls)
+                cls._instances[filename] = instance
+        return cls._instances[filename]
+
+    def __init__(self, filename: str):
+        # prevent re-loading on repeated calls
+        if getattr(self, "_initialized", False):
+            return
+
+        self._config_file = ConfigFile(filename)
+        self._data = self._load()
+        self._initialized = True
+
+    def _load(self) -> dict:
+        path = self._config_file.path
+
+        if path.exists():
+            with open(path, "r") as f:
+                return yaml.safe_load(f) or {}
+
+        return {}
+    
+    def get(self, key: str = None, sub: str = None):
+        if key is not None and sub is not None:
+            return self._data.get(key, {}).get(sub, None)
+        elif key is not None:
+            return self._data.get(key, None)
+        return self._data
+        
+    def __str__(self) -> str:
+        """Detailed string representation for debugging"""
+        # Get all attributes including private ones
+        attrs = {k: v for k, v in self.__dict__.items()}
+        return f"AppSettings({attrs})"

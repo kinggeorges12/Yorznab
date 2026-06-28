@@ -24,22 +24,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.customlogger import CustomLogger
-from utils.settings import load_settings
+from utils.settings import AppSettings
 import asyncio
 
 # Global logger instance
 logger = CustomLogger()
 
-# Define defaults
-DEFAULTS = {
-    "FEED_FILE": "/app/data/torrents.json",
-    "RSS_REFRESH_MAX_AGE": 24,   # hours
-    "RSS_REFRESH_SCHEDULE": "30 * * * *",  # cron schedule: minute hour day month weekday
-}
-
 # Load settings from config file
-globals().update(load_settings(DEFAULTS, []))
-
+SETTINGS = AppSettings('app.yaml')
 
 def get_file_age_hours(file_path: str) -> float:
     """
@@ -62,13 +54,13 @@ def get_file_age_hours(file_path: str) -> float:
     return age_hours
 
 
-def should_refresh(file_path: str, max_age_hours: int = 24) -> bool:
+def should_refresh(file_path: str, min_age_hours: int = 24) -> bool:
     """
     Check if the file should be refreshed based on its age.
     
     Args:
         file_path: Path to the file to check
-        max_age_hours: Maximum age in hours before refresh is needed
+        min_age_hours: Minimum age in hours before refresh is needed
         
     Returns:
         True if file should be refreshed, False otherwise
@@ -79,11 +71,11 @@ def should_refresh(file_path: str, max_age_hours: int = 24) -> bool:
         logger.info(f"📁 File {file_path} doesn't exist - refresh needed")
         return True
     
-    if age_hours > max_age_hours:
-        logger.info(f"⏰ File {file_path} is {age_hours:.1f} hours old (>{max_age_hours}h) - refresh needed")
+    if age_hours > min_age_hours:
+        logger.info(f"⏰ File {file_path} is {age_hours:.1f} hours old (>{min_age_hours}h) - refresh needed")
         return True
     
-    logger.info(f"✅ File {file_path} is {age_hours:.1f} hours old (≤{max_age_hours}h) - no refresh needed")
+    logger.info(f"✅ File {file_path} is {age_hours:.1f} hours old (≤{min_age_hours}h) - no refresh needed")
     return False
 
 
@@ -233,13 +225,13 @@ async def rss_refresh_cron():
     Gets configuration from settings file.
     """
     # Get configuration from settings
-    feed_file = globals().get('FEED_FILE')
-    schedule = globals().get('RSS_REFRESH_SCHEDULE')
-    max_age_hours = globals().get('RSS_REFRESH_MAX_AGE')
-    
+    feed_file = SETTINGS.get('feed', 'file')
+    schedule = SETTINGS.get('rss', 'refresh_schedule')
+    min_age_hours = SETTINGS.get('rss', 'refresh_max_age')
+
     logger.info(f"🚀 RSS refresh cron job started (schedule: {schedule})")
     logger.info(f"📁 Feed file: {feed_file}")
-    logger.info(f"⏰ Max age: {max_age_hours} hours")
+    logger.info(f"⏰ Max age: {min_age_hours} hours")
     
     while True:
         try:
@@ -255,7 +247,7 @@ async def rss_refresh_cron():
                 await asyncio.sleep(seconds_until_next)
             
             # Check if refresh is needed
-            if should_refresh(feed_file, max_age_hours):
+            if should_refresh(feed_file, min_age_hours):
                 await refresh_rss()
             else:
                 logger.info("😴 No RSS refresh needed")
@@ -268,10 +260,10 @@ async def rss_refresh_cron():
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
-    p.add_argument("--feed-file", default=globals().get("FEED_FILE"), help="Path to the feed file to refresh")
-    p.add_argument("--max-age-hours", type=int, default=globals().get("RSS_REFRESH_MAX_AGE"), help="Maximum age in hours before refresh is needed")
+    p.add_argument("--feed-file", default=SETTINGS.get('feed', 'file'), help="Path to the feed file to refresh")
+    p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('rss', 'refresh_max_age'), help="Minimum age in hours before refresh is needed")
     p.add_argument("--force", action="store_true", help="Force refresh regardless of file age")
-    p.add_argument("--schedule", default=globals().get("RSS_REFRESH_SCHEDULE"), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
+    p.add_argument("--schedule", default=SETTINGS.get('rss', 'refresh_schedule'), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
     p.add_argument("--daemon", action="store_true", help="Run as a daemon (continuous background process)")
     return p.parse_args(argv)
 
@@ -285,7 +277,7 @@ async def main(argv: list[str] | None = None) -> int:
     
     logger.info(f"🚀 RSS Refresh Cron Job started")
     logger.info(f"📁 Feed file: {feed_file}")
-    logger.info(f"⏰ Max age: {args.max_age_hours} hours")
+    logger.info(f"⏰ Max age: {args.min_age_hours} hours")
     logger.info(f"🕐 Schedule: {args.schedule}")
     
     # Run once on start

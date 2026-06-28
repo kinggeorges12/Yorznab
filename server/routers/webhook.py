@@ -1,32 +1,29 @@
+import os
 from fastapi import APIRouter, Request, HTTPException, Header, Query
 from fastapi.responses import JSONResponse
-from utils.settings import load_settings
+from utils.settings import AppSettings
+from utils.keystore import KeyStore
 import rss.builder
-import threading
 import asyncio
+
+# Load libraries
+from server.rss.ArrClient import ArrClient, ArrType
 
 router = APIRouter()
 
-# Define defaults
-DEFAULTS = {
-    "WEBHOOK_KEY": "",
-    "WEBHOOK_ENDPOINT": "/webhook",
-    "WEBHOOK_WAIT": 30,
-    "FEED_FILE": "/app/data/torrents.json",
-    "RSS_RETENTION_DAYS": 365,
-}
 # Export config vars to globals
-globals().update(load_settings(DEFAULTS, ["WEBHOOK_KEY"]))
+SETTINGS = AppSettings('app.yaml')
+from server.utils.config import ConfigFile
 
-async def run_requests(type_name: str = None, external_id: str = None) -> int:
+async def run_requests(server_type: ArrClient.ArrType | None = None, external_id: str = None) -> int:
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
     try:
         # Build command arguments
-        args = ["--log", "--publish", globals().get('FEED_FILE'), "--retention", str(globals().get('RSS_RETENTION_DAYS'))]
+        args = ["--log", "--publish", SETTINGS.get('feed', 'file'), "--retention", str(SETTINGS.get('rss', 'retention_days'))]
         
-        # Add type parameter if specified
-        if type_name and type_name in ['Movies', 'TV']:
-            args.extend(["--name", type_name])
+        # Add server parameter if specified
+        if server_type:
+            args.extend(["--server", server_type.value])
         
         # Add external ID parameter if specified
         if external_id:
@@ -38,21 +35,22 @@ async def run_requests(type_name: str = None, external_id: str = None) -> int:
         return result
         
     except Exception as e:
-        print(f"Failed to execute requests script: {str(e)}")
+        print(f"Failed to execute requests script: {e}", exc_info=True)
         return 1
 
+# Manual run from the web browser
 @router.get("/webhook")
 async def webhook_get(
-    type: str = Query(None, description="Type of content to search for: 'Movies' or 'TV'"),
+    server: str = Query(None, description="Server name to process (Radarr or Sonarr)"),
     id: str = Query(None, description="External ID for the wanted video (TMDB/TVDB ID)")
 ):
     """Run the requests.py script to search for torrents and write them to the feed file"""
-    result = await run_requests(type_name=type, external_id=id)
+    result = await run_requests(server_type=ArrType(server), external_id=id)
     
     if result == 0:
         message = "Requests script executed successfully"
-        if type:
-            message += f" for {type}"
+        if server:
+            message += f" for {server}"
         if id is not None:
             message += f" with external ID {id}"
         
@@ -73,13 +71,14 @@ async def webhook_get(
             status_code=500
         )
 
+# Runs from the Jellyseerr webhook
 @router.post("/webhook")
 async def webhook(request: Request, authorization: str = Header(None)):
     # Check header exists
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
     # Expect format: "<API_KEY>"
-    elif authorization != WEBHOOK_KEY:  # pyright: ignore[reportUndefinedVariable]
+    elif authorization != KeyStore.get_key("WEBHOOK_KEY"):
         raise HTTPException(status_code=403, detail="Invalid API key")
 
     # Parse JSON payload
@@ -93,43 +92,38 @@ async def webhook(request: Request, authorization: str = Header(None)):
         media = payload["media"]
         media_type = media.get("media_type")
         
-        if media_type == "movie":
-            type_name = "Movies"
-            db_type = "TMBD"
-            external_id = media.get("tmdbId")
-        elif media_type == "tv":
-            type_name = "TV"
-            db_type = "TVDB"
-            tvdb_id = media.get("tvdbId")
+        # Initialize ArrClient based on Jellyseerr media type
+        arr = ArrClient.init_jellyseerr(media_type)
+        
+        # Set initial to the database ID, then process seasons for TV
+        external_id = arr.ExternalId
+        if(arr.ServerType == ArrType.Sonarr):
             # Get requested seasons from extra data
             requested_seasons = []
             for extra_item in payload.get("extra", []):
                 if extra_item.get("name") == "Requested Seasons":
                     requested_seasons += extra_item.get("value")
-
             # Build external parameter with tvdbId and season
             if requested_seasons:
-                external_id = f"{tvdb_id}:{','.join(str(s) for s in requested_seasons)}"
-            else:
-                external_id = tvdb_id
+                external_id = f"{arr.ExternalId}:{','.join(str(s) for s in requested_seasons)}"
 
-        print(f"Webhook received, processing {type_name} requests in background after {globals().get('WEBHOOK_WAIT')} seconds: {payload}")
+        print(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('rss', 'webhook_wait')} seconds: {payload}")
         
         # Define the background processing function
         async def process_request():
             try:
                 # Wait x seconds before processing
-                await asyncio.sleep(globals().get('WEBHOOK_WAIT', 30))
+                await asyncio.sleep(SETTINGS.get('rss', 'webhook_wait'))
                 
                 # Call the shared run_requests function
-                result = await run_requests(type_name=type_name, external_id=external_id)
+                result = await run_requests(server_type=arr.ServerType, external_id=external_id)
                 
                 if result == 0:
-                    print(f"Successfully processed {type_name} request for {db_type} ID: {external_id}")
+                    print(f"Successfully processed {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
                 else:
-                    print(f"Failed to process {type_name} request for {db_type} ID: {external_id}")
+                    print(f"Failed to process {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
             except Exception as e:
-                print(f"Error processing {type_name} request: {str(e)}")
+                print(f"Error processing {arr.ServerName} request: {str(e)}")
         
         # Start background task
         asyncio.create_task(process_request())

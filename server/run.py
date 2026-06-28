@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -5,6 +7,8 @@ from routers import status, torznab, webhook
 import asyncio
 import cron.rssrefresh
 from contextlib import asynccontextmanager
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,10 +34,10 @@ app.include_router(torznab.router)
 app.include_router(webhook.router)
 
 # Mount static directory
-app.mount("/static", StaticFiles(directory="/app/server/static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Favicon
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse("/app/server/static/favicon.ico")
+    return FileResponse(STATIC_DIR + "/favicon.ico")
 

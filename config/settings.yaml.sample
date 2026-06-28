@@ -1,0 +1,45 @@
+# Do not change the root "Radarr"
+Radarr:
+  # Optional name for logs
+  Name: MyRadarr
+  # Radarr website must be accessible from Docker
+  Url: http://localhost:7878
+  # CHANGE THIS! Login to Radarr > Settings > General > API Key
+  ApiKey: RADARR_API_KEY
+  # Only useful for custom Radarr web urls
+  Endpoint: /api/v3/movie
+  # Proper names are shown in logs
+  ProperName: Movie
+  ProperNames: Movie(s)
+
+# Do not change the root "Sonarr"
+Sonarr:
+  # Optional name for logs
+  Name: MySonarr
+  # Sonarr website must be accessible from Docker
+  Url: http://localhost:8989
+  # CHANGE THIS! Login to Radarr > Settings > General > API Key
+  ApiKey: SONARR_API_KEY
+  # Only useful for custom Sonarr web urls
+  Endpoint: /api/v3/series
+  # Proper names are shown in logs
+  ProperName: Show
+  ProperNames: Show(s)
+
+# Do not change the root "qBittorrent"
+qBittorrent:
+  # Optional name for logs
+  Name: MyQbit
+  # qBittorrent website must be accessible from Docker
+  QUrl: http://localhost:8080
+  # Find API key on new versions of qBittorrent > Tools > Options > WebUI
+  QApiKey: qbt_API_KEY
+  # Delete the QApiKey if using username/password authentication
+  QUsername: qbittorrent
+  QPassword: password
+  # [default=60] Time to wait for search to complete (in seconds)
+  SearchTimeout: 60
+  # [default=0] Maximum number of results to wait for before returning, use 0 for unlimited
+  SearchLimit: 100
+  # [default=10] Time to wait between search status checks (in seconds)
+  SearchPing: 10

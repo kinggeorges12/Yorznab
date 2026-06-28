@@ -1,0 +1,24 @@
+# Customizable web portal
+feed:
+  file: /app/data/torrents.json
+  title: Yorznab
+  link: http://localhost:9118
+  image: http://localhost:9118/static/banner.jpg
+  description: Get yo feed on!
+  language: en
+  # Location of endpoint for Sonarr, Radarr, and browser access
+  api_endpoint: /api
+  # Location of endpoint for webhook requests
+  webhook_endpoint: /webhook
+
+# Local refresh of the RSS feed when Jellyseer has not requested content
+rss:
+  # Cron will not refresh until min age (in hours) is exceeded since the last refresh.
+  refresh_min_age: 1
+  # Cron schedule for refreshing the RSS feed.
+  # Format: minute hour day month weekday (e.g., "30 5 * * 7" every Sunday at 5:30am)
+  refresh_schedule: "30 * * * *"
+  # Days before old torrents are removed from the feed.
+  retention_days: 90
+  # ONLY when the feed is being processed, seconds to wait after receiving a webhook request and processing it.
+  webhook_wait: 60

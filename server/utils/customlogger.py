@@ -11,7 +11,6 @@ import sys
 import tempfile
 import uuid
 
-
 class EmojiFormatter(logging.Formatter):
     """Custom formatter that adds emojis based on log level."""
     
@@ -20,7 +19,7 @@ class EmojiFormatter(logging.Formatter):
         if record.levelno == logging.DEBUG:
             record.msg = f"🔍 {record.msg}"
         elif record.levelno == logging.INFO:
-            record.msg = f"💡 {record.msg}"
+            record.msg = f"ℹ️ {record.msg}"
         elif record.levelno == logging.WARNING:
             record.msg = f"⚠️ {record.msg}"
         elif record.levelno == logging.ERROR:
@@ -64,10 +63,14 @@ class CustomLogger(logging.Logger):
             
             # File handler (if logging enabled)
             if enable_log:
-                temp_dir = tempfile.gettempdir()
                 script_name = name
                 log_id = str(uuid.uuid4())[:8]
-                log_file = os.path.join(temp_dir, f"{script_name}-{log_id}.log")
+                LOG_DIR = os.getenv("LOG_DIR")
+                if LOG_DIR:
+                    os.makedirs(LOG_DIR, exist_ok=True)
+                else:
+                    LOG_DIR = tempfile.gettempdir()
+                log_file = os.path.join(LOG_DIR, f"{script_name}-{log_id}.log")
                 
                 file_handler = logging.FileHandler(log_file, encoding='utf-8')
                 file_handler.setLevel(logging.DEBUG)
@@ -75,7 +78,7 @@ class CustomLogger(logging.Logger):
                 # Detailed formatter for file logging
                 file_formatter = logging.Formatter(
                     '[%(asctime)s *%(levelname)s*] %(message)s',
-                    datefmt='%Y-%m-%dT%H:%M:%S.%fZ'
+                    datefmt='%Y-%m-%dT%H:%M:%S.%SZ'
                 )
                 file_handler.setFormatter(file_formatter)
                 self.addHandler(file_handler)

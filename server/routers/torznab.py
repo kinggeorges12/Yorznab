@@ -7,25 +7,15 @@ from feedgen.ext.torrent import TorrentExtension, TorrentEntryExtension
 from datetime import datetime, timezone
 import json
 import re
-from utils.settings import load_settings
+from utils.settings import AppSettings
+from utils.keystore import KeyStore
 
 router = APIRouter()
 
-# Define defaults
-DEFAULTS = {
-    "API_KEY": "",
-    "API_ENDPOINT": "/api",
-    "FEED_FILE": "/app/data/torrents.json",
-    "FEED_TITLE": "Default Title",
-    "FEED_LINK": "http://localhost:8080",
-    "FEED_IMAGE" : "http://localhost:8080/static/banner.jpg",
-    "FEED_DESCRIPTION": "Default description.",
-    "FEED_LANGUAGE": "en",
-    "NS": {"torznab": "http://torznab.com/schemas/2015/feed"},
-    "RSS_RETENTION_DAYS": 365,
-}
 # Export config vars to globals
-globals().update(load_settings(DEFAULTS, ["API_KEY"]))
+SETTINGS = AppSettings('app.yaml')
+API_KEY = KeyStore.get_key("API_KEY")
+NS = {"torznab": "http://torznab.com/schemas/2015/feed"},
 
 # Set default categories
 CATEGORIES = [
@@ -129,10 +119,10 @@ def generate_rss(items, offset=0, limit=0):
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
-    fg.title(globals().get('FEED_TITLE'))
-    fg.link(href=globals().get('FEED_LINK'))
-    fg.description(globals().get('FEED_DESCRIPTION'))
-    fg.language(globals().get('FEED_LANGUAGE'))
+    fg.title(SETTINGS.get('feed', 'title'))
+    fg.link(href=SETTINGS.get('feed', 'link'))
+    fg.description(SETTINGS.get('feed', 'description'))
+    fg.language(SETTINGS.get('feed', 'language'))
 
     # Sort items first, then apply pagination
     sorted_items = sorted(items, key=lambda x: (x.get("score"), x.get("pubDate")), reverse=True)
@@ -148,7 +138,7 @@ def generate_rss(items, offset=0, limit=0):
         # The relationship type (rel) must be enclosure for Sonarr to grab torrents.
         fe.link(href=t.get("fileUrl"))
         fe.enclosure(url=t.get("fileUrl"), length=t.get("fileSize", 0), type="application/x-bittorrent")
-        fe.guid(guid=f"{globals().get('FEED_LINK')}/api?apikey={globals().get('API_KEY')}&t=details&q={t.get('descrLink')}", permalink=True)
+        fe.guid(guid=f"{SETTINGS.get('feed', 'link')}/api?apikey={API_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
         pub_date = datetime.fromtimestamp(t.get("pubDate"), tz=timezone.utc)
         fe.pubDate(pub_date)
         # Look for category field and handle strings, then parse as array
@@ -167,7 +157,7 @@ def generate_rss(items, offset=0, limit=0):
 
     return fg.rss_str(pretty=True)
 
-@router.get(globals().get('API_ENDPOINT'))
+@router.get(SETTINGS.get('feed', 'api_endpoint'))
 def torznab_api(
     apikey: str = Query(None),
     t: str = Query(...),
@@ -183,7 +173,7 @@ def torznab_api(
 ):
     # Load torrents JSON
     torrents = []
-    json_path = globals().get('FEED_FILE')
+    json_path = SETTINGS.get('feed', 'file')
     try:
         with open(json_path) as f:
             torrents = json.load(f)
@@ -193,12 +183,12 @@ def torznab_api(
         print(f"Error: {json_path} contains invalid JSON.")
 
     # API key check
-    if apikey != globals().get('API_KEY'):
+    if apikey != API_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:torznab="{globals().get('NS')['torznab']}">
+<rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{globals().get('FEED_TITLE')}</title>
-    <link>{globals().get('FEED_LINK')}</link>
+    <title>{SETTINGS.get('feed', 'title')}</title>
+    <link>{SETTINGS.get('feed', 'link')}</link>
     <description>Indexer Error</description>
     <error code="1001" description="Missing or invalid API key"/>
   </channel>
@@ -208,12 +198,12 @@ def torznab_api(
     if t == "caps":
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<caps xmlns:torrent="{globals().get('NS')['torznab']}">
-  <server version="1.0" title="{globals().get('FEED_TITLE')}" strapline="Torznab Indexer"
-      email="admin@example.com" url="{globals().get('FEED_LINK')}"
-      image="{globals().get('FEED_IMAGE')}" />
+<caps xmlns:torrent="{NS['torznab']}">
+  <server version="1.0" title="{SETTINGS.get('feed', 'title')}" strapline="Torznab Indexer"
+      email="admin@example.com" url="{SETTINGS.get('feed', 'link')}"
+      image="{SETTINGS.get('feed', 'image')}" />
   <limits max="0" default="0" />
-  <retention>{globals().get('RSS_RETENTION_DAYS')}</retention>
+  <retention>{SETTINGS.get('rss', 'retention_days')}</retention>
   <registration available="yes" open="yes" />
 
   <searching>

@@ -1,0 +1,51 @@
+services:
+
+  yorznab:
+    image: python:3.11-slim
+    container_name: yorznab
+    user: "1000:1000" # Optional, user:group
+    environment:
+      HOME: /python # User home directory for Python installation
+      PIP_CACHE_DIR: /python/home/.cache/pip # Optional, pip cache directory
+      PYTHONUNBUFFERED: 1 # Real-time logging
+      SEARCH_FILTER: "filters.yaml.sample" # Apply the pre-built filter on search results, or provide one in the config directory
+      CONFIG_DIR: /app/config # Create these files HERE: config.yaml, app.yaml
+      LOG_DIR: /app/server/logs # Default is the temp directory
+    ports:
+      - "9118:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - type: bind
+        source: /srv/data/Docker/Yorznab/python # Optional, otherwise use /tmp
+        target: /python
+      - type: bind
+        source: /srv/data/Docker/Yorznab/python/.cache/pip # Optional, otherwise use /tmp
+        target: /python/home/.cache/pip
+      # Writing RSS feed
+      - type: bind
+        source: /srv/data/Docker/Yorznab/data/
+        target: /data
+      # Writing Yorznab API Keys to keys.yaml
+      - type: bind
+        source: /srv/data/Docker/Yorznab/app/config
+        target: /app/config
+      - type: bind
+        source: /srv/data/Docker/Yorznab/app/server
+        target: /app/server
+        read_only: true
+    command: >
+      bash -c "
+      export PYTHONUSERBASE="$$HOME/.local" # Where pip --user installs
+      export PATH=\"$$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$$PATH\"
+      cd /app &&
+      pip install --user --upgrade pip &&
+      pip install --user -r requirements.txt && 
+      python -m uvicorn server.run:app --host 0.0.0.0 --port 8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 8080); conn.request(\"GET\", \"/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]
+      start_period: 20s
+      interval: 300s
+      timeout: 15s
+      retries: 10
+    restart: unless-stopped
