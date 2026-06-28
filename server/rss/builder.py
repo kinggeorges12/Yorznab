@@ -1,7 +1,5 @@
 # Libraries
 import argparse
-import contextlib
-import json
 import os
 import sys
 import tempfile
@@ -14,6 +12,7 @@ from server.rss.QBitClient import QBitClient
 from server.rss.ArrClient import ArrClient, ArrType
 
 # Import utilities
+from server.utils.feedfile import FeedFile
 from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettingsUndefined
 from utils.customlogger import CustomLogger
@@ -23,30 +22,17 @@ from utils.timeformatter import IsoTimeFormatter
 # Global logger instance
 LOGGER = None  # Will be initialized in main() with command line arguments
 
-def load_json(path: str) -> Any:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_json(path: str, data: Any) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
 # -----------------------------
 # Publisher
 # -----------------------------
 
 def publish_results(publish_path: str, retention_days: int, results: list[dict[str, Any]], whatif: bool = False) -> None:
-    existing: list[dict[str, Any]] = []
-    with contextlib.suppress(Exception):
-        existing = load_json(path=publish_path)
-        if not isinstance(existing, list):
-            existing = []
+    feed_file = FeedFile(publish_path).read()
 
     cutoff = IsoTimeFormatter().subtract_days(days=retention_days)
 
     recent: dict[str, dict[str, Any]] = {}
-    for item in existing:
+    for item in feed_file:
         last = IsoTimeFormatter(item.get("lastAdded"))
         if last >= cutoff:
             recent[item.get("descrLink")] = item
@@ -59,8 +45,7 @@ def publish_results(publish_path: str, retention_days: int, results: list[dict[s
     if whatif:
         print(f"Would write {len(results)} new and {len(final)} total items to {publish_path}")
         return
-    os.makedirs(os.path.dirname(publish_path), exist_ok=True)
-    save_json(path=publish_path, data=final)
+    FeedFile(publish_path).save(final)
 
 
 # -----------------------------
@@ -340,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     script_name = os.path.splitext(os.path.basename(__file__))[0]
     LOGGER = CustomLogger(name=script_name, silent=args.silent, enable_log=args.log)
     
-    lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key('UNIQUE_APPID') or 'yorznab'}.lock")
+    lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key('SECURE_APPID') or 'yorznab'}.lock")
     lock = FileLock(lock_path)
     
     try:

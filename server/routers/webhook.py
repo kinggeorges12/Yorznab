@@ -1,6 +1,7 @@
 import os
 from fastapi import APIRouter, Request, HTTPException, Header, Query
 from fastapi.responses import JSONResponse
+from server.routers.handler import RouteHandler
 from utils.settings import AppSettings
 from utils.keystore import KeyStore
 import rss.builder
@@ -13,7 +14,6 @@ router = APIRouter()
 
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
-from server.utils.config import ConfigFile
 
 async def run_requests(server_type: ArrType | None = None, external_id: str = None) -> int:
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
@@ -39,7 +39,7 @@ async def run_requests(server_type: ArrType | None = None, external_id: str = No
         return 1
 
 # Manual run from the web browser
-@router.get("/webhook")
+@router.get(RouteHandler.WEBHOOK)
 async def webhook_get(
     server: str = Query(None, description="Server name to process (Radarr or Sonarr)"),
     id: str = Query(None, description="External ID for the wanted video (TMDB/TVDB ID)")
@@ -72,7 +72,7 @@ async def webhook_get(
         )
 
 # Runs from the Jellyseerr webhook
-@router.post("/webhook")
+@router.post(RouteHandler.WEBHOOK)
 async def webhook(request: Request, authorization: str = Header(None)):
     # Check header exists
     if not authorization:

@@ -10,6 +10,7 @@ services:
       - PYTHONUNBUFFERED=1 # Real-time logging
       - CONFIG_DIR=/app/config # Edit these files HERE: config.yaml, yorznab.yaml, filters.yaml (optional)
       - LOG_DIR=/app/logs # Default is the temp directory
+      #- SECURE_APPID=YOUR_APPID # Change this to prevent unauthorized access of API and webhook credentials via /login?appid=YOUR_APPID
     ports:
       - "9118:8080" # Default port 9118
     extra_hosts:

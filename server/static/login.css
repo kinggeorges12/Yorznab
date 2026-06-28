@@ -1,0 +1,618 @@
+/* Login Page Styles - Green Theme */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Containers */
+.login-container,
+.success-container {
+    max-width: 710px;
+    background: white;
+    padding: 40px 50px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(34, 197, 94, 0.2);
+    width: 100%;
+    transition: transform 0.2s ease;
+}
+
+.login-container:hover,
+.success-container:hover {
+    box-shadow: 0 20px 60px rgba(34, 197, 94, 0.3);
+}
+
+h1 {
+    color: #14532d;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: left;
+    letter-spacing: -0.5px;
+    border-bottom: 3px solid #22c55e;
+    padding-bottom: 15px;
+}
+
+/* Form */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    color: #166534;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Password Wrapper */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input[type="password"],
+.password-wrapper input[type="text"] {
+    width: 100%;
+    padding: 12px 45px 12px 16px;
+    font-size: 16px;
+    border: 2px solid #427e58;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: #f7fee7;
+    color: #14532d;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.password-wrapper input[type="password"]:focus,
+.password-wrapper input[type="text"]:focus {
+    outline: none;
+    border-color: #22c55e;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.password-wrapper input[type="password"]::placeholder,
+.password-wrapper input[type="text"]::placeholder {
+    color: #1FB054;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.3px;
+    font-weight: 500;
+}
+
+/* Toggle Button */
+.password-wrapper .toggle-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 5px;
+    color: #166534;
+    transition: all 0.2s ease;
+}
+
+.password-wrapper .toggle-btn:hover {
+    background: rgba(34, 197, 94, 0.1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.password-wrapper .toggle-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.password-wrapper .toggle-btn.visible .eye-icon {
+    transform: scale(1.1);
+}
+
+/* Buttons */
+button {
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Submit Button */
+button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    color: white;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
+    background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+}
+
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+/* Error Messages - shake only here */
+.error-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.error-message {
+    color: #dc2626;
+    background: #fef2f2;
+    border-left: 4px solid #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    animation: shake 0.5s ease;
+}
+
+.hint-message {
+    color: #166534;
+    background: #f0fdf4;
+    font-size: 13px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #22c55e;
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* Key Display */
+.key-container {
+    background: #f7fee7;
+    border: 2px solid #86efac;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.key-label {
+    color: #166534;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.key-value {
+    color: #14532d;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    word-break: break-all;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #bbf7d0;
+    margin-top: 5px;
+    user-select: all;
+    cursor: text;
+    font-weight: 500;
+}
+
+.key-value:hover {
+    background: #f7fee7;
+}
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.nav-actions button,
+.nav-actions form button {
+    flex: 1;
+    min-width: 60px;
+    height: 50px;
+    padding: 8px 12px;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    position: relative;
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* FIX: Label hidden by default but keeps its space reserved */
+.nav-actions button .btn-label,
+.nav-actions form button .btn-label {
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
+}
+
+/* FIX: Icon never shrinks or moves */
+.nav-actions button .btn-icon,
+.nav-actions form button .btn-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-actions form {
+    flex: 1;
+    margin: 0;
+    display: flex;
+    min-width: 60px;
+    transition: all 0.3s ease;
+}
+
+.nav-actions form button {
+    width: 100%;
+}
+
+/* Hover & Active - Only expand width */
+.nav-actions button:hover,
+.nav-actions form:hover,
+.nav-actions button.active {
+    flex: 2;
+}
+
+.nav-actions button:hover,
+.nav-actions form button:hover {
+    transform: translateY(-2px);
+}
+
+/* FIX: Show label on hover AND active without adding space */
+.nav-actions button:hover .btn-label,
+.nav-actions form button:hover .btn-label,
+.nav-actions button.active .btn-label {
+    max-width: 100px;
+    opacity: 1;
+    margin: 0 0 0 6px;
+}
+
+.nav-actions button.active {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Nav Colors */
+.nav-actions .home-btn {
+    background: #667eea;
+    color: white;
+}
+
+.nav-actions .home-btn:hover,
+.nav-actions .home-btn.active {
+    background: #5a67d8;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.nav-actions .config-btn {
+    background: #f59e0b;
+    color: white;
+}
+
+.nav-actions .config-btn:hover,
+.nav-actions .config-btn.active {
+    background: #d97706;
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+}
+
+.nav-actions .creds-btn {
+    background: #8b5cf6;
+    color: white;
+}
+
+.nav-actions .creds-btn:hover,
+.nav-actions .creds-btn.active {
+    background: #7c3aed;
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+}
+
+.nav-actions .logout-btn {
+    background: #dc2626;
+    color: white;
+}
+
+.nav-actions .logout-btn:hover {
+    background: #b91c1c;
+    box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+}
+/* ============================================
+   COPY BUTTONS
+   ============================================ */
+
+.copy-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: nowrap; /* prevent wrapping */
+    flex-direction: row;
+}
+
+.copy-btn {
+    flex: 1 1 auto; /* grow, shrink, auto basis */
+    padding: 12px 20px;
+    background: #22c55e;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 120px;
+}
+
+.copy-btn:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(34, 197, 94, 0.3);
+}
+
+.copy-btn:active {
+    transform: translateY(0);
+}
+
+/* Animations - only for error shake */
+@keyframes shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+/* ============================================
+   Password
+   ============================================ */
+
+@media (max-width: 480px) {
+    body {
+        padding: 20px;
+        align-items: center;
+    }
+
+    .login-container,
+    .success-container {
+        padding: 30px 20px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .password-wrapper input[type="password"],
+    .password-wrapper input[type="text"] {
+        font-size: 14px;
+        padding: 10px 40px 10px 14px;
+    }
+
+    .nav-actions button,
+    .nav-actions form button {
+        min-width: 50px;
+        height: 45px;
+        font-size: 20px;
+    }
+
+    .nav-actions button:hover .btn-label,
+    .nav-actions form button:hover .btn-label {
+        font-size: 12px;
+    }
+
+}
+
+/* ============================================
+   Configuration Styling for Text Containers and Cards
+   ============================================ */
+
+.text-container {
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.text-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.green-border-shadow {
+    border: 3px solid #4CAF50;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.red-border-shadow {
+    border: 3px solid #f44336;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
+
+.app-icons-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 15px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 12px;
+}
+
+.icon-wrapper {
+    flex: 0 1 auto;
+    display: inline-flex;
+    padding: 4px;
+    background: white;
+    transition: transform 0.2s;
+    /* Constrain size */
+    max-width: 120px;
+    max-height: 120px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Prevents overflow */
+}
+
+.icon-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.app-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+    width: 100%;
+}
+
+.app-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-version {
+    font-size: 10px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+}
+
+.status-dot.healthy {
+    background: #4CAF50;
+}
+
+.status-dot.unhealthy {
+    background: #f44336;
+}
+
+/* ============================================
+   Link styling
+   ============================================ */
+
+a {
+    color: #4CAF50;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+a:hover {
+    color: #2E7D32;
+}
+
+a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #4CAF50;
+    transition: width 0.3s ease;
+}
+
+a:hover::after {
+    width: 100%;
+}
+
+/** ============================================
+   ASCII Logo
+   ============================================ */
+
+.ascii-line {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+    margin: 0;
+    font-family: monospace;
+    white-space: pre;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

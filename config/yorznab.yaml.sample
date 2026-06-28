@@ -6,9 +6,15 @@ feed:
   image: http://localhost:9118/static/banner.jpg
   description: Get yo feed on!
   language: en
-  # Location of endpoint for Sonarr, Radarr, and browser access
+  # Location of endpoint for Sonarr, Radarr, and browser access (default: /api)
   api_endpoint: /api
-  # Location of endpoint for webhook requests
+  # Location of endpoint for login requests (default: /login)
+  login_endpoint: /login
+  # Location of endpoint for static files (default: /static)
+  static_endpoint: /static
+  # Location of endpoint for status requests (default: /status)
+  status_endpoint: /status
+  # Location of endpoint for webhook requests (default: /webhook)
   webhook_endpoint: /webhook
 
 # Local refresh of the RSS feed when Jellyseer has not requested content

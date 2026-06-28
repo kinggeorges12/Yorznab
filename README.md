@@ -1,7 +1,27 @@
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║     ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗          ║
+║     ╚██╗ ██╔╝██╔═══██╗██╔══██╗╚══███╔╝████╗  ██║██╔══██╗██╔══██╗██║          ║
+║      ╚████╔╝ ██║   ██║██████╔╝  ███╔╝ ██╔██╗ ██║███████║██████╔╝██║          ║
+║       ╚██╔╝  ██║   ██║██╔══██╗ ███╔╝  ██║╚██╗██║██╔══██║██╔══██╗╚═╝          ║
+║        ██║   ╚██████╔╝██║  ██║███████╗██║ ╚████║██║  ██║██████╔╝██╗          ║
+║        ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝          ║
+║══════════════════════════════════════════════════════════════════════════════║
+║                                                                              ║
+║                                                    ...welcome to Yorznab!    ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
 # Yorznab
 Ever wanted to make your own Torznab server of your own? Now you can!
 
 Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested content through qBittorrent and publish a Yorznab RSS feed. Radarr and Sonarr use the Yorznab RSS feed to find and request torrents from supported download clients like qBittorrent.
+
+<div align="center">
+<img src="Screenshots/Configuration-Windows.png" alt="Yorznab Configuration" style="max-height: 500px; width: auto;">
+</div>
 
 # Requirements
 Compatible with Linux or Windows. Requires the following services to fully use this app. Current tested configuration:
@@ -71,7 +91,12 @@ This starts the service in Docker. You must follow steps in external apps to mak
 3. Run Docker file: `docker compose -f ./app/docker-compose.yml up -d`
 
 # Indexer
-This allows Radarr and Sonarr to query Yorznab for torrents. The settings for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`. Note: You can ignore the `UNIQUE_APPID`, as this is used for internal logging.
+This allows Radarr and Sonarr to query Yorznab for torrents. The settings for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`. The `SECURE_APPID` can be used to retrieve these keys when set in your Docker compose the Yorznab web, e.g., `http://localhost:9118/`.
+<div align="center">
+<img src="Screenshots/Login.png" alt="Yorznab Login" style="max-height: 200px; width: auto;">
+<br>
+<img src="Screenshots/Credentials.png" alt="Yorznab Credentials" style="max-height: 400px; width: auto;">
+</div>
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → Indexers → + → Torznab**.

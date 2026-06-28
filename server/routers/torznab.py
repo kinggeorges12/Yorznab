@@ -5,8 +5,11 @@ import xml.sax.saxutils as saxutils
 from feedgen.feed import FeedGenerator
 from feedgen.ext.torrent import TorrentExtension, TorrentEntryExtension
 from datetime import datetime, timezone
-import json
 import re
+
+# Import local modules
+from server.routers.handler import RouteHandler
+from server.utils.feedfile import FeedFile
 from utils.settings import AppSettings
 from utils.keystore import KeyStore
 
@@ -15,7 +18,7 @@ router = APIRouter()
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
 API_KEY = KeyStore.get_key("API_KEY")
-NS = {"torznab": "http://torznab.com/schemas/2015/feed"},
+NS = {"torznab": "http://torznab.com/schemas/2015/feed"}
 
 # Set default categories
 CATEGORIES = [
@@ -157,7 +160,7 @@ def generate_rss(items, offset=0, limit=0):
 
     return fg.rss_str(pretty=True)
 
-@router.get(SETTINGS.get('feed', 'api_endpoint'))
+@router.get(RouteHandler.API)
 def torznab_api(
     apikey: str = Query(None),
     t: str = Query(...),
@@ -171,17 +174,6 @@ def torznab_api(
     offset: int = Query(0, description="Number of results to skip"),
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
-    # Load torrents JSON
-    torrents = []
-    json_path = SETTINGS.get('feed', 'file')
-    try:
-        with open(json_path) as f:
-            torrents = json.load(f)
-    except FileNotFoundError:
-        print(f"Warning: {json_path} not found.")
-    except json.JSONDecodeError:
-        print(f"Error: {json_path} contains invalid JSON.")
-
     # API key check
     if apikey != API_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -194,6 +186,9 @@ def torznab_api(
   </channel>
 </rss>"""
         return Response(content=apikey_error, media_type="application/xml")
+
+    # Load torrents JSON after checking API key
+    torrents = FeedFile(SETTINGS.get('feed', 'file')).read()
 
     if t == "caps":
         # Minimal caps XML

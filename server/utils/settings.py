@@ -38,11 +38,14 @@ class AppSettings:
 
         return {}
     
-    def get(self, key: str = None, sub: str = None):
+    def get(self, key: str = None, sub: str = None, exists: bool = False) -> dict | None:
         if key is not None and sub is not None:
             return self._data.get(key, {}).get(sub, None)
         elif key is not None:
-            return self._data.get(key, None)
+            data = self._data.get(key, None)
+            if data is None and exists:
+                raise AppSettingsUndefined(f"🚩 The configuration section for {key} is undefined or misconfigured.")
+            return data
         return self._data
         
     def __str__(self) -> str:

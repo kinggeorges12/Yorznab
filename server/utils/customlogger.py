@@ -66,13 +66,14 @@ class CustomLogger(logging.Logger):
             
             # File handler (if logging enabled)
             if enable_log:
-                app_id = KeyStore.get_key('UNIQUE_APPID')[:7]  # Use first 7 chars of UNIQUE_APPID for log file naming
+                app_id = KeyStore.get_key('SECURE_APPID')
+                log_id = app_id[:7] if app_id else "unknown"  # Use first 7 chars of SECURE_APPID for log file naming
                 LOG_DIR = os.getenv("LOG_DIR")
                 if LOG_DIR:
                     os.makedirs(LOG_DIR, exist_ok=True)
                 else:
                     LOG_DIR = tempfile.gettempdir()
-                log_file = os.path.join(LOG_DIR, f"{app_id}-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+                log_file = os.path.join(LOG_DIR, f"{log_id}-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
                 
                 file_handler = logging.FileHandler(log_file, encoding='utf-8')
                 file_handler.setLevel(logging.DEBUG)

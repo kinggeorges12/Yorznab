@@ -15,6 +15,7 @@ Cron job example (runs at minute 30 every hour):
 import argparse
 import asyncio
 import os
+import random
 import sys
 import time
 from datetime import datetime, timedelta
@@ -27,8 +28,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from server.utils.keystore import KeyStore
 HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.exists() else None
 
-from utils.customlogger import CustomLogger
-from utils.settings import AppSettings
+from server.utils.customlogger import CustomLogger
+from server.utils.settings import AppSettings
+from server.utils.feedfile import FeedFile
 import asyncio
 
 # Global logger instance
@@ -37,49 +39,29 @@ LOGGER = CustomLogger(name="cron", enable_log=True)
 # Load settings from config file
 SETTINGS = AppSettings(filename='yorznab.yaml')
 
-def get_file_age_hours(file_path: str) -> float:
-    """
-    Get the age of a file in hours.
-    
-    Args:
-        file_path: Path to the file to check
-        
-    Returns:
-        Age in hours, or float('inf') if file doesn't exist
-    """
-    if not os.path.exists(file_path):
-        return float('inf')
-    
-    file_mtime = os.path.getmtime(file_path)
-    current_time = time.time()
-    age_seconds = current_time - file_mtime
-    age_hours = age_seconds / 3600
-    
-    return age_hours
 
-
-def should_refresh(file_path: str, min_age_hours: int = 24) -> bool:
+def should_refresh(feed_file: FeedFile, refresh_min_age: int = 24) -> bool:
     """
     Check if the file should be refreshed based on its age.
     
     Args:
-        file_path: Path to the file to check
-        min_age_hours: Minimum age in hours before refresh is needed
+        feed_file: FeedFile instance to check
+        refresh_min_age: Minimum age in hours before refresh is needed
         
     Returns:
         True if file should be refreshed, False otherwise
     """
-    age_hours = get_file_age_hours(file_path)
+    age_hours = feed_file.get_file_age()
     
     if age_hours == float('inf'):
-        LOGGER.info(f"📁 File {file_path} doesn't exist - refresh needed")
+        LOGGER.info(f"📁 (Refresh needed) Feed File doesn't exist: {feed_file}")
         return True
     
-    if age_hours > min_age_hours:
-        LOGGER.info(f"⏰ File {file_path} is {age_hours:.1f} hours old (>{min_age_hours}h) - refresh needed")
+    if age_hours > refresh_min_age:
+        LOGGER.info(f"⏰ (Refresh needed) Feed file is {age_hours:.1f} hours old (>{refresh_min_age}h): {feed_file}")
         return True
     
-    LOGGER.info(f"✅ File {file_path} is {age_hours:.1f} hours old (≤{min_age_hours}h) - no refresh needed")
+    LOGGER.info(f"✅ (Refresh not needed) Feed file is {age_hours:.1f} hours old (≤{refresh_min_age}h): {feed_file}")
     return False
 
 
@@ -229,13 +211,13 @@ async def rss_refresh_cron():
     Gets configuration from settings file.
     """
     # Get configuration from settings
-    feed_file = SETTINGS.get('feed', 'file')
-    schedule = SETTINGS.get('rss', 'refresh_schedule')
-    min_age_hours = SETTINGS.get('rss', 'refresh_max_age')
+    feed_file = FeedFile(SETTINGS.get('feed', 'file'))
+    schedule = SETTINGS.get('rss', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"  # Default: every day at random minute/hour
+    refresh_min_age = SETTINGS.get('rss', 'refresh_min_age') or 24  # Default: 24 hours
 
     LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
     LOGGER.info(f"📁 Feed file: {feed_file}")
-    LOGGER.info(f"⏰ Max age: {min_age_hours or 0} hours")
+    LOGGER.info(f"⏰ Max age: {refresh_min_age} hours")
     
     while True:
         try:
@@ -251,7 +233,7 @@ async def rss_refresh_cron():
                 await asyncio.sleep(seconds_until_next)
             
             # Check if refresh is needed
-            if should_refresh(feed_file, min_age_hours):
+            if should_refresh(feed_file, refresh_min_age):
                 await refresh_rss()
             else:
                 LOGGER.info("😴 No RSS refresh needed")
@@ -265,7 +247,7 @@ async def rss_refresh_cron():
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
     p.add_argument("--feed-file", default=SETTINGS.get('feed', 'file'), help="Path to the feed file to refresh")
-    p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('rss', 'refresh_max_age'), help="Minimum age in hours before refresh is needed")
+    p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('rss', 'refresh_min_age'), help="Minimum age in hours before refresh is needed")
     p.add_argument("--schedule", default=SETTINGS.get('rss', 'refresh_schedule'), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
     p.add_argument("--daemon", action="store_true", help="Run as a daemon (continuous background process)")
     p.add_argument("--force", action="store_true", help="Force refresh regardless of file age")
@@ -277,17 +259,17 @@ async def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     
     # Get feed file from config
-    feed_file = args.feed_file or SETTINGS.get('feed', 'file')
+    feed_file = FeedFile(args.feed_file or SETTINGS.get('feed', 'file'))
 
     # Determine whether we need to refresh the feed
     force_msg = HELLO_WORLD
     force_msg = 'Command line argument "--force"' if not force_msg and args.force else force_msg
-    force_msg = 'RSS Feed missing' if not force_msg and not Path(feed_file).exists() else force_msg
+    force_msg = 'RSS Feed missing' if not force_msg and not feed_file.exists() else force_msg
     
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
     LOGGER.info(f"⚡ Run now: {force_msg or 'Nope'}")
     LOGGER.info(f"📁 Feed file: {feed_file}")
-    LOGGER.info(f"⏰ Max age: {args.min_age_hours or 0} hours")
+    LOGGER.info(f"⏰ Min age: {args.min_age_hours or 0} hours")
     LOGGER.info(f"🕐 Schedule: {args.schedule}")
     
     # Force refresh on first run
