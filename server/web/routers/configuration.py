@@ -45,12 +45,47 @@ async def setup(authenticated: str = Cookie(None)):
         qbittorrent_status = ""
 
     # Format exceptions, if something is wrong with no exceptions, show a generic error message
-    exceptions_html = '<p class="error-message">Radarr: Unknown error occurred</p>' if not exceptions and not radarr_status else ""
-    exceptions_html = '<p class="error-message">Sonarr: Unknown error occurred</p>' if not exceptions and not sonarr_status else ""
-    exceptions_html = '<p class="error-message">qBittorrent: Unknown error occurred</p>' if not exceptions and not qbittorrent_status else ""
+    html_exceptions = '<p class="error-message">Radarr: Unknown error occurred</p>' if not exceptions and not radarr_status else ""
+    html_exceptions = '<p class="error-message">Sonarr: Unknown error occurred</p>' if not exceptions and not sonarr_status else ""
+    html_exceptions = '<p class="error-message">qBittorrent: Unknown error occurred</p>' if not exceptions and not qbittorrent_status else ""
     for e in exceptions:
-        exceptions_html += f'<p class="error-message">{e}</p>\n'
+        html_exceptions += f'<p class="error-message">{e}</p>\n'
+
+    # Build app items html
+    def build_apps_html(name: str, url: str, status: str, icon_url: str) -> str:
+        return f'''<!-- {name} -->
+                    <div class="app-item">
+                        <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }" {
+                            f'''style="background-image: url('{RouteHandler.STATIC}/favicon.ico')"''' if url else ''}>
+                            <a href="{url if url else '#'}" target="_blank" rel="noreferrer">
+                                <img class="app-icon" alt="{name}"
+                                    src="{icon_url}"
+                                    onerror="this.onerror=null; this.parentElement.parentElement.querySelector('.warning-badge').classList.add('visible')"
+                                    onload="this.classList.add('loaded'); this.parentElement.parentElement.style.backgroundImage = 'none';">
+                            </a>
+                            <span class="warning-badge" title="{name} app image did not load">⚠️</span>
+                        </div>
+                        <div class="app-info">
+                            <span class="app-name">{name}</span>
+                            <span class="app-version">{status if status else '?'}</span>
+                            <span class="status-dot { 'healthy' if status else 'unhealthy' }"></span>
+                        </div>
+                    </div>'''
     
+    html_apps = ''
+    html_apps += build_apps_html(name = radarr_client.ServerName if radarr_client and radarr_client.ServerName else 'Radarr',
+                                url = radarr_client.Url if radarr_client and hasattr(radarr_client, 'Url') and radarr_client.Url else None,
+                                status = radarr_status['version'] if radarr_status and 'version' in radarr_status else None,
+                                icon_url = 'https://github.com/Radarr/radarr.github.io/blob/master/logo/1024.png?raw=true')
+    html_apps += build_apps_html(name = sonarr_client.ServerName if sonarr_client and sonarr_client.ServerName else 'Sonarr',
+                                url = sonarr_client.Url if sonarr_client and hasattr(sonarr_client, 'Url') and sonarr_client.Url else None,
+                                status = sonarr_status['version'] if sonarr_status and 'version' in sonarr_status else None,
+                                icon_url = 'https://github.com/Sonarr/Sonarr/blob/main/Logo/1024.png?raw=true')
+    html_apps += build_apps_html(name = qbittorrent_client.ServerName if qbittorrent_client and qbittorrent_client.ServerName else 'qBittorrent',
+                                url = qbittorrent_client.Url if qbittorrent_client and hasattr(qbittorrent_client, 'Url') and qbittorrent_client.Url else None,
+                                status = qbittorrent_status or None,
+                                icon_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png')
+
     # Get path for config instructions
     server_path = os.getenv("PYTHONPATH")
 
@@ -63,61 +98,12 @@ async def setup(authenticated: str = Cookie(None)):
                 <h2>Connected Apps</h2>
                 
                 <div class="app-icons-container">
-                    <!-- Radarr -->
-                    <div class="app-item">
-                        <div class="icon-wrapper { 'green-border-shadow' if radarr_status else 'red-border-shadow' }">
-                            <a href="{radarr_client.Url if radarr_client and radarr_client.Url else '#'}" target="_blank" rel="noreferrer">
-                                <img class="app-icon" alt="Radarr"
-                                    src="https://github.com/Radarr/radarr.github.io/blob/master/logo/1024.png?raw=true"
-                                    onerror="this.onerror=null; this.src='{RouteHandler.STATIC}/favicon.ico'; this.parentElement.parentElement.querySelector('.warning-badge').classList.add('visible')">
-                            </a>
-                            <span class="warning-badge" title="Radarr app image did not load">⚠️</span>
-                        </div>
-                        <div class="app-info">
-                            <span class="app-name">{radarr_client.ServerName if radarr_client and radarr_client.ServerName else 'Radarr'}</span>
-                            <span class="app-version">{radarr_status['version'] if radarr_status and 'version' in radarr_status else '?'}</span>
-                            <span class="status-dot { 'healthy' if radarr_status else 'unhealthy' }"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- Sonarr -->
-                    <div class="app-item">
-                        <div class="icon-wrapper { 'green-border-shadow' if sonarr_status else 'red-border-shadow' }">
-                            <a href="{sonarr_client.Url if sonarr_client and sonarr_client.Url else '#'}" target="_blank" rel="noreferrer">
-                                <img class="app-icon" alt="Sonarr"
-                                    src="https://github.com/Sonarr/Sonarr/blob/main/Logo/1024.png?raw=true"
-                                    onerror="this.onerror=null; this.src='{RouteHandler.STATIC}/favicon.ico'; this.parentElement.parentElement.querySelector('.warning-badge').classList.add('visible')">
-                            </a>
-                            <span class="warning-badge" title="Sonarr app image did not load">⚠️</span>
-                        </div>
-                        <div class="app-info">
-                            <span class="app-name">{ sonarr_client.ServerName if sonarr_client and sonarr_client.ServerName else 'Sonarr' }</span>
-                            <span class="app-version">{sonarr_status['version'] if sonarr_status and 'version' in sonarr_status else '?'}</span>
-                            <span class="status-dot { 'healthy' if sonarr_status else 'unhealthy' }"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- qBittorrent -->
-                    <div class="app-item">
-                        <div class="icon-wrapper { 'green-border-shadow' if qbittorrent_status else 'red-border-shadow' }">
-                            <a href="{qbittorrent_client.Url if qbittorrent_client and qbittorrent_client.Url else '#'}" target="_blank" rel="noreferrer">
-                                <img class="app-icon" alt="qBittorrent"
-                                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png"
-                                    onerror="this.onerror=null; this.src='{RouteHandler.STATIC}/favicon.ico'; this.parentElement.parentElement.querySelector('.warning-badge').classList.add('visible')">
-                            </a>
-                            <span class="warning-badge" title="qBittorrent app image did not load">⚠️</span>
-                        </div>
-                        <div class="app-info">
-                            <span class="app-name">{ qbittorrent_client.ServerName if qbittorrent_client and qbittorrent_client.ServerName else 'qBittorrent' }</span>
-                            <span class="app-version">{qbittorrent_status or '?'}</span>
-                            <span class="status-dot { 'healthy' if qbittorrent_status else 'unhealthy' }"></span>
-                        </div>
-                    </div>
+                    {html_apps}
                 </div>
             </div>
             
             <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not qbittorrent_status else 'none'};">
-                {exceptions_html}
+                {html_exceptions}
                 <p class="hint-message">Please login to your server and run the setup script from the command line.</p>
             </div>
 

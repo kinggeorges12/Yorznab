@@ -497,18 +497,32 @@ button[type="submit"]:active {
     padding: 4px;
     background: #1a1a1a;
     transition: transform 0.2s;
-    max-width: 120px;
-    max-height: 120px;
+    max-width: 200px;
+    max-height: 200px;
+    align-items: center;
+    justify-content: center;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    aspect-ratio: 1 / 1;  /* Maintains square shape */
+    width: 100%;
+    height: 100%;
+    background-size: contain;    /* Changed from cover to contain */
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .icon-wrapper img {
+    opacity: 0;
+    transition: opacity 0.3s;
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+}
+
+.icon-wrapper img.loaded {
+    opacity: 1;
 }
 
 .icon-wrapper .warning-badge {
@@ -536,6 +550,11 @@ button[type="submit"]:active {
     display: block;
 }
 
+.app-item {
+    width: 100%;
+    flex: 0 1 auto;
+}
+
 .app-info {
     display: flex;
     flex-direction: column;
@@ -552,6 +571,7 @@ button[type="submit"]:active {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    width: 100%;
 }
 
 .app-version {
