@@ -25,11 +25,12 @@ def page_template(title: str, content: str, token: str,
 <html>
     <head>
         <title>{TITLE} {title}</title>
-        <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
-        {f'<link rel="stylesheet" href="{RouteHandler.STATIC}/css/{css}?token={token}">' if css else ''}
-        <script src="{RouteHandler.STATIC}/js/web.js?token={token}"></script>
         <script src="{RouteHandler.STATIC}/js/theme.js?token={token}"></script>
-        {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}"></script>' if js else ''}
+        <link rel="preload" href="{RouteHandler.STATIC}/css/web.css?token={token}" as="style">
+        <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
+        <script src="{RouteHandler.STATIC}/js/web.js?token={token}" async></script>
+        {f'<link rel="stylesheet" href="{RouteHandler.STATIC}/css/{css}?token={token}">' if css else ''}
+        {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}" async></script>' if js else ''}
         <meta name="cache-control" content="no-cache, no-store, must-revalidate">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">

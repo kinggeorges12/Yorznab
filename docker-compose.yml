@@ -22,6 +22,10 @@ services:
       - type: bind
         source: /srv/dev/yorznab/export/
         target: /export
+      # Logging server output
+      - type: bind
+        source: /srv/dev/yorznab/logs
+        target: /logs
       # Writing Yorznab API Keys to keys.yaml
       - type: bind
         source: /srv/dev/yorznab/app/config
@@ -31,10 +35,6 @@ services:
         source: /srv/dev/yorznab/app/server
         target: /app/server
         read_only: true
-      # Logging server output
-      - type: bind
-        source: /srv/dev/yorznab/logs
-        target: /logs
     command: >
         bash -c "
         export PYTHONPATH=/app;

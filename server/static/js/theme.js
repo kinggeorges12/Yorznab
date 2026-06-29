@@ -2,7 +2,6 @@
 (function() {
     'use strict';
     
-    // Get current theme from URL or localStorage
     function getCurrentTheme() {
         const hash = window.location.hash;
         if (hash === '#dark') return 'dark';
@@ -11,34 +10,20 @@
         const saved = localStorage.getItem('preferredTheme');
         if (saved === 'dark' || saved === 'light') return saved;
         
-        return 'dark'; // Default to dark
+        return 'dark';
     }
     
-    // Apply theme
     function applyTheme(theme) {
         // Set data attribute on html element
         document.documentElement.setAttribute('data-theme', theme);
-        document.body.className = `theme-${theme}`;
         
-        // Update toggle button
-        const toggleBtn = document.querySelector('.theme-toggle-btn');
-        if (toggleBtn) {
-            if (theme === 'dark') {
-                // In dark mode, show moon (click to go light)
-                toggleBtn.innerHTML = `
-                    <span class="btn-icon">🌙</span>
-                    <span class="btn-label">Light</span>
-                `;
-                toggleBtn.dataset.theme = 'dark';
-            } else {
-                // In light mode, show sun (click to go dark)
-                toggleBtn.innerHTML = `
-                    <span class="btn-icon">☀️</span>
-                    <span class="btn-label">Dark</span>
-                `;
-                toggleBtn.dataset.theme = 'light';
-            }
+        // Only set body className if body exists
+        if (document.body) {
+            document.body.className = `theme-${theme}`;
         }
+        
+        // Set background immediately
+        document.documentElement.style.backgroundColor = theme === 'light' ? '#ffffff' : '#1a1a1a';
         
         // Store preference
         localStorage.setItem('preferredTheme', theme);
@@ -51,35 +36,56 @@
         console.log(`🎨 Theme applied: ${theme}`);
     }
     
-    // Toggle theme
     function toggleTheme() {
         const current = getCurrentTheme();
         const next = current === 'dark' ? 'light' : 'dark';
         applyTheme(next);
+        updateToggleButton();
     }
     
-    // Initialize
-    function init() {
+    function updateToggleButton() {
+        const toggleBtn = document.querySelector('.theme-toggle-btn');
+        if (!toggleBtn) return;
+        
         const theme = getCurrentTheme();
-        applyTheme(theme);
-        
-        // Add toggle function to global scope
-        window.toggleTheme = toggleTheme;
-        
-        // Listen for hash changes
-        window.addEventListener('hashchange', function() {
-            const hash = window.location.hash;
-            if (hash === '#dark') applyTheme('dark');
-            else if (hash === '#light') applyTheme('light');
-        });
-        
-        console.log('✅ Theme system initialized');
+        if (theme === 'dark') {
+            toggleBtn.innerHTML = `
+                <span class="btn-icon">🌙</span>
+                <span class="btn-label">Light</span>
+            `;
+            toggleBtn.dataset.theme = 'dark';
+        } else {
+            toggleBtn.innerHTML = `
+                <span class="btn-icon">☀️</span>
+                <span class="btn-label">Dark</span>
+            `;
+            toggleBtn.dataset.theme = 'light';
+        }
     }
     
-    // Run on DOM ready
+    // Run IMMEDIATELY
+    const theme = getCurrentTheme();
+    applyTheme(theme);
+    
+    // Make toggle function globally available
+    window.toggleTheme = toggleTheme;
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', function() {
+        const hash = window.location.hash;
+        if (hash === '#dark') applyTheme('dark');
+        else if (hash === '#light') applyTheme('light');
+        updateToggleButton();
+    });
+    
+    // Update toggle button when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateToggleButton();
+        });
     } else {
-        init();
+        updateToggleButton();
     }
+    
+    console.log('✅ Theme system initialized');
 })();
