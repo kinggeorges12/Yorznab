@@ -23,7 +23,7 @@ async def login_success(request: Request):
         <div class="success-container">
             {navigation(f'{RouteHandler.LOGIN}/success')}
             <h1>{TITLE} 🏠 Home</h1>
-            <div class="text-card">
+            <div class="text-container">
                 <h2>Welcome! You are logged in.</h2>
                 <br>
                 <p>Check out the GitHub repository for updates and information:</p>
@@ -32,19 +32,19 @@ async def login_success(request: Request):
                 <p>Stuck? Post an issue:</p>
                 <a href="https://github.com/kinggeorges12/Yorznab/issues" target="_blank" rel="noopener noreferrer">ARRGH HELP ME!</a>
             </div>
-            <div class="text-card">
+            <div class="text-container">
             <div id="ascii-container"><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╔══════════════════════════════════════════════════════════════════════════════╗</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║     ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║     ╚██╗ ██╔╝██╔═══██╗██╔══██╗╚══███╔╝████╗  ██║██╔══██╗██╔══██╗██║          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║      ╚████╔╝ ██║   ██║██████╔╝  ███╔╝ ██╔██╗ ██║███████║██████╔╝██║          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║       ╚██╔╝  ██║   ██║██╔══██╗ ███╔╝  ██║╚██╗██║██╔══██║██╔══██╗╚═╝          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║        ██║   ╚██████╔╝██║  ██║███████╗██║ ╚████║██║  ██║██████╔╝██╗          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║        ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝          ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║       ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║       ╚██╗ ██╔╝██╔═══██╗██╔══██╗╚══███╔╝████╗  ██║██╔══██╗██╔══██╗██║        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║        ╚████╔╝ ██║   ██║██████╔╝  ███╔╝ ██╔██╗ ██║███████║██████╔╝██║        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║         ╚██╔╝  ██║   ██║██╔══██╗ ███╔╝  ██║╚██╗██║██╔══██║██╔══██╗╚═╝        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║          ██║   ╚██████╔╝██║  ██║███████╗██║ ╚████║██║  ██║██████╔╝██╗        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║══════════════════════════════════════════════════════════════════════════════║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
-║                                                    ...Welcome to Yorznab!    ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║                                         ...a Torznab Indexer that's all YORZ ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╚══════════════════════════════════════════════════════════════════════════════╝</pre>
 
             </div>

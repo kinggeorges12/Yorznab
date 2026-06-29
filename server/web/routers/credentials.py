@@ -22,11 +22,11 @@ async def keys(authenticated: str = Cookie(None)):
         <div class="success-container">
             {navigation(f'{RouteHandler.LOGIN}/keys')}
             <h1>{TITLE} 🔐 Credentials</h1>
-            <div class="key-container">
+            <div class="text-container">
                 <div class="key-label">🔑 API Key for Radarr &amp; Sonarr</div>
                 <div class="key-value" id="apiKey">{api_key}</div>
             </div>
-            <div class="key-container">
+            <div class="text-container">
                 <div class="key-label">🔗 Webhook Key for Jellyseerr</div>
                 <div class="key-value" id="webhookKey">{webhook_key}</div>
             </div>

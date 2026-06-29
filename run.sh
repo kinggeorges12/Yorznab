@@ -27,5 +27,5 @@ export LOG_DIR="${PWD}/logs"
 (
     source .venv/bin/activate
     cd server || exit
-    python -m uvicorn run:app --host 0.0.0.0 --port 8080 --log-level debug
+    python -m uvicorn run:app --host 0.0.0.0 --port 8080
 )

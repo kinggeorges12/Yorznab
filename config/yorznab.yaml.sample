@@ -1,11 +1,28 @@
-# Customizable web portal
+# Local refresh of the RSS feed when Jellyseer has not requested content
+cron:
+  # Cron will not refresh until min age (in hours) is exceeded since the last refresh.
+  refresh_min_age: 1
+  # Cron schedule for refreshing the RSS feed.
+  # Format: minute hour day month weekday (e.g., "30 5 * * 7" every Sunday at 5:30am)
+  refresh_schedule: "30 * * * *"
+  # Days before old torrents are removed from the feed.
+  retention_days: 90
+  # ONLY when the feed is being processed, seconds to wait after receiving a webhook request and processing it.
+  webhook_wait: 60
+
+# Customizable feed information for Torznab tags
+# More info here: https://nzbdrone.readthedocs.io/Implementing-a-Torznab-indexer/
 feed:
   file: /export/torrents.json
   title: Yorznab
   link: http://localhost:9118
   image: http://localhost:9118/static/banner.jpg
+  email: admin@example.com
   description: Get yo feed on!
   language: en
+
+# Setup custom endpoints for your server
+server:
   # Location of endpoint for Sonarr, Radarr, and browser access (default: /api)
   api_endpoint: /api
   # Location of endpoint for login requests (default: /login)
@@ -16,15 +33,3 @@ feed:
   status_endpoint: /status
   # Location of endpoint for webhook requests (default: /webhook)
   webhook_endpoint: /webhook
-
-# Local refresh of the RSS feed when Jellyseer has not requested content
-rss:
-  # Cron will not refresh until min age (in hours) is exceeded since the last refresh.
-  refresh_min_age: 1
-  # Cron schedule for refreshing the RSS feed.
-  # Format: minute hour day month weekday (e.g., "30 5 * * 7" every Sunday at 5:30am)
-  refresh_schedule: "30 * * * *"
-  # Days before old torrents are removed from the feed.
-  retention_days: 90
-  # ONLY when the feed is being processed, seconds to wait after receiving a webhook request and processing it.
-  webhook_wait: 60

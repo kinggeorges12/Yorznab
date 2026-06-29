@@ -1,3 +1,5 @@
+Setup "Status" page to show when the next cron will run, or if any tasks are currently running. Could show logs?
+
 DONE in QBit watchdog: Automatically delete failed downloads in qbit and blacklist the torrent files.
 
 move config files to config folder: in settings.yaml, change Movies to Radarr, Shows to Sonarr. Proper names and endpoints should be defaulted to those values in the file. Rename "Trackers" to "PrivateTrackers" and rename other settings so they make sense.

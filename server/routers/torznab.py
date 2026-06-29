@@ -194,11 +194,11 @@ def torznab_api(
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <caps xmlns:torrent="{NS['torznab']}">
-  <server version="1.0" title="{SETTINGS.get('feed', 'title')}" strapline="Torznab Indexer"
-      email="admin@example.com" url="{SETTINGS.get('feed', 'link')}"
+  <server version="1.0" title="{SETTINGS.get('feed', 'title')}" strapline="Yorznab Indexer"
+      email="{SETTINGS.get('feed', 'email')}" url="{SETTINGS.get('feed', 'link')}"
       image="{SETTINGS.get('feed', 'image')}" />
   <limits max="0" default="0" />
-  <retention>{SETTINGS.get('rss', 'retention_days')}</retention>
+  <retention>{SETTINGS.get('cron', 'retention_days')}</retention>
   <registration available="yes" open="yes" />
 
   <searching>

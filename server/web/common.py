@@ -20,6 +20,7 @@ def get_csrf_token() -> str:
 
 def page_template(title: str, content: str, token: str,
                   css: str = None, js: str = None) -> str:
+        
     return f'''<!DOCTYPE html>
 <html>
     <head>
@@ -27,6 +28,7 @@ def page_template(title: str, content: str, token: str,
         <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
         {f'<link rel="stylesheet" href="{RouteHandler.STATIC}/css/{css}?token={token}">' if css else ''}
         <script src="{RouteHandler.STATIC}/js/web.js?token={token}"></script>
+        <script src="{RouteHandler.STATIC}/js/theme.js?token={token}"></script>
         {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}"></script>' if js else ''}
         <meta name="cache-control" content="no-cache, no-store, must-revalidate">
         <meta charset="UTF-8">
@@ -35,7 +37,7 @@ def page_template(title: str, content: str, token: str,
     <body>{content}</body>
 </html>'''
 
-def navigation(current_route: str) -> str:
+def navigation(current_route: str = '') -> str:
     nav_items = [
         (f"{RouteHandler.LOGIN}/success", "🏠", "Home", "home-btn"),
         (f"{RouteHandler.LOGIN}/keys", "🔐", "Credentials", "creds-btn"),
@@ -50,10 +52,17 @@ def navigation(current_route: str) -> str:
                 {emoji} <span class="btn-label">{label}</span>
             </button>'''
     
-    return f'''
-        <div class="nav-actions">
-            {buttons}
+    logout = f'''
             <form method="POST" action="{RouteHandler.LOGIN}/logout">
                 <button type="submit" class="logout-btn">⏻ <span class="btn-label">Logout</span></button>
-            </form>
+            </form>'''
+    
+    return f'''
+        <div class="nav-actions">
+            {buttons if current_route else ''}
+            <button class="theme-toggle-btn" onclick="toggleTheme()">
+                <span class="btn-icon">🌙</span>
+                <span class="btn-label">Dark</span>
+            </button>
+            {logout if current_route else ''}
         </div>'''

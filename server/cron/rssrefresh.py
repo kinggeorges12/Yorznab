@@ -212,8 +212,8 @@ async def rss_refresh_cron():
     """
     # Get configuration from settings
     feed_file = FeedFile(SETTINGS.get('feed', 'file'))
-    schedule = SETTINGS.get('rss', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"  # Default: every day at random minute/hour
-    refresh_min_age = SETTINGS.get('rss', 'refresh_min_age') or 24  # Default: 24 hours
+    schedule = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"  # Default: every day at random minute/hour
+    refresh_min_age = SETTINGS.get('cron', 'refresh_min_age') or 24  # Default: 24 hours
 
     LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
     LOGGER.info(f"📁 Feed file: {feed_file}")
@@ -247,8 +247,8 @@ async def rss_refresh_cron():
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
     p.add_argument("--feed-file", default=SETTINGS.get('feed', 'file'), help="Path to the feed file to refresh")
-    p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('rss', 'refresh_min_age'), help="Minimum age in hours before refresh is needed")
-    p.add_argument("--schedule", default=SETTINGS.get('rss', 'refresh_schedule'), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
+    p.add_argument("--min-age-hours", type=int, default=SETTINGS.get('cron', 'refresh_min_age'), help="Minimum age in hours before refresh is needed")
+    p.add_argument("--schedule", default=SETTINGS.get('cron', 'refresh_schedule'), help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
     p.add_argument("--daemon", action="store_true", help="Run as a daemon (continuous background process)")
     p.add_argument("--force", action="store_true", help="Force refresh regardless of file age")
     return p.parse_args(argv)

@@ -27,11 +27,11 @@ class RouteHandlerFactory:
             return
         
         with self._lock:
-            self.API = SETTINGS.get('feed', 'api_endpoint') or "/api"
-            self.LOGIN = SETTINGS.get('feed', 'login_endpoint') or "/login"
-            self.STATIC = SETTINGS.get('feed', 'static_endpoint') or "/static"
-            self.STATUS = SETTINGS.get('feed', 'status_endpoint') or "/status"
-            self.WEBHOOK = SETTINGS.get('feed', 'webhook_endpoint') or "/webhook"
+            self.API = SETTINGS.get('server', 'api_endpoint') or "/api"
+            self.LOGIN = SETTINGS.get('server', 'login_endpoint') or "/login"
+            self.STATIC = SETTINGS.get('server', 'static_endpoint') or "/static"
+            self.STATUS = SETTINGS.get('server', 'status_endpoint') or "/status"
+            self.WEBHOOK = SETTINGS.get('server', 'webhook_endpoint') or "/webhook"
             self._initialized = True
 
 # Initialize routes

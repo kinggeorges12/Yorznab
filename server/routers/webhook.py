@@ -19,7 +19,7 @@ async def run_requests(server_type: ArrType | None = None, external_id: str = No
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
     try:
         # Build command arguments
-        args = ["--log", "--publish", SETTINGS.get('feed', 'file'), "--retention", str(SETTINGS.get('rss', 'retention_days'))]
+        args = ["--log", "--publish", SETTINGS.get('feed', 'file'), "--retention", str(SETTINGS.get('cron', 'retention_days'))]
         
         # Add server parameter if specified
         if server_type:
@@ -107,13 +107,13 @@ async def webhook(request: Request, authorization: str = Header(None)):
             if requested_seasons:
                 external_id = f"{arr.ExternalId}:{','.join(str(s) for s in requested_seasons)}"
 
-        print(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('rss', 'webhook_wait')} seconds: {payload}")
+        print(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
         
         # Define the background processing function
         async def process_request():
             try:
                 # Wait x seconds before processing
-                await asyncio.sleep(SETTINGS.get('rss', 'webhook_wait'))
+                await asyncio.sleep(SETTINGS.get('cron', 'webhook_wait'))
                 
                 # Call the shared run_requests function
                 result = await run_requests(server_type=arr.ServerType, external_id=external_id)

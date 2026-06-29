@@ -6,7 +6,7 @@ from urllib.parse import parse_qs
 # Import modules
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, TITLE, ID_NAME, authenticated, get_csrf_token, page_template
+from server.web.common import LOGGER, TITLE, ID_NAME, authenticated, get_csrf_token, navigation, page_template
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
@@ -49,6 +49,7 @@ async def login_page(request: Request, appid: str = Query(None), failed: bool = 
     
     content = f'''
         <div class="login-container">
+            {navigation('')}
             <h1>Welcome to {TITLE}</h1>
             <form autocomplete="off" method="POST" action="{RouteHandler.LOGIN}">
                 <input type="hidden" name="csrf_token" value="{token}">

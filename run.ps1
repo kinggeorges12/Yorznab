@@ -8,9 +8,12 @@ $env:SEARCH_FILTER = "filters.yaml"
 $env:PYTHONPATH = "${pwd}"
 $env:CONFIG_DIR="${pwd}\config"
 $env:LOG_DIR="${pwd}\logs"
-Push-Location server
 try{
-    python -m uvicorn run:app --host 0.0.0.0 --port 8080 --log-level debug
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    Push-Location server
+    python -m uvicorn run:app --host 0.0.0.0 --port 8080
 } finally {
     Pop-Location
+    deactivate
 }

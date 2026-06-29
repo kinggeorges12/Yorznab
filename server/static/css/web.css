@@ -1,4 +1,183 @@
-/* Login Page Styles - Green Theme */
+/* ============================================
+   BASE STYLES - Using CSS Variables
+   ============================================ */
+
+:root {
+    /* Default (Dark Theme) */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #1a1a1a;
+    --bg-gradient: #1a1a1a;
+    --text-primary: #e0e0e0;
+    --text-secondary: #d0d0d0;
+    --text-muted: #a0a0a0;
+    --text-light: #666666;
+    
+    --border-color: #2E8B57;
+    --border-light: #505050;
+    --border-error: #ef4444;
+    --border-success: #4CAF50;
+    
+    --shadow-color: rgba(102, 187, 106, 0.15);
+    --shadow-hover: rgba(102, 187, 106, 0.25);
+    
+    --input-bg: #0d0d0d;
+    --input-border: #2E8B57;
+    --input-focus: #66BB6A;
+    --input-placeholder: #666666;
+    
+    --btn-primary-bg: linear-gradient(135deg, #4CAF50 0%, #2E8B57 100%);
+    --btn-primary-hover: linear-gradient(135deg, #66BB6A 0%, #2E7D32 100%);
+    --btn-primary-shadow: rgba(102, 187, 106, 0.3);
+    
+    --error-bg: #1a1a1a;
+    --error-text: #fca5a5;
+    --error-border: #ef4444;
+    
+    --hint-bg: #0d0d0d;
+    --hint-text: #d0d0d0;
+    --hint-border: #2E8B57;
+    
+    --key-bg: #1a1a1a;
+    --key-text: #fcd34d;
+    --key-border: #2E8B57;
+    --key-hover: #0d0d0d;
+    
+    --container-bg: #1a1a1a;
+    --container-border: #2E8B57;
+    --container-shadow: rgba(102, 187, 106, 0.15);
+    --container-shadow-hover: rgba(102, 187, 106, 0.25);
+    
+    --heading-color: #ffffff;
+    --heading-border: #4CAF50;
+    
+    --text-container-bg: #1a1a1a;
+    --text-container-border: #505050;
+    --text-container-shadow: rgba(0,0,0,0.3);
+    
+    --ascii-color: #66BB6A;
+    
+    --nav-home: #667eea;
+    --nav-home-hover: #5a67d8;
+    --nav-config: #f59e0b;
+    --nav-config-hover: #d97706;
+    --nav-creds: #8b5cf6;
+    --nav-creds-hover: #7c3aed;
+    --nav-logout: #dc2626;
+    --nav-logout-hover: #b91c1c;
+    
+    --app-info-bg: #0d0d0d;
+    --app-info-border: #2E8B57;
+    --app-name-color: #e0e0e0;
+    --app-version-color: #a0a0a0;
+    --app-version-bg: #0d0d0d;
+    
+    --icon-wrapper-bg: #1a1a1a;
+    --badge-bg: rgba(26, 26, 26, 0.9);
+    --badge-shadow: rgba(0, 0, 0, 0.5);
+    
+    --link-color: #66BB6A;
+    --link-hover: #4CAF50;
+    --link-underline: #66BB6A;
+    
+    --toggle-btn-color: #66BB6A;
+    --toggle-btn-hover: rgba(102, 187, 106, 0.1);
+    
+    --copy-btn-bg: #4CAF50;
+    --copy-btn-hover: #66BB6A;
+    --copy-btn-shadow: rgba(102, 187, 106, 0.3);
+}
+
+/* ============================================
+   LIGHT THEME OVERRIDES
+   ============================================ */
+
+[data-theme="light"] {
+    --bg-primary: #f0fdf4;
+    --bg-secondary: white;
+    --bg-gradient: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%);
+    --text-primary: #000000;
+    --text-secondary: #166534;
+    --text-muted: #166534;
+    --text-light: #1FB054;
+    
+    --border-color: #427e58;
+    --border-light: #e0e0e0;
+    --border-error: #dc2626;
+    --border-success: #4CAF50;
+    
+    --shadow-color: rgba(34, 197, 94, 0.2);
+    --shadow-hover: rgba(34, 197, 94, 0.3);
+    
+    --input-bg: #f7fee7;
+    --input-border: #427e58;
+    --input-focus: #22c55e;
+    --input-placeholder: #1FB054;
+    
+    --btn-primary-bg: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    --btn-primary-hover: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    --btn-primary-shadow: rgba(34, 197, 94, 0.4);
+    
+    --error-bg: #fef2f2;
+    --error-text: #dc2626;
+    --error-border: #dc2626;
+    
+    --hint-bg: #f0fdf4;
+    --hint-text: #166534;
+    --hint-border: #22c55e;
+    
+    --key-bg: white;
+    --key-text: #14532d;
+    --key-border: #bbf7d0;
+    --key-hover: #f7fee7;
+    
+    --container-bg: white;
+    --container-border: transparent;
+    --container-shadow: rgba(34, 197, 94, 0.2);
+    --container-shadow-hover: rgba(34, 197, 94, 0.3);
+    
+    --heading-color: #14532d;
+    --heading-border: #22c55e;
+    
+    --text-container-bg: white;
+    --text-container-border: #e0e0e0;
+    --text-container-shadow: rgba(0,0,0,0.1);
+    
+    --ascii-color: #14532d;
+    
+    --nav-home: #667eea;
+    --nav-home-hover: #5a67d8;
+    --nav-config: #f59e0b;
+    --nav-config-hover: #d97706;
+    --nav-creds: #8b5cf6;
+    --nav-creds-hover: #7c3aed;
+    --nav-logout: #dc2626;
+    --nav-logout-hover: #b91c1c;
+    
+    --app-info-bg: #f5f5f5;
+    --app-info-border: #e0e0e0;
+    --app-name-color: #333;
+    --app-version-color: #666;
+    --app-version-bg: #f0f0f0;
+    
+    --icon-wrapper-bg: white;
+    --badge-bg: rgba(255, 255, 255, 0.9);
+    --badge-shadow: rgba(0, 0, 0, 0.2);
+    
+    --link-color: #4CAF50;
+    --link-hover: #2E7D32;
+    --link-underline: #4CAF50;
+    
+    --toggle-btn-color: #166534;
+    --toggle-btn-hover: rgba(34, 197, 94, 0.1);
+    
+    --copy-btn-bg: #22c55e;
+    --copy-btn-hover: #16a34a;
+    --copy-btn-shadow: rgba(34, 197, 94, 0.3);
+}
+
+/* ============================================
+   GLOBAL RESET
+   ============================================ */
 
 * {
     margin: 0;
@@ -13,44 +192,55 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%);
+    background: var(--bg-gradient);
+    color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding-top: 60px;
     min-height: 100vh;
     margin: 0;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Containers */
+/* ============================================
+   CONTAINERS
+   ============================================ */
+
 .login-container,
 .success-container {
     max-width: 710px;
-    background: white;
+    background: var(--container-bg);
     padding: 40px 50px;
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(34, 197, 94, 0.2);
+    border: 2px solid var(--container-border);
+    box-shadow: 0 20px 60px var(--container-shadow);
     width: 100%;
-    transition: transform 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .login-container:hover,
 .success-container:hover {
-    box-shadow: 0 20px 60px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 20px 60px var(--container-shadow-hover);
+    border-color: var(--border-success);
 }
 
 h1 {
-    color: #14532d;
+    color: var(--heading-color);
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 30px;
     text-align: left;
     letter-spacing: -0.5px;
-    border-bottom: 3px solid #22c55e;
+    border-bottom: 3px solid var(--heading-border);
     padding-bottom: 15px;
+    transition: color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Form */
+/* ============================================
+   FORMS
+   ============================================ */
+
 form {
     display: flex;
     flex-direction: column;
@@ -64,13 +254,17 @@ form {
 }
 
 label {
-    color: #166534;
+    color: var(--text-secondary);
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.3px;
+    transition: color 0.3s ease;
 }
 
-/* Password Wrapper */
+/* ============================================
+   PASSWORD WRAPPER
+   ============================================ */
+
 .password-wrapper {
     position: relative;
     width: 100%;
@@ -81,11 +275,11 @@ label {
     width: 100%;
     padding: 12px 45px 12px 16px;
     font-size: 16px;
-    border: 2px solid #427e58;
+    border: 2px solid var(--input-border);
     border-radius: 8px;
     transition: all 0.3s ease;
-    background: #f7fee7;
-    color: #14532d;
+    background: var(--input-bg);
+    color: var(--text-primary);
     font-family: 'Courier New', monospace;
     letter-spacing: 0.5px;
     font-weight: 600;
@@ -94,17 +288,18 @@ label {
 .password-wrapper input[type="password"]:focus,
 .password-wrapper input[type="text"]:focus {
     outline: none;
-    border-color: #22c55e;
-    background: white;
+    border-color: var(--input-focus);
+    background: var(--bg-secondary);
     box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
 }
 
 .password-wrapper input[type="password"]::placeholder,
 .password-wrapper input[type="text"]::placeholder {
-    color: #1FB054;
+    color: var(--input-placeholder);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     letter-spacing: 0.3px;
     font-weight: 500;
+    opacity: 0.6;
 }
 
 /* Toggle Button */
@@ -118,12 +313,12 @@ label {
     cursor: pointer;
     font-size: 20px;
     padding: 5px;
-    color: #166534;
+    color: var(--toggle-btn-color);
     transition: all 0.2s ease;
 }
 
 .password-wrapper .toggle-btn:hover {
-    background: rgba(34, 197, 94, 0.1);
+    background: var(--toggle-btn-hover);
     transform: translateY(-50%) scale(1.1);
 }
 
@@ -135,7 +330,10 @@ label {
     transform: scale(1.1);
 }
 
-/* Buttons */
+/* ============================================
+   BUTTONS
+   ============================================ */
+
 button {
     border: none;
     border-radius: 8px;
@@ -148,7 +346,7 @@ button {
 button[type="submit"] {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    background: var(--btn-primary-bg);
     color: white;
     font-size: 16px;
     letter-spacing: 0.5px;
@@ -156,15 +354,18 @@ button[type="submit"] {
 
 button[type="submit"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
-    background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    box-shadow: 0 10px 25px var(--btn-primary-shadow);
+    background: var(--btn-primary-hover);
 }
 
 button[type="submit"]:active {
     transform: translateY(0);
 }
 
-/* Error Messages - shake only here */
+/* ============================================
+   ERROR MESSAGES
+   ============================================ */
+
 .error-container {
     margin-top: 20px;
     margin-bottom: 20px;
@@ -174,61 +375,63 @@ button[type="submit"]:active {
 }
 
 .error-message {
-    color: #dc2626;
-    background: #fef2f2;
-    border-left: 4px solid #dc2626;
+    color: var(--error-text);
+    background: var(--error-bg);
+    border-left: 4px solid var(--error-border);
     padding: 12px 16px;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
     animation: shake 0.5s ease;
+    border: 1px solid var(--error-border);
+    transition: all 0.3s ease;
 }
 
 .hint-message {
-    color: #166534;
-    background: #f0fdf4;
+    color: var(--hint-text);
+    background: var(--hint-bg);
     font-size: 13px;
     padding: 10px 16px;
     border-radius: 8px;
-    border-left: 4px solid #22c55e;
+    border-left: 4px solid var(--hint-border);
     font-style: italic;
     font-weight: 500;
+    border: 1px solid var(--hint-border);
+    transition: all 0.3s ease;
 }
 
-/* Key Display */
-.key-container {
-    background: #f7fee7;
-    border: 2px solid #86efac;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
+/* ============================================
+   KEY DISPLAY
+   ============================================ */
 
 .key-label {
-    color: #166534;
+    color: var(--text-secondary);
     font-weight: 600;
     font-size: 14px;
     margin-bottom: 5px;
+    transition: color 0.3s ease;
 }
 
 .key-value {
-    color: #14532d;
+    color: var(--key-text);
     font-family: 'Courier New', monospace;
     font-size: 15px;
     word-break: break-all;
-    background: white;
+    background: var(--key-bg);
     padding: 8px 12px;
     border-radius: 4px;
-    border: 1px solid #bbf7d0;
+    border: 1px solid var(--key-border);
     margin-top: 5px;
     user-select: all;
     cursor: text;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .key-value:hover {
-    background: #f7fee7;
+    background: var(--key-hover);
 }
+
 /* ============================================
    NAVIGATION
    ============================================ */
@@ -259,7 +462,6 @@ button[type="submit"]:active {
     cursor: pointer;
 }
 
-/* FIX: Label hidden by default but keeps its space reserved */
 .nav-actions button .btn-label,
 .nav-actions form button .btn-label {
     font-size: 14px;
@@ -274,7 +476,6 @@ button[type="submit"]:active {
     padding: 0;
 }
 
-/* FIX: Icon never shrinks or moves */
 .nav-actions button .btn-icon,
 .nav-actions form button .btn-icon {
     flex-shrink: 0;
@@ -295,7 +496,6 @@ button[type="submit"]:active {
     width: 100%;
 }
 
-/* Hover & Active - Only expand width */
 .nav-actions button:hover,
 .nav-actions form:hover,
 .nav-actions button.active {
@@ -307,7 +507,6 @@ button[type="submit"]:active {
     transform: translateY(-2px);
 }
 
-/* FIX: Show label on hover AND active without adding space */
 .nav-actions button:hover .btn-label,
 .nav-actions form button:hover .btn-label,
 .nav-actions button.active .btn-label {
@@ -317,52 +516,143 @@ button[type="submit"]:active {
 }
 
 .nav-actions button.active {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px var(--shadow-color);
 }
 
 /* Nav Colors */
 .nav-actions .home-btn {
-    background: #667eea;
+    background: var(--nav-home);
     color: white;
 }
 
 .nav-actions .home-btn:hover,
 .nav-actions .home-btn.active {
-    background: #5a67d8;
+    background: var(--nav-home-hover);
     box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
 }
 
 .nav-actions .config-btn {
-    background: #f59e0b;
+    background: var(--nav-config);
     color: white;
 }
 
 .nav-actions .config-btn:hover,
 .nav-actions .config-btn.active {
-    background: #d97706;
+    background: var(--nav-config-hover);
     box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
 }
 
 .nav-actions .creds-btn {
-    background: #8b5cf6;
+    background: var(--nav-creds);
     color: white;
 }
 
 .nav-actions .creds-btn:hover,
 .nav-actions .creds-btn.active {
-    background: #7c3aed;
+    background: var(--nav-creds-hover);
     box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
 }
 
 .nav-actions .logout-btn {
-    background: #dc2626;
+    background: var(--nav-logout);
     color: white;
 }
 
 .nav-actions .logout-btn:hover {
-    background: #b91c1c;
+    background: var(--nav-logout-hover);
     box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
 }
+/* ============================================
+   THEME TOGGLE BUTTON - LIGHT/DARK MODE
+   ============================================ */
+
+/* Base theme toggle button */
+.nav-actions .theme-toggle-btn {
+    background: transparent;
+    color: white;
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 60px;
+    height: 50px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* === DARK MODE (default) === */
+/* Moon icon - dark grey button */
+[data-theme="dark"] .nav-actions .theme-toggle-btn {
+    background: #374151;  /* Dark grey */
+    color: #e5e7eb;       /* Light grey text */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .nav-actions .theme-toggle-btn:hover {
+    background: #4b5563;  /* Slightly lighter grey on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .nav-actions .theme-toggle-btn:active {
+    transform: translateY(0);
+}
+
+/* === LIGHT MODE === */
+/* Sun icon - light grey button */
+[data-theme="light"] .nav-actions .theme-toggle-btn {
+    background: #e5e7eb;  /* Light grey */
+    color: #1f2937;       /* Dark grey text */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .nav-actions .theme-toggle-btn:hover {
+    background: #d1d5db;  /* Slightly darker grey on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .nav-actions .theme-toggle-btn:active {
+    transform: translateY(0);
+}
+
+/* Optional: Subtle border for definition */
+[data-theme="dark"] .nav-actions .theme-toggle-btn {
+    border: 1px solid #4b5563;
+}
+
+[data-theme="light"] .nav-actions .theme-toggle-btn {
+    border: 1px solid #d1d5db;
+}
+
+/* Optional: Animated icon */
+.nav-actions .theme-toggle-btn .btn-icon {
+    transform: rotate(100deg);
+    transition: transform 0.5s ease;
+    display: inline-block;
+}
+
+.nav-actions .theme-toggle-btn:hover .btn-icon {
+    transform: rotate(-20deg) scale(1.1);
+}
+
+/* Label styling */
+.nav-actions .theme-toggle-btn .btn-label {
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* Hide label on small screens */
+@media (max-width: 480px) {
+    .nav-actions .theme-toggle-btn .btn-label {
+        display: none;
+    }
+}
+
 /* ============================================
    COPY BUTTONS
    ============================================ */
@@ -371,53 +661,43 @@ button[type="submit"]:active {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    flex-wrap: nowrap; /* prevent wrapping */
+    flex-wrap: nowrap;
     flex-direction: row;
 }
 
 .copy-btn {
-    flex: 1 1 auto; /* grow, shrink, auto basis */
+    flex: 1 1 auto;
     padding: 12px 20px;
-    background: #22c55e;
+    background: var(--copy-btn-bg);
     color: white;
     font-size: 16px;
     font-weight: 700;
     min-width: 120px;
+    transition: all 0.3s ease;
 }
 
 .copy-btn:hover {
-    background: #16a34a;
+    background: var(--copy-btn-hover);
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 10px 25px var(--copy-btn-shadow);
 }
 
 .copy-btn:active {
     transform: translateY(0);
 }
 
-/* Animations - only for error shake */
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
 @keyframes shake {
-    0%,
-    100% {
-        transform: translateX(0);
-    }
-    10%,
-    30%,
-    50%,
-    70%,
-    90% {
-        transform: translateX(-5px);
-    }
-    20%,
-    40%,
-    60%,
-    80% {
-        transform: translateX(5px);
-    }
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
 /* ============================================
-   Password
+   RESPONSIVE
    ============================================ */
 
 @media (max-width: 480px) {
@@ -452,40 +732,38 @@ button[type="submit"]:active {
     .nav-actions form button:hover .btn-label {
         font-size: 12px;
     }
-
 }
 
 /* ============================================
-   Configuration Styling for Text Containers and Cards
+   TEXT CONTAINERS & CARDS
    ============================================ */
 
 .text-container {
-    padding: 20px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    margin: 10px 0;
-}
-
-.text-card {
-    background: white;
+    background: var(--text-container-bg);
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px var(--text-container-shadow);
+    border: 1px solid var(--text-container-border);
     margin-bottom: 20px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
 }
 
 .green-border-shadow {
-    border: 3px solid #4CAF50;
+    border: 3px solid var(--border-success);
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
 }
 
 .red-border-shadow {
-    border: 3px solid #f44336;
+    border: 3px solid var(--border-error);
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
+
+/* ============================================
+   APP ICONS
+   ============================================ */
 
 .app-icons-container {
     display: flex;
@@ -494,23 +772,24 @@ button[type="submit"]:active {
     width: 100%;
     gap: 15px;
     padding: 20px;
-    background: #f5f5f5;
+    background: var(--app-info-bg);
     border-radius: 12px;
+    border: 1px solid var(--app-info-border);
+    transition: all 0.3s ease;
 }
 
 .icon-wrapper {
     flex: 0 1 auto;
     display: inline-flex;
     padding: 4px;
-    background: white;
+    background: var(--icon-wrapper-bg);
     transition: transform 0.2s;
-    /* Constrain size */
     max-width: 120px;
     max-height: 120px;
     align-items: center;
     justify-content: center;
-    overflow: hidden; /* Prevents overflow */
-    position: relative; /* ← ADD THIS - needed for absolute positioning of badge */
+    overflow: hidden;
+    position: relative;
 }
 
 .icon-wrapper img {
@@ -527,15 +806,13 @@ button[type="submit"]:active {
     z-index: 10;
     font-size: 1.2em;
     cursor: help;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--badge-bg);
     border-radius: 50%;
-    /* Make it a perfect circle */
     width: 28px;
     height: 28px;
-    display: none; /* Keep this, we'll override with .visible */
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px var(--badge-shadow);
     pointer-events: auto;
     line-height: 1;
     text-align: center;
@@ -557,21 +834,24 @@ button[type="submit"]:active {
 .app-name {
     font-size: 12px;
     font-weight: 600;
-    color: #333;
+    color: var(--app-name-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
 }
 
 .app-version {
     font-size: 10px;
-    color: #666;
-    background: #f0f0f0;
+    color: var(--app-version-color);
+    background: var(--app-version-bg);
     padding: 1px 8px;
     border-radius: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
 }
 
 .status-dot {
@@ -583,19 +863,19 @@ button[type="submit"]:active {
 }
 
 .status-dot.healthy {
-    background: #4CAF50;
+    background: var(--border-success);
 }
 
 .status-dot.unhealthy {
-    background: #f44336;
+    background: var(--border-error);
 }
 
 /* ============================================
-   Link styling
+   LINK STYLING
    ============================================ */
 
 a {
-    color: #4CAF50;
+    color: var(--link-color);
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -603,7 +883,7 @@ a {
 }
 
 a:hover {
-    color: #2E7D32;
+    color: var(--link-hover);
 }
 
 a::after {
@@ -613,7 +893,7 @@ a::after {
     left: 0;
     width: 0;
     height: 2px;
-    background: #4CAF50;
+    background: var(--link-underline);
     transition: width 0.3s ease;
 }
 
@@ -621,8 +901,8 @@ a:hover::after {
     width: 100%;
 }
 
-/** ============================================
-   ASCII Logo
+/* ============================================
+   ASCII LOGO
    ============================================ */
 
 .ascii-line {
@@ -631,6 +911,8 @@ a:hover::after {
     margin: 0;
     font-family: monospace;
     white-space: pre;
+    color: var(--ascii-color);
+    transition: color 0.3s ease;
 }
 
 @keyframes fadeIn {

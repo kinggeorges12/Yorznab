@@ -49,7 +49,7 @@ async def setup(authenticated: str = Cookie(None)):
             {navigation(f'{RouteHandler.LOGIN}/setup')}
             <h1>{TITLE} ⚙️ Configuration</h1>
 
-            <div class="text-card">
+            <div class="text-container">
                 <h2>Connected Apps</h2>
                 
                 <div class="app-icons-container">
@@ -111,7 +111,7 @@ async def setup(authenticated: str = Cookie(None)):
                 <p class="hint-message">Please login to your server and run the code from the command line.</p>
             </div>
 
-            <div class="key-container">
+            <div class="text-container">
                 <div class="key-label">📋 Interactive Setup Script for { 'PowerShell' if os.name == 'nt' else 'Shell' }</div>
                 <div class="key-value">{ f'cd {server_path} && ./setup.ps1' if os.name == 'nt'
                                          else f'cd {server_path} && chmod +x setup.sh && ./setup.sh' }</div>

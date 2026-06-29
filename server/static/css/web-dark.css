@@ -1,0 +1,638 @@
+/* Login Page Styles - Dark Theme */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Containers */
+.login-container,
+.success-container {
+    max-width: 710px;
+    background: #1a1a1a;
+    padding: 40px 50px;
+    border-radius: 16px;
+    border: 2px solid #2E8B57;
+    box-shadow: 0 20px 60px rgba(102, 187, 106, 0.15);
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.login-container:hover,
+.success-container:hover {
+    box-shadow: 0 20px 60px rgba(102, 187, 106, 0.25);
+    border-color: #66BB6A;
+}
+
+h1 {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: left;
+    letter-spacing: -0.5px;
+    border-bottom: 3px solid #4CAF50;
+    padding-bottom: 15px;
+}
+
+/* Form */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    color: #d0d0d0;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Password Wrapper */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input[type="password"],
+.password-wrapper input[type="text"] {
+    width: 100%;
+    padding: 12px 45px 12px 16px;
+    font-size: 16px;
+    border: 2px solid #2E8B57;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.password-wrapper input[type="password"]:focus,
+.password-wrapper input[type="text"]:focus {
+    outline: none;
+    border-color: #66BB6A;
+    background: #1a1a1a;
+    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.15);
+}
+
+.password-wrapper input[type="password"]::placeholder,
+.password-wrapper input[type="text"]::placeholder {
+    color: #666666;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.3px;
+    font-weight: 500;
+    opacity: 0.6;
+}
+
+/* Toggle Button */
+.password-wrapper .toggle-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 5px;
+    color: #66BB6A;
+    transition: all 0.2s ease;
+}
+
+.password-wrapper .toggle-btn:hover {
+    background: rgba(102, 187, 106, 0.1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.password-wrapper .toggle-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.password-wrapper .toggle-btn.visible .eye-icon {
+    transform: scale(1.1);
+}
+
+/* Buttons */
+button {
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Submit Button */
+button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #4CAF50 0%, #2E8B57 100%);
+    color: white;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 187, 106, 0.3);
+    background: linear-gradient(135deg, #66BB6A 0%, #2E7D32 100%);
+}
+
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+/* Error Messages - shake only here */
+.error-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.error-message {
+    color: #fca5a5;
+    background: #1a1a1a;
+    border-left: 4px solid #ef4444;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    animation: shake 0.5s ease;
+    border: 1px solid #ef4444;
+}
+
+.hint-message {
+    color: #d0d0d0;
+    background: #0d0d0d;
+    font-size: 13px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #66BB6A;
+    font-style: italic;
+    font-weight: 500;
+    border: 1px solid #2E8B57;
+}
+
+.key-label {
+    color: #d0d0d0;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.key-value {
+    color: #fcd34d;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    word-break: break-all;
+    background: #1a1a1a;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #2E8B57;
+    margin-top: 5px;
+    user-select: all;
+    cursor: text;
+    font-weight: 600;
+}
+
+.key-value:hover {
+    background: #0d0d0d;
+}
+
+/* ============================================
+   NAVIGATION - Colorful buttons preserved
+   ============================================ */
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.nav-actions button,
+.nav-actions form button {
+    flex: 1;
+    min-width: 60px;
+    height: 50px;
+    padding: 8px 12px;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    position: relative;
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* FIX: Label hidden by default but keeps its space reserved */
+.nav-actions button .btn-label,
+.nav-actions form button .btn-label {
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
+}
+
+/* FIX: Icon never shrinks or moves */
+.nav-actions button .btn-icon,
+.nav-actions form button .btn-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-actions form {
+    flex: 1;
+    margin: 0;
+    display: flex;
+    min-width: 60px;
+    transition: all 0.3s ease;
+}
+
+.nav-actions form button {
+    width: 100%;
+}
+
+/* Hover & Active - Only expand width */
+.nav-actions button:hover,
+.nav-actions form:hover,
+.nav-actions button.active {
+    flex: 2;
+}
+
+.nav-actions button:hover,
+.nav-actions form button:hover {
+    transform: translateY(-2px);
+}
+
+/* FIX: Show label on hover AND active without adding space */
+.nav-actions button:hover .btn-label,
+.nav-actions form button:hover .btn-label,
+.nav-actions button.active .btn-label {
+    max-width: 100px;
+    opacity: 1;
+    margin: 0 0 0 6px;
+}
+
+.nav-actions button.active {
+    box-shadow: 0 4px 15px rgba(102, 187, 106, 0.3);
+}
+
+/* Nav Colors - Colorful buttons preserved */
+.nav-actions .home-btn {
+    background: #667eea;
+    color: white;
+}
+
+.nav-actions .home-btn:hover,
+.nav-actions .home-btn.active {
+    background: #5a67d8;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.nav-actions .config-btn {
+    background: #f59e0b;
+    color: white;
+}
+
+.nav-actions .config-btn:hover,
+.nav-actions .config-btn.active {
+    background: #d97706;
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+}
+
+.nav-actions .creds-btn {
+    background: #8b5cf6;
+    color: white;
+}
+
+.nav-actions .creds-btn:hover,
+.nav-actions .creds-btn.active {
+    background: #7c3aed;
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+}
+
+.nav-actions .logout-btn {
+    background: #dc2626;
+    color: white;
+}
+
+.nav-actions .logout-btn:hover {
+    background: #b91c1c;
+    box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+}
+
+/* ============================================
+   COPY BUTTONS
+   ============================================ */
+
+.copy-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: nowrap;
+    flex-direction: row;
+}
+
+.copy-btn {
+    flex: 1 1 auto;
+    padding: 12px 20px;
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 120px;
+}
+
+.copy-btn:hover {
+    background: #66BB6A;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 187, 106, 0.3);
+}
+
+.copy-btn:active {
+    transform: translateY(0);
+}
+
+/* Animations - only for error shake */
+@keyframes shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+/* ============================================
+   Password
+   ============================================ */
+
+@media (max-width: 480px) {
+    body {
+        padding: 20px;
+        align-items: center;
+    }
+
+    .login-container,
+    .success-container {
+        padding: 30px 20px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .password-wrapper input[type="password"],
+    .password-wrapper input[type="text"] {
+        font-size: 14px;
+        padding: 10px 40px 10px 14px;
+    }
+
+    .nav-actions button,
+    .nav-actions form button {
+        min-width: 50px;
+        height: 45px;
+        font-size: 20px;
+    }
+
+    .nav-actions button:hover .btn-label,
+    .nav-actions form button:hover .btn-label {
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   Configuration Styling for Text Containers and Cards
+   ============================================ */
+
+.text-container {
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid #505050;
+    margin-bottom: 20px;
+    color: #e0e0e0;
+}
+
+.green-border-shadow {
+    border: 3px solid #4CAF50;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+}
+
+.red-border-shadow {
+    border: 3px solid #ef4444;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.app-icons-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 15px;
+    padding: 20px;
+    background: #0d0d0d;
+    border-radius: 12px;
+    border: 1px transparent #2E8B57;
+}
+
+.icon-wrapper {
+    flex: 0 1 auto;
+    display: inline-flex;
+    padding: 4px;
+    background: #1a1a1a;
+    transition: transform 0.2s;
+    max-width: 120px;
+    max-height: 120px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.icon-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.icon-wrapper .warning-badge {
+    display: none;
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 10;
+    font-size: 1.2em;
+    cursor: help;
+    background: rgba(26, 26, 26, 0.9);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+    line-height: 1;
+    text-align: center;
+}
+
+.icon-wrapper .warning-badge.visible {
+    display: block;
+}
+
+.app-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+    width: 100%;
+}
+
+.app-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-version {
+    font-size: 10px;
+    color: #a0a0a0;
+    background: #0d0d0d;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid #2E8B57;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+}
+
+.status-dot.healthy {
+    background: #66BB6A;
+}
+
+.status-dot.unhealthy {
+    background: #ef4444;
+}
+
+/* ============================================
+   Link styling
+   ============================================ */
+
+a {
+    color: #66BB6A;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+a:hover {
+    color: #4CAF50;
+}
+
+a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #66BB6A;
+    transition: width 0.3s ease;
+}
+
+a:hover::after {
+    width: 100%;
+}
+
+/** ============================================
+   ASCII Logo
+   ============================================ */
+
+.ascii-line {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+    margin: 0;
+    font-family: monospace;
+    white-space: pre;
+    color: #66BB6A;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
