@@ -123,8 +123,8 @@ async def setup(authenticated: str = Cookie(None)):
 
             <div class="text-container">
                 <div class="key-label">📋 Interactive Setup Script for { 'PowerShell' if os.name == 'nt' else 'Shell' }</div>
-                <div class="key-value">{ f'cd /srv/dev/yorznab{server_path} && ./setup.ps1' if os.name == 'nt'
-                                         else f'cd C:/Docker/yorznab{server_path} && chmod +x setup.sh && ./setup.sh' }</div>
+                <div class="key-value">{ f'cd C:/Docker/yorznab{server_path} && ./setup.ps1' if os.name == 'nt'
+                                         else f'cd /srv/dev/yorznab{server_path} && chmod +x setup.sh && ./setup.sh' }</div>
             </div>
             <div class="copy-actions">
                 <button class="copy-btn" onclick="copyKey('setupCommand')">📋 Copy Setup Command</button>
