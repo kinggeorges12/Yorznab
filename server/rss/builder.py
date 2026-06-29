@@ -86,7 +86,7 @@ def init_library(server_type: ArrType) -> tuple[QBitClient, ArrClient]:
 # Job Runner
 # -----------------------------
 
-def run_for_library(server_type: ArrType, publish_path: str, retention_days: int, do_qbit: bool, whatif: bool) -> None:
+def run_for_library(server_type: ArrType, external_id: str, publish_path: str, retention_days: int, do_qbit: bool, whatif: bool) -> None:
     """
     Main processing function for a specific library (Movies or TV).
     
@@ -95,6 +95,7 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
     
     Args:
         server_type: Server type ("Radarr" or "Sonarr")
+        external_id: External ID for the library item (TMDB/TVDB ID) to process a specific video
         publish_path: Path to JSON file for publishing results
         retention_days: Number of days to retain records in published JSON
         do_qbit: Whether to send top result directly to qBittorrent
@@ -178,6 +179,13 @@ def run_for_library(server_type: ArrType, publish_path: str, retention_days: int
                             "series": series,
                         })
 
+    # Filter by external ID if initiated from webhook
+    if external_id:
+        if arr.ServerType is ArrType.Radarr:
+            search_requests = [item for item in search_requests if item.get("meta", {}).get("imdbId") == external_id]
+        if arr.ServerType is ArrType.Sonarr:
+            search_requests = [item for item in search_requests if item.get("meta", {}).get("tvdbId") == external_id]
+    
     # Execute searches, optimize, optionally add top torrent
     all_top: list[dict[str, Any]] = []
     for item in search_requests:
@@ -336,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
                 run_for_library(server_type=ArrType.Radarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
                 run_for_library(server_type=ArrType.Sonarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
             else:
-                run_for_library(server_type=ArrType(args.server), publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
+                run_for_library(server_type=ArrType(args.server), external_id=args.external_id, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
     except Exception as e:
         LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
         return 1

@@ -9,7 +9,7 @@
 # Yorznab
 Ever wanted to make your own Torznab server of your own? Now you can!
 
-Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested content through qBittorrent and publish a Yorznab RSS feed. Radarr and Sonarr use the Yorznab RSS feed to find and request torrents from supported download clients like qBittorrent.
+Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested content through qBittorrent. Radarr and Sonarr use the Yorznab feed to query and request torrents from supported download clients like qBittorrent.
 
 <div align="center">
   <picture>
@@ -19,8 +19,24 @@ Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to downl
   </picture>
 </div>
 
+# Getting Started
+These instructions will setup the Python app on your localhost in Docker. Let's get started already!
+1. [Install Yorznab](#install-yorznab): Run the setup script to install Yorznab to the server or localhost.
+2. [Docker Compose](#docker-compose): Build the container to access the Yorznab dashboard on the web.
+3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
+
+# Features
+- Identify the Wanted content from Radarr and Sonarr apps to build search queries.
+- Search the qBittorrent API for Wanted content and build a Yorznab \(Torznab-like\) RSS feed from the search results.
+- Serve the Yorznab feed as an Indexer for Radarr and Sonarr apps.
+- Cron job to initiate automatic Yorznab feed refreshes.
+- Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested content.
+- Filter through qBittorrent search results to ensure high quality torrents.
+- Handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
+- Dashboard to monitor connections to external apps. More coming Soon™.
+
 # Requirements
-Compatible with Linux or Windows. Requires the following services to fully use this app. Current tested configuration:
+Compatible with Linux or Windows. Requires the following services to fully use this app. Tested versions shown below:
 
 - Ubuntu v26
 - Docker v29
@@ -29,12 +45,6 @@ Compatible with Linux or Windows. Requires the following services to fully use t
 - [Sonarr](https://github.com/sonarr/sonarr) v4 configured with a download client
 - [qBittorrent](https://github.com/qbittorrent/qBittorrent) v5
 - [Jackett](https://github.com/Jackett/Jackett) v\.24 \(optional\)
-
-# Getting Started
-These instructions will setup the Python app on your localhost in Docker. Following these steps will help you get started quickly.
-1. [Install Yorznab](#install-yorznab): Run the setup script to install Yorznab to the server or localhost.
-2. [Docker Compose](#docker-compose): Build the container to access the Yorznab dashboard on the web.
-3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
 
 # Install Yorznab
 The automated setup tool \(`setup.sh` or `setup.ps1`\) initializes the Radarr, Sonarr and qBittorrent app credentials. For help finding your credentials, see the [Help](#help) section.

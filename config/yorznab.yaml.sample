@@ -1,10 +1,10 @@
 # Local refresh of the RSS feed when Jellyseer has not requested content
 cron:
-  # Cron will not refresh until min age (in hours) is exceeded since the last refresh.
-  refresh_min_age: 1
   # Cron schedule for refreshing the RSS feed.
-  # Format: minute hour day month weekday (e.g., "30 5 * * 7" every Sunday at 5:30am)
-  refresh_schedule: "30 * * * *"
+  # Format for basic cron is minute hour day month weekday.
+  # Useless example: "R */13 * * 7" means every Sunday run once every 13 hours on a random minute
+  # More info on accepted cron format: https://pypi.org/project/croniter/
+  refresh_schedule: "R */7 * * *"
   # Days before old torrents are removed from the feed.
   retention_days: 90
   # ONLY when the feed is being processed, seconds to wait after receiving a webhook request and processing it.
