@@ -17,7 +17,7 @@ async def login_success(request: Request):
     token = get_csrf_token()
 
     # Generate random delays for the ASCII art animation
-    random_delays = [round(random.uniform(0.1, 0.3) + round(random.expovariate(8)*2, 1), 1) for _ in range(11)] + [0.1]
+    random_delays = [round(random.uniform(0.1, 0.3) + round(random.expovariate(8)*2, 1), 1) for _ in range(11)] + [0.1] + [0.1]
     animation_timer = list(reversed(list(accumulate(random_delays))))
     content = f'''
         <div class="success-container">
@@ -45,6 +45,7 @@ async def login_success(request: Request):
 ║══════════════════════════════════════════════════════════════════════════════║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║                                         ...a Torznab Indexer that's all YORZ ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╚══════════════════════════════════════════════════════════════════════════════╝</pre>
 
             </div>
