@@ -32,9 +32,9 @@ Compatible with Linux or Windows. Requires the following services to fully use t
 
 # Getting Started
 These instructions will setup the Python app on your localhost in Docker. Following these steps will help you get started quickly.
-1. Install Yorznab: Run the setup script to install Yorznab to the server or localhost.
-2. Docker Compose: Build the container to access the Yorznab dashboard on the web.
-3. Connect Apps: Grab setup keys from the Yorznab dashboard and copy them into your apps.
+1. [Install Yorznab](#install-yorznab): Run the setup script to install Yorznab to the server or localhost.
+2. [Docker Compose](#docker-compose): Build the container to access the Yorznab dashboard on the web.
+3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
 
 # Install Yorznab
 The automated setup tool \(`setup.sh` or `setup.ps1`\) initializes the Radarr, Sonarr and qBittorrent app credentials. For help finding your credentials, see the [Help](#help) section.
