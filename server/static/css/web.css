@@ -901,6 +901,16 @@ a:hover::after {
     width: 100%;
 }
 
+/* Override for links inside .icon-wrapper - blue underline on hover */
+.icon-wrapper a::after {
+    background: blue;
+}
+
+.icon-wrapper a:hover::after {
+    width: 100%;
+    background: blue;
+}
+
 /* ============================================
    ASCII LOGO
    ============================================ */

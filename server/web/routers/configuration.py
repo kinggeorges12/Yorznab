@@ -17,13 +17,14 @@ async def setup(authenticated: str = Cookie(None)):
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
     
     token = get_csrf_token()
+    exceptions = []
 
     try:
         radarr_client = ArrClient(ArrType.Radarr)
         radarr_status = radarr_client.status() if radarr_client else ""
         LOGGER.debug(f"Radarr Status: {radarr_status}")
     except Exception as e:
-        LOGGER.error(e)
+        exceptions.append(f"Radarr: {e}")
         radarr_client = {}
         radarr_status = ""
     try:
@@ -31,7 +32,7 @@ async def setup(authenticated: str = Cookie(None)):
         sonarr_status = sonarr_client.status() if sonarr_client else ""
         LOGGER.debug(f"Sonarr Status: {sonarr_status}")
     except Exception as e:
-        LOGGER.error(e)
+        exceptions.append(f"Sonarr: {e}")
         sonarr_client = {}
         sonarr_status = ""
     try:
@@ -39,10 +40,20 @@ async def setup(authenticated: str = Cookie(None)):
         qbittorrent_status = qbittorrent_client.version() if qbittorrent_client else ""
         LOGGER.debug(f"qBittorrent Status: {qbittorrent_status}")
     except Exception as e:
-        LOGGER.error(e)
+        exceptions.append(f"qBittorrent: {e}")
         qbittorrent_client = {}
         qbittorrent_status = ""
+
+    # Format exceptions, if something is wrong with no exceptions, show a generic error message
+    exceptions_html = '<p class="error-message">Radarr: Unknown error occurred</p>' if not exceptions and not radarr_status else ""
+    exceptions_html = '<p class="error-message">Sonarr: Unknown error occurred</p>' if not exceptions and not sonarr_status else ""
+    exceptions_html = '<p class="error-message">qBittorrent: Unknown error occurred</p>' if not exceptions and not qbittorrent_status else ""
+    for e in exceptions:
+        exceptions_html += f'<p class="error-message">{e}</p>\n'
+    
+    # Get path for config instructions
     server_path = os.getenv("PYTHONPATH")
+
     content = f'''
         <div class="success-container">
             {navigation(f'{RouteHandler.LOGIN}/setup')}
@@ -106,8 +117,8 @@ async def setup(authenticated: str = Cookie(None)):
             </div>
             
             <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not qbittorrent_status else 'none'};">
-                <p class="error-message">Some of the applications are not configured properly.</p>
-                <p class="hint-message">Please login to your server and run the code from the command line.</p>
+                {exceptions_html}
+                <p class="hint-message">Please login to your server and run the setup script from the command line.</p>
             </div>
 
             <div class="text-container">
