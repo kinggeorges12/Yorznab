@@ -341,10 +341,10 @@ def main(argv: list[str] | None = None) -> int:
         with lock:
             LOGGER.info("🔒 Lock acquired")
             if args.server == "Both":
-                run_for_library(server_type=ArrType.Radarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
-                run_for_library(server_type=ArrType.Sonarr, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
+                run_for_library(server_type=ArrType.Radarr, external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
+                run_for_library(server_type=ArrType.Sonarr, external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
             else:
-                run_for_library(server_type=ArrType(args.server), external_id=args.external_id, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
+                run_for_library(server_type=ArrType(args.server), external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
     except Exception as e:
         LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
         return 1
