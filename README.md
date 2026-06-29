@@ -13,9 +13,9 @@ Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to downl
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration-Linux.png">
-    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-Windows-2.png">
-    <img src="Screenshots/Configuration-Windows-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Home.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Home-2.png">
+    <img src="Screenshots/Home-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
   </picture>
 </div>
 
