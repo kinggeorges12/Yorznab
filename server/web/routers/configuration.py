@@ -53,10 +53,10 @@ async def setup(authenticated: str = Cookie(None)):
 
     # Build app items html
     def build_apps_html(name: str, url: str, status: str, icon_url: str) -> str:
+        placeholder_image = f'''style="background-image: url('{RouteHandler.STATIC}/favicon.ico')"''' if url else ''
         return f'''<!-- {name} -->
                     <div class="app-item">
-                        <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }" {
-                            f'''style="background-image: url('{RouteHandler.STATIC}/favicon.ico')"''' if url else ''}>
+                        <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }"{placeholder_image}>
                             <a href="{url if url else '#'}" target="_blank" rel="noreferrer">
                                 <img class="app-icon" alt="{name}"
                                     src="{icon_url}"
