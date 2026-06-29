@@ -26,6 +26,8 @@ These instructions will setup the Python app on your localhost in Docker. Let's 
 3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
 
 # Features
+Keep up-to-date using the [Update Yorznab](#update-yorznab) section.
+
 - Identify the Wanted media from Radarr and Sonarr apps to build search queries.
 - Search the qBittorrent API for Wanted media and build a Yorznab \(Torznab-like\) RSS feed from the search results.
 - Serve the Yorznab feed as an Indexer for Radarr and Sonarr apps.
@@ -49,7 +51,7 @@ Compatible with Linux or Windows. Requires the following services to fully use t
 # Install Yorznab
 The automated setup tool \(`setup.sh` or `setup.ps1`\) initializes the Radarr, Sonarr and qBittorrent app credentials. For help finding your credentials, see the [Help](#help) section.
 
-## Linux
+## Linux \(Shell\)
 ```
 sudo mkdir -p /srv/dev/yorznab/app
 cd /srv/dev/yorznab
@@ -63,7 +65,7 @@ sudo chmod +x setup.sh
 ./setup.sh
 ```
 
-## Windows
+## Windows \(PowerShell\)
 ```
 New-Item -Path C:\Docker\yorznab -ItemType Directory -Force
 Set-Location C:\Docker\yorznab
@@ -79,7 +81,7 @@ powershell -ExecutionPolicy Bypass -File ./setup.ps1
 # Docker Compose
 This starts the service in Docker. Be sure to include the `SECURE_APPID` setting in `docker-compose.yml` to allow access to the dashboard for the first-time setup. After initial setup, remove `SECURE_APPID` from the Docker file, and retrieve it from the server in the `app/config/keys.yml` file to continue using the dashboard.
 
-## Linux
+## Linux \(Shell\)
 ```
 cd /srv/dev/yorznab
 mkdir -p logs export python
@@ -87,7 +89,7 @@ sudo chown -R $(id -un):$(id -gn) .
 docker compose -f ./app/docker-compose.yml up -d
 ```
 
-## Windows
+## Windows \(PowerShell\)
 ```
 cd C:\Docker\yorznab
 (Get-Content 'docker-compose.yml') -replace '/srv/dev/yorznab','C:/Docker/yorznab' | Set-Content docker-compose-windows.yml
@@ -97,7 +99,7 @@ docker compose -f ./app/docker-compose-windows.yml up -d
 # Connect Apps
 The Yorznab dashboard provides a way to see your credentials for the API and webhook. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9118/`](http://localhost:9118/) or http://myserver.local:9118/.
 
-Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups.
+Setting the `SECURE_APPID` in the `docker-compose.yaml` file will allow you to easily login for first-time setups.
 
 <div align="center">
   <picture>
@@ -118,7 +120,7 @@ Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted 
   </picture>
 </div>
 
-Just a reminder: Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
+Just a reminder: Setting the `SECURE_APPID` in the `docker-compose.yaml` file will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → Indexers → + → Torznab**.
@@ -206,6 +208,33 @@ The Radarr and Sonarr apps allow you to configure specific rules for seeding bas
 
 ## Jackett
 Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename.
+
+# Update Yorznab
+The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below. If you run into issues connecting to your apps, try running the automated setup tool \(`setup.sh` or `setup.ps1`\) to update your App settings in the new version.
+
+## Linux \(Shell\)
+```
+version=v1.0
+docker stop yorznab
+sudo mkdir -p /srv/dev/yorznab/app
+cd /srv/dev/yorznab
+sudo chown -R $(id -un):$(id -gn) .
+wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.tar.gz
+tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
+docker start yorznab
+```
+
+## Windows \(PowerShell\)
+```
+$version='v1.0'
+docker stop yorznab
+New-Item -Path C:\Docker\yorznab -ItemType Directory -Force
+Set-Location C:\Docker\yorznab
+Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.zip" -OutFile "yorznab-main.zip"
+Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
+Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
+docker start yorznab
+```
 
 # Help
 
