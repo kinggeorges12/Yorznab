@@ -1,15 +1,20 @@
 ############# TAG OPTIONS #############
 
+# Tags are compatible with Jackett! Use the name of the tracker in Jackett or qBittorrent, not the website.
+# Any private trackers added through Jackett will show up the same as if they are added to qBittorrent search plugin.
+
 tags:
-  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett"
+  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett".
   remove_jackett_tags: true
-  # Only output torrents matching TrackerTags entries below
+  # Only save torrents that match any tracker_tags entries.
   tracker_tags_only: false
-  # Add tags in qBittorrent to downloads from these trackers
+  # Skip saving torrents that match any tracker_tags entries. This setting is inactive when tracker_tags_only is active.
+  tracker_tags_skip: false
+  # Add tags in qBittorrent to downloads from these trackers. Leave blank to apply rules (only or skip) without tagging in qBittorrent.
   tracker_tags:
-    Private Tracker Name 1: privatetracker1.com
-    Private Tracker Name 2: privatetracker2.com
-    Private Tracker Name 3: privatetracker3.com
+    Private Tracker Name 1: tag1
+    Private Tracker Name 2: tag2
+    Private Tracker Name 3: 
 
 ############# SCORING TORRENTS #############
 
@@ -17,9 +22,6 @@ tags:
 # Minimum scores and sizes to determine which torrents to publish.
 # Torrents are sorted on score (greatest) and pubDate (newest).
 # To convert to file size in mbps, use the formula: (file size in MB) = mbps * (runtime minutes) * 7.5
-
-# min_score: Drops anything lower than this. Score can be any number, but should be based on the weights.
-min_score: 5
 
 # Movies/TV category provides mbps estimates for each quality level. Enter the minimum size for the category. Leave one category blank as the lowest quality (default=SD).
 #   TV categories: WEB-DL, SD, HD, Other. Not supported by mbps filtering: Foreign, Sport, Anime, Documentary.

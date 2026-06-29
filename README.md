@@ -130,7 +130,7 @@ Setting the `SECURE_APPID` in your Docker compose will allow you to easily login
     - \[SONARR\] Maximum Single Episode Age: 730 (any day after will grab season packs)
 
 ### Indexer default settings
-- URL: `./app/docker-compose.yml` \(ports\) and `./app/config/yorznab.yaml` \(feed → link\)
+- URL: Server Address from App (Radarr/Sonnar server pings Yorznab) and `./app/docker-compose.yml` \(ports\) and  and `./app/config/yorznab.yaml` \(feed → link\)
 - API Path: `./app/config/yorznab.yaml` \(server → api_endpoint\)
 
 ## Webhook
@@ -182,10 +182,14 @@ tags:
     Private Tracker Name 3: privatetracker3.com
 ```
 
-If you need to provide special seeding requirements for trackers, be sure to set the `tracker_tags_only: true`
-1. Create another instance of Yorznab (e.g., PrivateYorznab) for each indexer seed requirements.
-2. Include each indexer in Radarr and Sonarr using the instructions in [Create Indexer](#create-indexer)
-3. Apply rules in Sonarr to continue seeding after downloading.
+## Multiple Indexers
+The Radarr and Sonarr apps allow you to configure specific rules for seeding based on the Indexer. This setup allows for special seeding requirements for private trackers.
+1. Create another instance of Yorznab (e.g., PrivateYorznab) for each tracker seed requirements.
+2. Open your `config/filter.yaml` file and add the flag indicating the type of Yorznab instance:
+    - Private trackers: `tracker_tags_only: true`
+    - Public trackers: `tracker_tags_skip: true`
+3. Include each indexer in Radarr and Sonarr apps using the instructions in [Indexer](#indexer).
+4. Apply rules in Radarr and Sonarr apps to continue seeding after downloading.
 
 ## Jackett
 Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename.

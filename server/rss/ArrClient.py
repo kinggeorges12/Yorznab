@@ -9,7 +9,6 @@ import httpx
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
-@dataclass
 class ArrType(Enum):
     Radarr = "Radarr"
     Sonarr = "Sonarr"

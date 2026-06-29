@@ -13,9 +13,15 @@ cron:
 # Customizable feed information for Torznab tags
 # More info here: https://nzbdrone.readthedocs.io/Implementing-a-Torznab-indexer/
 feed:
+  # This file is read when the feed is queried
   file: /export/torrents.json
+  # Used in logs and on the web
   title: Yorznab
+  # The information below is used to advertise capabilities on the API.
+  # The address should (untested) match the address when Radarr and Sonarr ping this server.
+  # The link port should (untested) match the server port used in Docker.
   link: http://localhost:9118
+  # Radarr and Sonarr do not implement the features below
   image: http://localhost:9118/static/banner.jpg
   email: admin@example.com
   description: Get yo feed on!
