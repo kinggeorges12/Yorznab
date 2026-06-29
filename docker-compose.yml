@@ -9,7 +9,7 @@ services:
       - HOME=/tmp # Python installation directory, change to /home for root user
       - PYTHONUNBUFFERED=1 # Real-time logging
       - CONFIG_DIR=/app/config # Edit these files HERE: config.yaml, yorznab.yaml, filters.yaml (optional)
-      - LOG_DIR=/app/logs # Default is the temp directory
+      - LOG_DIR=/logs # Default is the temp directory
       #- SECURE_APPID=YOUR_APPID # Change this to prevent unauthorized access of API and webhook credentials via /login?appid=YOUR_APPID
     ports:
       - "9118:8080" # Default port 9118
@@ -26,14 +26,15 @@ services:
       - type: bind
         source: /srv/dev/yorznab/app/config
         target: /app/config
-      # Logging server output
-      - type: bind
-        source: /srv/dev/yorznab/app/logs
-        target: /app/logs
+      # Running the Python web server and cron job
       - type: bind
         source: /srv/dev/yorznab/app/server
         target: /app/server
         read_only: true
+      # Logging server output
+      - type: bind
+        source: /srv/dev/yorznab/logs
+        target: /logs
     command: >
         bash -c "
         export PYTHONPATH=/app;

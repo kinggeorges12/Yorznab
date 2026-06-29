@@ -32,7 +32,7 @@ qBittorrent:
   QUsername: qbittorrent
   QPassword: password
   # Only useful for custom qBittorrent web urls
-  Endpoint: /api/v2
+  QEndpoint: /api/v2
   # [default=60] Time to wait for search to complete (in seconds)
   SearchTimeout: 60
   # [default=0] Maximum number of results to wait for before returning, use 0 for unlimited

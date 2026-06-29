@@ -1,8 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
+import os
 from typing import Any, Optional
 from dacite import Config, from_dict
+from dacite.exceptions import MissingValueError
 import httpx
 
 # Import classes
@@ -34,9 +36,17 @@ class ArrClient:
     def __init__(self, server_type: ArrType, logger: CustomLogger = None):
         self.LOGGER = CustomLogger(name=server_type.value, logger=logger)
         # Resolve config file settings.yaml
-        config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(key=server_type.value, exists=True)
+        try:
+            config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(key=server_type.value, exists=True)
+        except AppSettingsUndefined as e:
+            self.LOGGER.warning(f"🚩 Server has bad configuration for {server_type.value}. Continuing without this app.")
+            raise Exception(e)
         config_raw["ServerType"] = server_type.value
-        self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
+        try:
+            self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
+        except MissingValueError as e:
+            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.getenv('PYTHONPATH') + self._config_file}")
+            raise Exception(e)
 
     @dataclass
     class Mapper:

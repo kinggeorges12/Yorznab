@@ -103,8 +103,8 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
     """
     try:
         qBit, arr = init_library(server_type=server_type)
-    except AppSettingsUndefined as e:
-        LOGGER.warning(f"{e}")
+    except Exception as e:
+        LOGGER.error(f"❌ {e}")
         return
 
     qFilter = QBitFilter()

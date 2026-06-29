@@ -44,7 +44,7 @@ class AppSettings:
         elif key is not None:
             data = self._data.get(key, None)
             if data is None and exists:
-                raise AppSettingsUndefined(f"🚩 The configuration section for {key} is undefined or misconfigured.")
+                raise AppSettingsUndefined(f"The configuration section for {key} is undefined or misconfigured.")
             return data
         return self._data
         
@@ -57,5 +57,5 @@ class AppSettings:
     def exists(self, name: str) -> Self:
         """Check if the configuration file exists"""
         if not self._config_file.path.exists():
-            raise AppSettingsUndefined(f"🚩 The file for {name} does not exist: {self._config_file.path}")
+            raise AppSettingsUndefined(f"The file for {name} does not exist: {self._config_file.path}")
         return self

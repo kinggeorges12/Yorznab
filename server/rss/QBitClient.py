@@ -1,7 +1,9 @@
 import contextlib
+import os
 import time
 from typing import Any, Optional
 from dacite import from_dict
+from dacite.exceptions import MissingValueError
 import httpx
 from dataclasses import dataclass
 
@@ -35,9 +37,17 @@ class QBitClient:
     def __init__(self, logger: CustomLogger = None):
         self.LOGGER = CustomLogger(name=self.Name, logger=logger)
         # Resolve config file settings.yaml
-        config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(key=self.Name, exists=True)
+        try:
+            config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(key=self.Name, exists=True)
+        except AppSettingsUndefined as e:
+            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self.Name}.")
+            raise Exception(e)
         config_raw["ServerType"] = self.Name # Required field
-        self._config = from_dict(data_class=QBitConfig, data=config_raw)
+        try:
+            self._config = from_dict(data_class=QBitConfig, data=config_raw)
+        except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "QUrl"
+            self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.getenv('PYTHONPATH') + self._config_file}")
+            raise Exception(e)
 
     @property
     def ServerName(self) -> str: return self._config.ServerName if self._config.ServerName else self.ServerType

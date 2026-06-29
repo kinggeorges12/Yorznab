@@ -1,5 +1,4 @@
 import os
-
 from fastapi import APIRouter, Cookie, Response
 from fastapi.responses import RedirectResponse
 
@@ -23,7 +22,7 @@ async def setup(authenticated: str = Cookie(None)):
         radarr_client = ArrClient(ArrType.Radarr)
         radarr_status = radarr_client.status() if radarr_client else ""
         LOGGER.debug(f"Radarr Status: {radarr_status}")
-    except AppSettingsUndefined as e:
+    except Exception as e:
         LOGGER.error(e)
         radarr_client = {}
         radarr_status = ""
@@ -31,7 +30,7 @@ async def setup(authenticated: str = Cookie(None)):
         sonarr_client = ArrClient(ArrType.Sonarr)
         sonarr_status = sonarr_client.status() if sonarr_client else ""
         LOGGER.debug(f"Sonarr Status: {sonarr_status}")
-    except AppSettingsUndefined as e:
+    except Exception as e:
         LOGGER.error(e)
         sonarr_client = {}
         sonarr_status = ""
@@ -39,7 +38,7 @@ async def setup(authenticated: str = Cookie(None)):
         qbittorrent_client = QBitClient()
         qbittorrent_status = qbittorrent_client.version() if qbittorrent_client else ""
         LOGGER.debug(f"qBittorrent Status: {qbittorrent_status}")
-    except AppSettingsUndefined as e:
+    except Exception as e:
         LOGGER.error(e)
         qbittorrent_client = {}
         qbittorrent_status = ""
@@ -113,8 +112,8 @@ async def setup(authenticated: str = Cookie(None)):
 
             <div class="text-container">
                 <div class="key-label">📋 Interactive Setup Script for { 'PowerShell' if os.name == 'nt' else 'Shell' }</div>
-                <div class="key-value">{ f'cd {'/srv/dev/yorznab' + server_path} && ./setup.ps1' if os.name == 'nt'
-                                         else f'cd {'C:/Docker/yorznab' + server_path} && chmod +x setup.sh && ./setup.sh' }</div>
+                <div class="key-value">{ f'cd /srv/dev/yorznab{server_path} && ./setup.ps1' if os.name == 'nt'
+                                         else f'cd C:/Docker/yorznab{server_path} && chmod +x setup.sh && ./setup.sh' }</div>
             </div>
             <div class="copy-actions">
                 <button class="copy-btn" onclick="copyKey('setupCommand')">📋 Copy Setup Command</button>

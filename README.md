@@ -9,7 +9,7 @@
 # Yorznab
 Ever wanted to make your own Torznab server of your own? Now you can!
 
-Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested content through qBittorrent. Radarr and Sonarr use the Yorznab feed to query and request torrents from supported download clients like qBittorrent.
+Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested media through qBittorrent. Radarr and Sonarr use the Yorznab feed to query and request torrents from supported download clients like qBittorrent.
 
 <div align="center">
   <picture>
@@ -26,11 +26,11 @@ These instructions will setup the Python app on your localhost in Docker. Let's 
 3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
 
 # Features
-- Identify the Wanted content from Radarr and Sonarr apps to build search queries.
-- Search the qBittorrent API for Wanted content and build a Yorznab \(Torznab-like\) RSS feed from the search results.
+- Identify the Wanted media from Radarr and Sonarr apps to build search queries.
+- Search the qBittorrent API for Wanted media and build a Yorznab \(Torznab-like\) RSS feed from the search results.
 - Serve the Yorznab feed as an Indexer for Radarr and Sonarr apps.
 - Cron job to initiate automatic Yorznab feed refreshes.
-- Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested content.
+- Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested media.
 - Filter through qBittorrent search results to ensure high quality torrents.
 - Handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
 - Dashboard to monitor connections to external apps. More coming Soon™.
@@ -56,8 +56,9 @@ cd /srv/dev/yorznab
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
-cp --update=none ./app/config/yorznab.yaml.sample ./app/config/yorznab.yaml
-cp --update=none ./app/config/filters.yaml.sample ./app/config/filters.yaml # Recommended
+cd app
+cp --update=none ./config/yorznab.yaml.sample ./config/yorznab.yaml
+cp --update=none ./config/filters.yaml.sample ./config/filters.yaml # Recommended
 sudo chmod +x setup.sh
 ./setup.sh
 ```
@@ -69,8 +70,9 @@ Set-Location C:\Docker\yorznab
 Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.zip" -OutFile "yorznab-main.zip"
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
-Copy-Item -Confirm -Path ./app/config/yorznab.yaml.sample -Destination ./app/config/yorznab.yaml
-Copy-Item -Confirm -Path ./app/config/filters.yaml.sample -Destination ./app/config/filters.yaml
+Set-Location app
+Copy-Item -Confirm -Path ./config/yorznab.yaml.sample -Destination ./config/yorznab.yaml
+Copy-Item -Confirm -Path ./config/filters.yaml.sample -Destination ./config/filters.yaml
 powershell -ExecutionPolicy Bypass -File ./setup.ps1
 ```
 
@@ -93,9 +95,9 @@ docker compose -f ./app/docker-compose-windows.yml up -d
 ```
 
 # Connect Apps
-The Yorznab dashboard provides a way to see your credentials for the API and webhook. Just click the Test button in each app to ensure that they can reach the Yorznab server.
+The Yorznab dashboard provides a way to see your credentials for the API and webhook. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9118/`](http://localhost:9118/) or http://myserver.local:9118/.
 
-Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
+Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups.
 
 <div align="center">
   <picture>
@@ -105,6 +107,9 @@ Setting the `SECURE_APPID` in your Docker compose will allow you to easily login
   </picture>
 </div>
 
+## Indexer
+Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted media. The keys for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`. Locate them by logging into the Yorznab dashboard and navigate to ⚙️ Configuration.
+
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Credentials.png">
@@ -113,10 +118,7 @@ Setting the `SECURE_APPID` in your Docker compose will allow you to easily login
   </picture>
 </div>
 
-## Indexer
-This allows Radarr and Sonarr to query Yorznab for torrents. The keys for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`.
-
-Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
+Just a reminder: Setting the `SECURE_APPID` in your Docker compose will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → Indexers → + → Torznab**.
@@ -138,13 +140,14 @@ Setting the `SECURE_APPID` in your Docker compose will allow you to easily login
     - Reject Blocklisted Torrent Hashes While Grabbing: ✅
     - Indexer Priority: 25 *default*
     - \[SONARR\] Maximum Single Episode Age: 730 (any day after will grab season packs)
+5. Click the Test button in each app to ensure that they can reach the Yorznab server.
 
 ### Indexer default settings
 - URL: Server Address from App (Radarr/Sonnar server pings Yorznab) and `./app/docker-compose.yml` \(ports\) and  and `./app/config/yorznab.yaml` \(feed → link\)
 - API Path: `./app/config/yorznab.yaml` \(server → api_endpoint\)
 
 ## Webhook
-This allows Seerr to notify Yorznab when new content is requested. Access the credentials page on the Yorznab dashboard to find the webhook key.
+This allows Seerr to notify Yorznab when new media is requested. Access the credentials page on the Yorznab dashboard to find the webhook key.
 
 1. Open Seerr in your browser.
 2. Go to **Settings → Notifications → Webhook**.
