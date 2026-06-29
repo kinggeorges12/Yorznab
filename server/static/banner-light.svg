@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 970 250" width="970" height="250">
+  <rect width="970" height="250" fill="#f5f5f5"/>
+
+  <!-- Left side: Text -->
+  <foreignObject x="0" y="0" width="970" height="250">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;">
+      <pre style="
+        font-family: monospace; 
+        font-size: 14px; 
+        color: #14532d;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 15px 15px 0 300px;
+        line-height: 1.2;
+        white-space: pre;
+      ">╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║       ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗        ║
+║       ╚██╗ ██╔╝██╔═══██╗██╔══██╗╚══███╔╝████╗  ██║██╔══██╗██╔══██╗██║        ║
+║        ╚████╔╝ ██║   ██║██████╔╝  ███╔╝ ██╔██╗ ██║███████║██████╔╝██║        ║
+║         ╚██╔╝  ██║   ██║██╔══██╗ ███╔╝  ██║╚██╗██║██╔══██║██╔══██╗╚═╝        ║
+║          ██║   ╚██████╔╝██║  ██║███████╗██║ ╚████║██║  ██║██████╔╝██╗        ║
+║          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝        ║
+║══════════════════════════════════════════════════════════════════════════════║
+║                                                                              ║
+║                                         ...a Torznab Indexer that's all YORZ ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝</pre>
+    </div>
+  </foreignObject>
+
+  <!-- Right side: RSS Icon -->
+  <g transform="translate(50, 22) scale(1.6)">
+    <rect width="128" height="128" rx="28" ry="28" x="0" y="0" fill="#A5D6A7"/>
+    <rect width="123" height="123" rx="25" ry="25" x="2.5" y="2.5" fill="#81C784"/>
+    <rect width="118" height="118" rx="23.5" ry="23.5" x="5" y="5" fill="url(#rssGradLight)"/>
+    <circle cx="34" cy="94.5" r="12" fill="#1B5E20"/>
+    <path d="M80 106.5h-17a41 41 0 0 0 -41 -41v-17a58 58 0 0 1 58 58z" fill="#1B5E20"/>
+    <path d="M92 106.5A70 70 0 0 0 22 36.5v-17.5a87.5 87.5 0 0 1 87.5 87.5z" fill="#1B5E20"/>
+  </g>
+
+  <defs>
+    <linearGradient x1="0.085" y1="0.085" x2="0.915" y2="0.915" id="rssGradLight">
+      <stop offset="0.0" stop-color="#C8E6C9"/>
+      <stop offset="0.1071" stop-color="#A5D6A7"/>
+      <stop offset="0.3503" stop-color="#81C784"/>
+      <stop offset="0.5" stop-color="#66BB6A"/>
+      <stop offset="0.7016" stop-color="#4CAF50"/>
+      <stop offset="0.8866" stop-color="#388E3C"/>
+      <stop offset="1.0" stop-color="#2E7D32"/>
+    </linearGradient>
+  </defs>
+</svg>

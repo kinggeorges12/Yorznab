@@ -1,5 +1,9 @@
 <div align="center">
-<img src="server/static/banner.svg" alt="Yorznab Configuration" style="max-height: 500px; width: auto;">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="server/static/banner.svg">
+    <source media="(prefers-color-scheme: light)" srcset="server/static/banner-light.svg">
+    <img src="server/static/banner.svg" alt="Yorznab Banner" style="max-width: 600px; height:auto;">
+  </picture>
 </div>
 
 # Yorznab
@@ -8,7 +12,11 @@ Ever wanted to make your own Torznab server of your own? Now you can!
 Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to download clients without a Usenet or Torznab subscription. Connect Seerr \(Jellyseerr\) to automatically search for requested content through qBittorrent and publish a Yorznab RSS feed. Radarr and Sonarr use the Yorznab RSS feed to find and request torrents from supported download clients like qBittorrent.
 
 <div align="center">
-<img src="Screenshots/Configuration-Windows.png" alt="Yorznab Configuration" style="max-height: 500px; width: auto;">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration-Linux.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-Windows-2.png">
+    <img src="Screenshots/Configuration-Windows-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
+  </picture>
 </div>
 
 # Requirements
@@ -69,21 +77,38 @@ This allows Yorznab to query the qBittorrent search engine.
 4. If the qBittorrent version does not have API Key option, provide the `QUsername` and `QPassword` and DO NOT include the QApiKey.
 
 # Docker
-This starts the service in Docker. You must follow steps in external apps to make it work.
+This starts the service in Docker. Be sure to include the `SECURE_APPID` setting in `docker-compose.yml` to allow access to the dashboard for the first-time setup. After initial setup, remove `SECURE_APPID` from the Docker file, and retrieve it from the server in the `app/config/keys.yml` file to continue using the dashboard.
 
-1. Open shell and enter the Docker directory:
-    - \[Linux Shell\] `cd /srv/dev/yorznab`
-    - \[Windows PowerShell\] `cd C:\Docker\yorznab`
-2. Create the data for Yorznab extract and home directory to persist Python files \[optional\]:
-    - \[Linux Shell\] `mkdir -p logs export python && sudo chown -R $(id -un):$(id -gn) .`
-3. Run Docker file: `docker compose -f ./app/docker-compose.yml up -d`
+## Linux
+```
+cd /srv/dev/yorznab
+mkdir -p logs export python
+sudo chown -R $(id -un):$(id -gn) .
+docker compose -f ./app/docker-compose.yml up -d
+```
+
+## Windows
+```
+cd C:\Docker\yorznab
+(Get-Content 'docker-compose.yml') -replace '/srv/dev/yorznab','C:/Docker/yorznab' | Set-Content docker-compose-windows.yml
+docker compose -f ./app/docker-compose-windows.yml up -d
+```
 
 # Indexer
 This allows Radarr and Sonarr to query Yorznab for torrents. The settings for `API_KEY` and `FEED_KEY` are randomly generated when Yorznab starts in Docker and stored in `config/keys.yaml`. The `SECURE_APPID` can be used to retrieve these keys when set in your Docker compose the Yorznab web, e.g., `http://localhost:9118/`.
+
 <div align="center">
-<img src="Screenshots/Login.png" alt="Yorznab Login" style="max-height: 200px; width: auto;">
-<br>
-<img src="Screenshots/Credentials.png" alt="Yorznab Credentials" style="max-height: 400px; width: auto;">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Login.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Login-2.png">
+    <img src="Screenshots/Login-2.png" alt="Yorznab Login" style="max-width: 600px; height:auto;">
+  </picture>
+  <br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Credentials.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Credentials-2.png">
+    <img src="Screenshots/Credentials-2.png" alt="Yorznab Credentials" style="max-width: 600px; height:auto;">
+  </picture>
 </div>
 
 1. Open Radarr or Sonarr in your browser.
