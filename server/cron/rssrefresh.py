@@ -119,7 +119,7 @@ async def rss_refresh_cron():
             seconds_until_next = (next_run - now).total_seconds()
             
             if seconds_until_next > 0:
-                LOGGER.info(f"⏰ Next RSS refresh check in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
+                LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
                 await asyncio.sleep(seconds_until_next)
             
             # Wait for refresh to finish before starting cron timer again
