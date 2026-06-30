@@ -70,10 +70,10 @@ class FeedFile:
 
     def get_file_age(self) -> float:
         """
-        Get the age of the feed file in hours.
+        Get the age of the feed file in seconds.
         
         Returns:
-            Age in hours, or float('inf') if file doesn't exist
+            Age in seconds, or float('inf') if file doesn't exist
         """
         if not self.exists():
             return float('inf')
@@ -81,9 +81,8 @@ class FeedFile:
         file_mtime = os.path.getmtime(self._config_file.path)
         current_time = time.time()
         age_seconds = current_time - file_mtime
-        age_hours = age_seconds / 3600
         
-        return age_hours
+        return age_seconds
 
     def __str__(self):
         return str(self._config_file.path)

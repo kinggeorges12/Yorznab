@@ -104,23 +104,38 @@ async def rss_refresh_cron():
     """
     # Get configuration from settings
     feed_file = FeedFile(SETTINGS.get('feed', 'file'))
-    schedule = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"  # Default: every day at random minute/hour
+    # Default: every day at random minute/hour
+    schedule = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
 
     LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
     LOGGER.info(f"📁 Feed file: {feed_file}")
     
     while True:
         try:
-            # Calculate next run time
-            now = datetime.now()
-            next_run = get_next_run_time(schedule, now)
+            # Check file age in case the cron shut down since last run
+            feed_file_age = feed_file.get_file_age()
             
-            # Calculate seconds until next run
+            # If file doesn't exist, run immediately
+            if feed_file_age == float('inf'):
+                LOGGER.warning("⚠️ Feed file doesn't exist - running immediate refresh")
+                await refresh_rss()
+                continue
+
+            # Calculate the file's modification time from its age
+            now = datetime.now()
+            file_mtime = now - timedelta(seconds=feed_file_age)
+            
+            # Calculate next run time based on when the file was last modified
+            next_run = get_next_run_time(schedule, file_mtime)
+            
+            # Calculate seconds until next run from current time
             seconds_until_next = (next_run - now).total_seconds()
             
             if seconds_until_next > 0:
                 LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
                 await asyncio.sleep(seconds_until_next)
+            else:
+                LOGGER.warning("🔔 Missed an RSS refresh on the schedule - running immediate refresh")
             
             # Wait for refresh to finish before starting cron timer again
             await refresh_rss()
@@ -129,7 +144,6 @@ async def rss_refresh_cron():
             LOGGER.error(f"❌ RSS refresh cron job error: {e}", exc_info=True)
             # Wait 5 minutes before retrying on error
             await asyncio.sleep(300)
-
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
