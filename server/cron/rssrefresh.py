@@ -12,14 +12,14 @@ Cron job example (runs at minute 30 every hour):
     30 * * * * /usr/bin/python3 /path/to/cron/rssrefresh.py
 """
 
+import os
 from typing import Optional
+from zoneinfo import ZoneInfo
 from croniter import croniter
 import argparse
 import asyncio
-import os
 import random
 import sys
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -40,6 +40,10 @@ LOGGER = CustomLogger(name="cron", enable_log=True)
 
 # Load settings from config file
 SETTINGS = AppSettings(filename='yorznab.yaml')
+
+# Get timezone from Docker environment variable, fallback to UTC
+TIMEZONE_STR = os.environ.get('TZ', 'UTC')
+TIMEZONE = ZoneInfo(TIMEZONE_STR)
 
 async def refresh_rss() -> bool:
     """
@@ -69,6 +73,11 @@ async def refresh_rss() -> bool:
         return False
 
 
+def get_now() -> datetime:
+    """Get current time in the configured timezone."""
+    return datetime.now(TIMEZONE)
+
+
 def get_next_run_time(schedule: str, base_time: Optional[datetime] = None) -> datetime:
     """
     Calculate the next run time based on cron schedule.
@@ -79,13 +88,17 @@ def get_next_run_time(schedule: str, base_time: Optional[datetime] = None) -> da
         base_time: Optional base time to calculate from. Defaults to now.
         
     Returns:
-        Next datetime when the job should run
+        Next datetime when the job should run (timezone-aware)
         
     Raises:
         ValueError: If the cron schedule is invalid
     """
     if base_time is None:
-        base_time = datetime.now()
+        base_time = get_now()
+    
+    # Ensure base_time is timezone-aware
+    if base_time.tzinfo is None or base_time.tzinfo.utcoffset(base_time) is None:
+        base_time = base_time.replace(tzinfo=TIMEZONE)
     
     # Validate and create cron iterator
     if not croniter.is_valid(schedule):
@@ -95,7 +108,12 @@ def get_next_run_time(schedule: str, base_time: Optional[datetime] = None) -> da
     cron = croniter(schedule, base_time)
     next_run = cron.get_next(datetime)
     
+    # Ensure the result is timezone-aware
+    if next_run.tzinfo is None or next_run.tzinfo.utcoffset(next_run) is None:
+        next_run = next_run.replace(tzinfo=TIMEZONE)
+    
     return next_run
+
 
 async def rss_refresh_cron():
     """
@@ -109,6 +127,7 @@ async def rss_refresh_cron():
 
     LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
     LOGGER.info(f"📁 Feed file: {feed_file}")
+    LOGGER.info(f"🌎 Timezone: {TIMEZONE_STR}")
     
     while True:
         try:
@@ -122,8 +141,12 @@ async def rss_refresh_cron():
                 continue
 
             # Calculate the file's modification time from its age
-            now = datetime.now()
+            now = get_now()
             file_mtime = now - timedelta(seconds=feed_file_age)
+            
+            # Ensure file_mtime is timezone-aware (assume UTC for file times)
+            if file_mtime.tzinfo is None or file_mtime.tzinfo.utcoffset(file_mtime) is None:
+                file_mtime = file_mtime.replace(tzinfo=ZoneInfo('UTC')).astimezone(TIMEZONE)
             
             # Calculate next run time based on when the file was last modified
             next_run = get_next_run_time(schedule, file_mtime)
@@ -132,7 +155,8 @@ async def rss_refresh_cron():
             seconds_until_next = (next_run - now).total_seconds()
             
             if seconds_until_next > 0:
-                LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {next_run.strftime('%Y-%m-%d %H:%M')}")
+                log_time = next_run.strftime('%Y-%m-%d %H:%M:%S %Z')
+                LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {log_time}")
                 await asyncio.sleep(seconds_until_next)
             else:
                 LOGGER.warning("🔔 Missed an RSS refresh on the schedule - running immediate refresh")
@@ -170,6 +194,7 @@ async def main(argv: list[str] | None = None) -> int:
     LOGGER.info(f"⚡ Run now: {force_msg or 'Nope'}")
     LOGGER.info(f"📁 Feed file: {feed_file}")
     LOGGER.info(f"🕐 Schedule: {args.schedule}")
+    LOGGER.info(f"🌎 Timezone: {TIMEZONE_STR}")
     
     # Force refresh on first run
     if force_msg:

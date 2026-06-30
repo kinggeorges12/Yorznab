@@ -6,3 +6,4 @@ filelock
 pyyaml
 dacite
 croniter
+tzdata
