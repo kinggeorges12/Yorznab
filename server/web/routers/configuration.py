@@ -1,4 +1,5 @@
 import os
+import platform
 from fastapi import APIRouter, Cookie, Response
 from fastapi.responses import RedirectResponse
 
@@ -76,18 +77,15 @@ async def setup(authenticated: str = Cookie(None)):
     html_apps += build_apps_html(name = radarr_client.ServerName if radarr_client and radarr_client.ServerName else 'Radarr',
                                 url = radarr_client.Url if radarr_client and hasattr(radarr_client, 'Url') and radarr_client.Url else None,
                                 status = radarr_status['version'] if radarr_status and 'version' in radarr_status else None,
-                                icon_url = 'https://github.com/Radarr/radarr.github.io/blob/master/logo/1024.png?raw=true')
+                                icon_url = 'https://avatars.githubusercontent.com/u/25025331')
     html_apps += build_apps_html(name = sonarr_client.ServerName if sonarr_client and sonarr_client.ServerName else 'Sonarr',
                                 url = sonarr_client.Url if sonarr_client and hasattr(sonarr_client, 'Url') and sonarr_client.Url else None,
                                 status = sonarr_status['version'] if sonarr_status and 'version' in sonarr_status else None,
-                                icon_url = 'https://github.com/Sonarr/Sonarr/blob/main/Logo/1024.png?raw=true')
+                                icon_url = 'https://avatars.githubusercontent.com/u/1082903')
     html_apps += build_apps_html(name = qbittorrent_client.ServerName if qbittorrent_client and qbittorrent_client.ServerName else 'qBittorrent',
                                 url = qbittorrent_client.Url if qbittorrent_client and hasattr(qbittorrent_client, 'Url') and qbittorrent_client.Url else None,
                                 status = qbittorrent_status or None,
                                 icon_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png')
-
-    # Get path for config instructions
-    server_path = os.getenv("PYTHONPATH")
 
     content = f'''
         <div class="success-container">
@@ -109,8 +107,7 @@ async def setup(authenticated: str = Cookie(None)):
 
             <div class="text-container">
                 <div class="key-label">📋 Interactive Setup Script for { 'PowerShell' if os.name == 'nt' else 'Shell' }</div>
-                <div class="key-value">{ f'cd C:/Docker/yorznab{server_path} && ./setup.ps1' if os.name == 'nt'
-                                         else f'cd /srv/dev/yorznab{server_path} && chmod +x setup.sh && ./setup.sh' }</div>
+                <div class="key-value" id="setupCommand">{ get_setup_command() }</div>
             </div>
             <div class="copy-actions">
                 <button class="copy-btn" onclick="copyKey('setupCommand')">📋 Copy Setup Command</button>
@@ -118,3 +115,28 @@ async def setup(authenticated: str = Cookie(None)):
         </div>'''
     
     return Response(content=page_template(title="Configuration", content=content, token=token, js="cmd.js"), media_type="text/html")
+
+
+def in_docker():
+    return os.path.exists('/.dockerenv')
+
+def in_wsl():
+    return 'microsoft' in os.uname().release.lower()
+
+def get_setup_command():
+    server_path = os.getenv("PYTHONPATH", "")
+    
+    if in_docker():
+        prefix = 'C:/Docker/yorznab' if os.name == 'nt' else '/srv/dev/yorznab'
+    else:
+        prefix = ''
+    
+    full_path = os.path.join(prefix, server_path.lstrip('/\\')) if prefix else server_path
+    
+    if os.name == 'nt':
+        commands = ['powershell.exe -ExecutionPolicy Bypass -File ./setup.ps1']
+    else:
+        commands = ['chmod +x setup.sh', './setup.sh']
+    
+    # Join with <br> for HTML display
+    return f'cd {full_path}<br>' + '<br>'.join(commands)
