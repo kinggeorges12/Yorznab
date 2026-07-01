@@ -12,7 +12,7 @@ services:
       - LOG_DIR=/logs # Default is the temp directory
       #- SECURE_APPID=YOUR_APPID # Change this to prevent unauthorized access of API and webhook credentials via /login?appid=YOUR_APPID
     ports:
-      - "9118:8080" # Default port 9118
+      - "9116:8080" # Default port 9116
     extra_hosts:
       - "host.docker.internal:host-gateway" # Expose Yorznab to other containers
     volumes:

@@ -97,7 +97,7 @@ docker compose -f ./app/docker-compose-windows.yml up -d
 ```
 
 # Connect Apps
-The Yorznab dashboard provides a way to see your credentials for the API and webhook. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9118/`](http://localhost:9118/) or http://myserver.local:9118/.
+The Yorznab dashboard provides a way to see your credentials for the API and webhook. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9116/`](http://localhost:9116/) or http://myserver.local:9116/.
 
 Setting the `SECURE_APPID` in the `docker-compose.yaml` file will allow you to easily login for first-time setups.
 
@@ -120,7 +120,7 @@ Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted 
   </picture>
 </div>
 
-Just a reminder: Setting the `SECURE_APPID` in the `docker-compose.yaml` file will allow you to easily login for first-time setups, e.g., [`http://localhost:9118/`](http://localhost:9118/).
+Just a reminder: Setting the `SECURE_APPID` in the `docker-compose.yaml` file will allow you to easily login for first-time setups, e.g., [`http://localhost:9116/`](http://localhost:9116/).
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → Indexers → + → Torznab**.
@@ -130,7 +130,7 @@ Just a reminder: Setting the `SECURE_APPID` in the `docker-compose.yaml` file wi
     - Enable RSS: ✅
     - Enable Automatic Search: ✅
     - Enable Interactive Search: ✅
-    - URL (defaults\*): http://localhost:9118
+    - URL (defaults\*): http://localhost:9116
     - API Path (defaults\*): /api
     - API Key (dashboard: API_KEY): YOUR_API_KEY
     - \[RADARR\] Categories: ✅ Movies \(all\)
@@ -156,7 +156,7 @@ This allows Seerr to notify Yorznab when new media is requested. Access the cred
 3. Fill-in these settings, using values from `config/yorznab.yaml` in parentheses:
     - Enable Agent: Yorznab: ✅
     - Support URL Variables: 🔲
-    - Webhook URL (feed: link/webhook_endpoint): http://localhost:9118/webhook
+    - Webhook URL (feed: link/webhook_endpoint): http://localhost:9116/webhook
     - Authorization Header \(dashboard: WEBHOOK_KEY\): YOUR_WEBHOOK_KEY
     - JSON Payload: *do not change default*
     - Notification Types \(🔲 Others\):
@@ -270,7 +270,7 @@ Setup the local Python environment for running locally without Docker.
 2. Run the following commands for your OS:
     - \[Linux Shell\] `cd /srv/dev/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
     - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
-3. Visit https://localhost:9118/status
+3. Visit https://localhost:9116/status
 
 # AI Disclosure
 What you're reading on this page was not written by AI. I wrote the Torznab code for this in 2025 without AI, or even an IDE. You might be able to confirm this from looking at my spaghetti code in [`torznab.py`](server/routers/torznab.py). Mostly done through looking up the endpoints available for the protocol. I used AI to generate the front-end web server. I also regenerated my utility files with AI to accomodate yaml files.

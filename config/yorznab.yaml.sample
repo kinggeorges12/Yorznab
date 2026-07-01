@@ -20,9 +20,9 @@ feed:
   # The information below is used to advertise capabilities on the API.
   # The address should (untested) match the address when Radarr and Sonarr ping this server.
   # The link port should (untested) match the server port used in Docker.
-  link: http://localhost:9118
+  link: http://localhost:9116
   # Radarr and Sonarr do not implement the features below
-  image: http://localhost:9118/static/banner.jpg
+  image: http://localhost:9116/static/banner.jpg
   email: admin@example.com
   description: Get yo feed on!
   language: en
