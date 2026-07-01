@@ -53,8 +53,9 @@ The automated setup tool \(`setup.sh` or `setup.ps1`\) initializes the Radarr, S
 
 ## Linux \(Shell\)
 ```
-sudo mkdir -p /srv/dev/yorznab/app
-cd /srv/dev/yorznab
+YORZNAB_DIR=/path/to/yorznab
+sudo mkdir -p "${YORZNAB_DIR}/app"
+cd "${YORZNAB_DIR}"
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
@@ -67,8 +68,9 @@ sudo chmod +x setup.sh
 
 ## Windows \(PowerShell\)
 ```
-New-Item -Path C:\Docker\yorznab -ItemType Directory -Force
-Set-Location C:\Docker\yorznab
+$YORZNAB_DIR='C:\Docker\yorznab'
+New-Item -Path "${YORZNAB_DIR}" -ItemType Directory -Force
+Set-Location "${YORZNAB_DIR}"
 Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.zip" -OutFile "yorznab-main.zip"
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
@@ -83,17 +85,20 @@ This starts the service in Docker. Be sure to include the `SECURE_APPID` setting
 
 ## Linux \(Shell\)
 ```
-cd /srv/dev/yorznab
+YORZNAB_DIR=/path/to/yorznab
+cd "${YORZNAB_DIR}"
 mkdir -p logs export python
 sudo chown -R $(id -un):$(id -gn) .
-docker compose -f ./app/docker-compose.yml up -d
+sed "s|/path/to/yorznab|${YORZNAB_DIR}|g" ./app/docker-compose.yml > ./app/docker-compose-run.yml
+docker compose -f ./app/docker-compose-run.yml up -d
 ```
 
 ## Windows \(PowerShell\)
 ```
-cd C:\Docker\yorznab
-(Get-Content 'docker-compose.yml') -replace '/srv/dev/yorznab','C:/Docker/yorznab' | Set-Content docker-compose-windows.yml
-docker compose -f ./app/docker-compose-windows.yml up -d
+$YORZNAB_DIR='C:\Docker\yorznab'
+cd "${YORZNAB_DIR}"
+(Get-Content './app/docker-compose.yml') -replace '/path/to/yorznab','C:/Docker/yorznab' | Set-Content ./app/docker-compose-run.yml
+docker compose -f ./app/docker-compose-run.yml up -d
 ```
 
 # Connect Apps
@@ -214,10 +219,11 @@ The GitHub tagged releases will update the Yorznab installation to a specific ve
 
 ## Linux \(Shell\)
 ```
+YORZNAB_DIR=/path/to/yorznab
 version=v1.0
 docker stop yorznab
-sudo mkdir -p /srv/dev/yorznab/app
-cd /srv/dev/yorznab
+sudo mkdir -p "${YORZNAB_DIR}/app"
+cd "${YORZNAB_DIR}"
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
@@ -226,10 +232,11 @@ docker start yorznab
 
 ## Windows \(PowerShell\)
 ```
+$YORZNAB_DIR='C:\Docker\yorznab'
 $version='v1.0'
 docker stop yorznab
-New-Item -Path C:\Docker\yorznab -ItemType Directory -Force
-Set-Location C:\Docker\yorznab
+New-Item -Path "${YORZNAB_DIR}" -ItemType Directory -Force
+Set-Location "${YORZNAB_DIR}"
 Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.zip" -OutFile "yorznab-main.zip"
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
@@ -268,12 +275,12 @@ Setup the local Python environment for running locally without Docker.
 
 1. Install [Python](https://www.python.org/downloads/) \(test on 3.11+\) on your server or PC. Ensure this is available in your shell: `python --version`
 2. Run the following commands for your OS:
-    - \[Linux Shell\] `cd /srv/dev/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
+    - \[Linux Shell\] `cd /path/to/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
     - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
 3. Visit https://localhost:9116/status
 
 # AI Disclosure
-What you're reading on this page was not written by AI. I wrote the Torznab code for this in 2025 without AI, or even an IDE. You might be able to confirm this from looking at my spaghetti code in [`torznab.py`](server/routers/torznab.py). Mostly done through looking up the endpoints available for the protocol. I used AI to generate the front-end web server. I also regenerated my utility files with AI to accomodate yaml files.
+What you're reading on this page was not written by AI. I wrote the Torznab code for this in 2025 without AI, or even an IDE. You might be able to confirm this from looking at my spaghetti code in the [first commit](https://github.com/kinggeorges12/Yorznab/commit/f6ca64b8d559aafe647cdb8f0c9cacda5c0535b9). Most of the work was looking up the endpoints available for the protocol. More recently, I used AI to generate the front-end web server. I also regenerated my utility functions with AI to incorporate some features the desktop app was missing like handling the timezone and settings.
 
 # Copyright Notice
 Please follow applicable copyright laws for your country and the [GitHub Acceptable Use Policies](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies).

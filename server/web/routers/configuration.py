@@ -127,7 +127,7 @@ def get_setup_command():
     server_path = os.getenv("PYTHONPATH", "")
     
     if in_docker():
-        prefix = 'C:/Docker/yorznab' if os.name == 'nt' else '/srv/dev/yorznab'
+        prefix = 'C:/Docker/yorznab' if os.name == 'nt' else '/path/to/yorznab'
     else:
         prefix = ''
     

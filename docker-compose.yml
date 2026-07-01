@@ -12,27 +12,27 @@ services:
       - LOG_DIR=/logs # Default is the temp directory
       #- SECURE_APPID=YOUR_APPID # Change this to prevent unauthorized access of API and webhook credentials via /login?appid=YOUR_APPID
     ports:
-      - "9116:8080" # Default port 9116
+      - "9116:9116" # Default port 9116
     extra_hosts:
       - "host.docker.internal:host-gateway" # Expose Yorznab to other containers
     volumes:
       # Only for root user to persist Python installation
-      # - /srv/dev/yorznab/python:/home
+      # - /path/to/yorznab/python:/home
       # Writing RSS feed
       - type: bind
-        source: /srv/dev/yorznab/export/
+        source: /path/to/yorznab/export/
         target: /export
       # Logging server output
       - type: bind
-        source: /srv/dev/yorznab/logs
+        source: /path/to/yorznab/logs
         target: /logs
       # Writing Yorznab API Keys to keys.yaml
       - type: bind
-        source: /srv/dev/yorznab/app/config
+        source: /path/to/yorznab/app/config
         target: /app/config
       # Running the Python web server and cron job
       - type: bind
-        source: /srv/dev/yorznab/app/server
+        source: /path/to/yorznab/app/server
         target: /app/server
         read_only: true
     command: >
@@ -42,9 +42,9 @@ services:
         cd /app/server &&
         pip install --user --upgrade pip &&
         pip install --user -r requirements.txt && 
-        python -m uvicorn run:app --host 0.0.0.0 --port 8080;"
+        python -m uvicorn run:app --host 0.0.0.0 --port 9116;"
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 8080); conn.request(\"GET\", \"/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]
+      test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 9116); conn.request(\"GET\", \"/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]
       start_period: 20s
       interval: 300s
       timeout: 15s
