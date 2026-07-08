@@ -54,7 +54,7 @@ async def login_page(request: Request, appid: str = Query(None), failed: bool = 
             <form autocomplete="off" method="POST" action="{RouteHandler.LOGIN}">
                 <input type="hidden" name="csrf_token" value="{token}">
                 <div class="form-group">
-                    <label for="appid">Please enter your App ID to show API keys:</label>
+                    <label for="appid">Please enter your App ID to login to the dashboard:</label>
                     <div class="password-wrapper">
                         <input type="password" autocomplete="off" id="{ID_NAME}" name="appid" placeholder="{ID_NAME}" required>
                         <button type="button" class="toggle-btn" id="toggleBtn" aria-label="Toggle password visibility">

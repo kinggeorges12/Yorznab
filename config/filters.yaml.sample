@@ -61,13 +61,17 @@ Movies:
     - "https://archive.org"
     - "https://www.publicdomaintorrents.info"
   required_mbps:
-    # For 90 minute movie, 1.33 to 8 mbps ~ 900MB to 5.4GB
+    # For 90 minute movie, 1.33 to 12 mbps ~ 900MB to 8.1GB
     lower: 1.33
-    upper: 8
+    upper: 12
+  required_mbps:
+    # For 90 minute movie, 1.33 to 16 mbps ~ 900MB to 10.8GB
+    lower: 1.33
+    upper: 16
   best_mbps:
-    # For 90 minute movie, 3.33 to 5.66 mbps ~ 2.25GB to 3.8GB
+    # For 90 minute movie, 3.33 to 10 mbps ~ 2.25GB to 6.75GB
     lower: 3.33
-    upper: 5.66
+    upper: 10
 
 TV:
   category:
@@ -93,6 +97,6 @@ TV:
     lower: 1.33
     upper: 8
   best_mbps:
-    # For a 20 minute show, 3.33 to 5.66 mbps ~ 500MB to 850MB
+    # For a 20 minute show, 3.33 to 6 mbps ~ 500MB to 900MB
     lower: 3.33
-    upper: 5.66
+    upper: 6

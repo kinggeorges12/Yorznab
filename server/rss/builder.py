@@ -14,7 +14,6 @@ from server.rss.ArrClient import ArrClient, ArrType
 # Import utilities
 from server.utils.feedfile import FeedFile
 from server.utils.keystore import KeyStore
-from server.utils.settings import AppSettingsUndefined
 from utils.customlogger import CustomLogger
 from utils.filelock import FileLock
 from utils.timeformatter import IsoTimeFormatter

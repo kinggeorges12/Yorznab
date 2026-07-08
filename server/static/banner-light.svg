@@ -30,24 +30,25 @@
   </foreignObject>
 
   <!-- Right side: RSS Icon -->
-  <g transform="translate(50, 22) scale(1.6)">
-    <rect width="128" height="128" rx="28" ry="28" x="0" y="0" fill="#A5D6A7"/>
-    <rect width="123" height="123" rx="25" ry="25" x="2.5" y="2.5" fill="#81C784"/>
-    <rect width="118" height="118" rx="23.5" ry="23.5" x="5" y="5" fill="url(#rssGradLight)"/>
-    <circle cx="34" cy="94.5" r="12" fill="#1B5E20"/>
-    <path d="M80 106.5h-17a41 41 0 0 0 -41 -41v-17a58 58 0 0 1 58 58z" fill="#1B5E20"/>
-    <path d="M92 106.5A70 70 0 0 0 22 36.5v-17.5a87.5 87.5 0 0 1 87.5 87.5z" fill="#1B5E20"/>
-  </g>
-
   <defs>
-    <linearGradient x1="0.085" y1="0.085" x2="0.915" y2="0.915" id="rssGradLight">
-      <stop offset="0.0" stop-color="#C8E6C9"/>
-      <stop offset="0.1071" stop-color="#A5D6A7"/>
-      <stop offset="0.3503" stop-color="#81C784"/>
-      <stop offset="0.5" stop-color="#66BB6A"/>
-      <stop offset="0.7016" stop-color="#4CAF50"/>
-      <stop offset="0.8866" stop-color="#388E3C"/>
-      <stop offset="1.0" stop-color="#2E7D32"/>
-    </linearGradient>
+   <linearGradient id="RSSg" x1="0.09" x2="0.92" y1="0.09" y2="0.92">
+    <stop offset="0" stop-color="#2E8B57"/>
+    <stop offset="0.11" stop-color="#3CB371"/>
+    <stop offset="0.35" stop-color="#4CAF50"/>
+    <stop offset="0.5" stop-color="#66BB6A"/>
+    <stop offset="0.7" stop-color="#43A047"/>
+    <stop offset="0.89" stop-color="#2E7D32"/>
+    <stop offset="1" stop-color="#1B5E20"/>
+   </linearGradient>
   </defs>
+  <g transform="translate(50, 22) scale(0.8)">
+   <rect fill="#1B5E20" height="256" id="svg_1" rx="55" ry="55" width="256" x="0" y="0"/>
+   <rect fill="#4CAF50" height="246" id="svg_2" rx="50" ry="50" width="246" x="5" y="5"/>
+   <rect fill="url(#RSSg)" height="236" id="svg_3" rx="47" ry="47" width="236" x="10" y="10"/>
+   <circle cx="112.22" cy="235.91" fill="#FFF" id="svg_5" r="24" transform="matrix(0.707107 -0.707107 0.707107 0.707107 -37.5556 121.233)"/>
+   <g id="svg_9" transform="translate(0 0.44) translate(-0.13 0)">
+    <path d="m194.93,227.83l-34,0a82,82 0 0 0 -82,-82l17.14,-21.62a116,116 0 0 1 98.86,103.62z" fill="#FFF" id="svg_6" transform="matrix(-0.799707 0 0 -1.11929 212.034 277.853)"/>
+    <path d="m173.6,201.13a140,140 0 0 0 -140,-140l0,-35a175,175 0 0 1 175,175l-35,0z" fill="#FFF" id="svg_7" transform="matrix(0 1.19761 -0.821428 0 221.59 -17.479)"/>
+   </g>
+  </g>
 </svg>

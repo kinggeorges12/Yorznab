@@ -118,8 +118,8 @@ class QBitFilter:
             r["tracker_tag"] = source_tag # Tags for filtering
             r["tags"] = source_tag or '' # Tags for feed
             r["lastAdded"] = IsoTimeFormatter().to_string()
-            r["file_size_MB"] = float(r.get("fileSize", 0) or 1) / (1024 ** 2)
-            r["file_mbps"] = (r["file_size_MB"] / 8) * (runtime / 60) # Convert MB to Mb and minutes to seconds
+            r["file_size_MB"] = float(r.get("fileSize", 0) or 1) / (1024 ** 2) # Convert to megabytes
+            r["file_mbps"] = (r["file_size_MB"] * 8) / (runtime * 60) # Convert file size MB to Mb and runtime minutes to seconds
             r["seeders_10pct"] = r.get("nbSeeders", 0) >= (0.1 * max_seeders)
             r["seeders_50pct"] = r.get("nbSeeders", 0) >= (0.5 * max_seeders)
             r["quality"] = any(q in file_name for q in APP.quality_search) if APP and APP.quality_search else None
