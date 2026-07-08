@@ -55,7 +55,10 @@ def navigation(current_route: str = '') -> str:
     
     logout = f'''
             <form method="POST" action="{RouteHandler.LOGIN}/logout">
-                <button type="submit" class="logout-btn">⏻ <span class="btn-label">Logout</span></button>
+                <button type="submit" class="logout-btn">
+                    <span class="btn-icon">➡️</span>
+                    <span class="btn-label">Logout</span>
+                </button>
             </form>'''
     
     return f'''

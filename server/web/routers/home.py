@@ -24,13 +24,15 @@ async def login_success(request: Request):
             {navigation(f'{RouteHandler.LOGIN}/success')}
             <h1>{TITLE} 🏠 Home</h1>
             <div class="text-container">
-                <h2>Welcome! You are logged in.</h2>
+                <h2>Welcome!</h2>
                 <br>
-                <p>Check out the GitHub repository for updates and information:</p>
-                <a href="https://github.com/kinggeorges12/Yorznab" target="_blank" rel="noopener noreferrer">https://github.com/kinggeorges12/Yorznab</a>
+                <p>Check out the GitHub repository for updates and information:
+                    <a href="https://github.com/kinggeorges12/Yorznab" target="_blank" rel="noopener noreferrer">https://github.com/kinggeorges12/Yorznab</a>
+                </p>
                 <br><br>
-                <p>Stuck? Post an issue:</p>
-                <a href="https://github.com/kinggeorges12/Yorznab/issues" target="_blank" rel="noopener noreferrer">ARRGH HELP ME!</a>
+                <p>Stuck? Post an issue:
+                    <a href="https://github.com/kinggeorges12/Yorznab/issues" target="_blank" rel="noopener noreferrer">ARRGH HELP ME!</a>
+                </p>
             </div>
             <div class="text-container">
             <div id="ascii-container"><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
