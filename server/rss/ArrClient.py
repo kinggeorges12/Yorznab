@@ -33,8 +33,8 @@ class ArrClient:
     _config: LibraryConfig = None
     _config_file = "settings.yaml"
 
-    def __init__(self, server_type: ArrType, logger: CustomLogger = None):
-        self.LOGGER = CustomLogger(name=server_type.value, logger=logger)
+    def __init__(self, server_type: ArrType):
+        self.LOGGER = CustomLogger(name=server_type.value)
         # Resolve config file settings.yaml
         try:
             config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(key=server_type.value, exists=True)

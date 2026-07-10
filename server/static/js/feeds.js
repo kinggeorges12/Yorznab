@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const countdown = document.getElementById('countdown');
     const targetTime = parseInt(countdown.getAttribute('data-target'));
-    let isActive = false;
+    let isActive = true;
     let statusCheckInterval = null;
     let countdownInterval = null;
 
@@ -11,22 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await fetch('/status')
                 .catch(error => {
                     console.error('Connection failed:', error);
-                    // Return a flag or throw to avoid going to .then()
-                    return null; // or throw error
+                    return null;
                 })
-                .then(response => {
+                .then(async response => {
                     if (response === null) {
-                        // This was our default from catch
-                        return { status: 'unhealthy', label: '🔌 Disconnected' };
+                        return { status: 'unhealthy', active: null, label: '🔌 Disconnected' };
                     }
-                    // Real response - parse JSON regardless of status
-                    return response.json();
+                    return await response.json();
                 });
             
-            // Update active state (ignore null)
-            if (data.active !== null) {
-                isActive = data.active;
-            }
+            // Update active state
+            isActive = data.active;
             
             // Update status indicator if it exists
             const statusDot = document.getElementById('status-dot');

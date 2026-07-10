@@ -15,7 +15,6 @@ Cron job example (runs at minute 30 every hour):
 import os
 from typing import Optional
 from threading import Lock
-from zoneinfo import ZoneInfo
 from croniter import croniter
 import argparse
 import asyncio
@@ -34,10 +33,11 @@ HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings
 from server.utils.feedconfig import FeedConfig
+from server.utils.timezoneaware import TimezoneAware
 import asyncio
 
 # Global logger instance
-LOGGER:CustomLogger = CustomLogger(name="cron", enable_log=True)
+LOGGER:CustomLogger = CustomLogger(name="cron")
 
 # Load settings from config file
 SETTINGS:AppSettings = AppSettings(filename='yorznab.yaml')
@@ -51,10 +51,6 @@ REFRESH_SCHEDULE:str = SETTINGS.get('cron', 'refresh_schedule') or f"{random.ran
 DOWNLOAD:bool = os.environ.get('DOWNLOAD','false').lower() not in ['false', 'no'] and bool(os.environ.get('DOWNLOAD'))
 NEXT_RUN:Optional[datetime] = None
 
-# Get timezone from Docker environment variable, fallback to UTC
-TIMEZONE_STR:str = os.environ.get('TZ', 'UTC')
-TIMEZONE:ZoneInfo = ZoneInfo(TIMEZONE_STR)
-
 class CronRunner:
 
     """
@@ -64,8 +60,6 @@ class CronRunner:
     _lock = Lock()
     _initialized = False
     _status:str = "Initializing"
-    _timezone_str:str = TIMEZONE_STR
-    _timezone:ZoneInfo = ZoneInfo(_timezone_str)
 
     def __new__(cls):
         with cls._lock:
@@ -74,7 +68,7 @@ class CronRunner:
         return cls._instance
 
     def __init__(self):
-        global FEED_CONFIGS, REFRESH_SCHEDULE, DOWNLOAD, NEXT_RUN, TIMEZONE_STR
+        global FEED_CONFIGS, REFRESH_SCHEDULE, DOWNLOAD, NEXT_RUN
         if not self.__class__._initialized:
             self._feed_configs:list[FeedConfig] = FEED_CONFIGS
             self.refresh_schedule:str = REFRESH_SCHEDULE
@@ -129,11 +123,6 @@ class CronRunner:
         with self.__class__._lock: self.__class__._status = "Failure"
         return False
 
-    @classmethod
-    def get_now(cls) -> datetime:
-        """Get current time in the configured timezone."""
-        return datetime.now(cls._timezone)
-
 
     def get_next_run_time(self, schedule: Optional[str] = None, base_time: Optional[datetime] = None) -> datetime:
         """
@@ -150,10 +139,9 @@ class CronRunner:
         Raises:
             ValueError: If the cron schedule is invalid
         """
-        global TIMEZONE
         
         if base_time is None:
-            base_time = self.__class__.get_now().replace(tzinfo=self.__class__._timezone)
+            base_time = TimezoneAware.get_now()
         
         # Validate and create cron iterator
         if not croniter.is_valid(schedule):
@@ -165,7 +153,7 @@ class CronRunner:
         
         # Ensure the result is timezone-aware
         if next_run.tzinfo is None or next_run.tzinfo.utcoffset(next_run) is None:
-            next_run = next_run.replace(tzinfo=self.__class__._timezone)
+            next_run = next_run.replace(tzinfo=TimezoneAware.TIMEZONE)
         
         return next_run
 
@@ -180,7 +168,7 @@ class CronRunner:
         schedule = self.refresh_schedule
 
         LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
-        LOGGER.info(f"🌎 Timezone: {self.__class__._timezone_str}")
+        LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
         
         while True:
             try:
@@ -202,7 +190,7 @@ class CronRunner:
                     continue
                 
                 # Calculate the file's modification time from its age
-                now = self.__class__.get_now()
+                now = TimezoneAware.get_now()
                 file_mtime = now - timedelta(seconds=max_file_age)
 
                 # Calculate next run time based on when the file was last modified
@@ -256,7 +244,7 @@ async def main(argv: list[str] | None = None) -> int:
     # Set defaults from args
     FEED_CONFIGS = FEED_CONFIGS or [FeedConfig()]  # Default to feed.yaml if none specified
     REFRESH_SCHEDULE = args.schedule or REFRESH_SCHEDULE
-    NEXT_RUN = CronRunner.get_now()  # Current time for first run
+    NEXT_RUN = TimezoneAware.get_now()  # Current time for first run
 
     # Determine whether we need to refresh the feed
     force_msg = HELLO_WORLD
@@ -270,7 +258,7 @@ async def main(argv: list[str] | None = None) -> int:
     if (DOWNLOAD):
         LOGGER.info(f"📥 Download top result: {DOWNLOAD}")
     LOGGER.info(f"🕐 Schedule: {REFRESH_SCHEDULE}")
-    LOGGER.info(f"🌎 Timezone: {TIMEZONE_STR}")
+    LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
     
     # Initialize the cron runner
     cron_runner = CronRunner()

@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
+from server.utils.timezoneaware import TimezoneAware
 from server.web.common import TITLE, get_csrf_token, navigation, page_template
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
@@ -19,7 +20,7 @@ async def feeds(authenticated: str = Cookie(None)):
     
     # Get the current server time
     next_run = CronRunner().next_run
-    base_time = CronRunner.get_now()
+    base_time = TimezoneAware.get_now()
     server_time_str = base_time.strftime('%Y-%m-%d %H:%M:%S')
 
     # Calculate seconds until next refresh
@@ -46,13 +47,13 @@ async def feeds(authenticated: str = Cookie(None)):
             <div class="info-item">
                 <span class="info-label">{feed_config.config_name}</span>
                 <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=movie" target="_blank">
-                    <span class="info-value">🎬</span>
+                    <span class="info-value" title="Movie Search">🎬</span>
                 </a>
                 <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=tvsearch" target="_blank">
-                    <span class="info-value">📺</span>
+                    <span class="info-value" title="TV Search">📺</span>
                 </a>
-                <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=caps" target="_blank">
-                    <span class="info-value">{feed_config.file}</span>
+                <a class="info-linktext" href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=caps" target="_blank">
+                    <span class="info-value" title="{feed_config.file}">{feed_config.file}</span>
                 </a>
             </div>'''
     
@@ -67,8 +68,8 @@ async def feeds(authenticated: str = Cookie(None)):
                 Cron Status: <span id="status-label">⏳ Loading...</span>
             </h2>
             <div class="info-item">
-                <span class="info-label">Next RSS refresh in:</span>
-                <span class="info-value" id="countdown" data-target="{target_timestamp}">
+                <span class="info-label">Refresh starts in:</span>
+                <span class="info-value" id="countdown" data-target="{target_timestamp}" title="Refresh starts in">
                     <span class="hours">{hours:02d}</span>
                     <span class="separator">:</span>
                     <span class="minutes">{minutes:02d}</span>
@@ -77,12 +78,12 @@ async def feeds(authenticated: str = Cookie(None)):
                 </span>
             </div>
             <div class="info-item">
-                <span class="info-label">Server time:</span>
-                <span class="info-value">{server_time_str}</span>
+                <span class="info-label">Scheduled:</span>
+                <span class="info-value" title="Scheduled">{refresh_time_str}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Next refresh:</span>
-                <span class="info-value">{refresh_time_str}</span>
+                <span class="info-label">Server time:</span>
+                <span class="info-value" title="Server time">{server_time_str}</span>
             </div>
         </div>
         <div class="text-container">
@@ -91,4 +92,4 @@ async def feeds(authenticated: str = Cookie(None)):
         </div>
     </div>'''
     
-    return Response(content=page_template(title="Feeds", content=content, token=token, js="feed.js"), media_type="text/html")
+    return Response(content=page_template(title="Feeds", content=content, token=token, js="feeds.js"), media_type="text/html")

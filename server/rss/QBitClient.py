@@ -34,8 +34,8 @@ class QBitClient:
     _authenticated: bool = False
     _response_timeout: int = 60
     
-    def __init__(self, logger: CustomLogger = None):
-        self.LOGGER = CustomLogger(name=self.Name, logger=logger)
+    def __init__(self):
+        self.LOGGER = CustomLogger(name=self.Name)
         # Resolve config file settings.yaml
         try:
             config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(key=self.Name, exists=True)

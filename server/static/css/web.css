@@ -134,7 +134,7 @@
 
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg-gradient);color:var(--text-primary);display:flex;justify-content:center;align-items:flex-start;padding-top:60px;min-height:100vh;margin:0;transition:background .3s ease,color .3s ease}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg-gradient);color:var(--text-primary);display:flex;justify-content:center;align-items:flex-start;padding:20px;min-height:100vh;margin:0;transition:background .3s ease,color .3s ease}
 
 .login-container,.app-container{
     max-width: 710px;
@@ -192,7 +192,7 @@ button[type=submit]:active{transform:translateY(0)}
 .nav-actions .creds-btn{background:var(--nav-creds);color:#fff}
 .nav-actions .creds-btn:hover,.nav-actions .creds-btn.active{background:var(--nav-creds-hover);box-shadow:0 10px 25px rgba(139,92,246,.4)}
 .nav-actions .logout-btn{background:var(--nav-logout);color:#fff}
-.nav-actions .logout-btn:hover{background:var(--nav-logout-hover);box-shadow:0 10px 25px rgba(220,38,38,.4)}
+.nav-actions .logout-btn:hover,.nav-actions .logout-btn.active{background:var(--nav-logout-hover);box-shadow:0 10px 25px rgba(220,38,38,.4)}
 .nav-actions .feed-btn {
     background: var(--nav-feed, #4CAF50);
     color: #fff;
@@ -213,7 +213,6 @@ button[type=submit]:active{transform:translateY(0)}
 .nav-actions .theme-toggle-btn .btn-icon{transform:rotate(100deg);transition:transform .5s ease;display:inline-block}
 .nav-actions .theme-toggle-btn:hover .btn-icon{transform:rotate(-20deg) scale(1.1)}
 .nav-actions .theme-toggle-btn .btn-label{font-size:clamp(0.6rem, 1.2vw, 0.9rem);font-weight:600;display:inline-block}
-@media(max-width:480px){.nav-actions .theme-toggle-btn .btn-label{display:none}}
 
 .copy-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:nowrap;flex-direction:row}
 .copy-btn{flex:1 1 auto;padding:12px 20px;background:var(--copy-btn-bg);color:#fff;font-size:16px;font-weight:700;min-width:120px;transition:all .3s ease}
@@ -223,11 +222,144 @@ button[type=submit]:active{transform:translateY(0)}
 @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
 @keyframes fadeIn{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
 
-@media(max-width:480px){body{padding:20px;align-items:center}.login-container,.app-container{padding:30px 20px}h1{font-size:24px}.password-wrapper input[type=password],.password-wrapper input[type=text]{font-size:14px;padding:10px 40px 10px 14px}.nav-actions button,.nav-actions form button{min-width:50px;height:45px;font-size:clamp(0.8rem, 2vw, 1rem)}.nav-actions button:hover .btn-label,.nav-actions form button:hover .btn-label{font-size:clamp(0.5rem, 1vw, 0.7rem)}}
+@media(max-width:480px){
+    body{padding:20px;align-items:center}
+    .login-container,.app-container{
+        padding:20px 16px;
+        display:flex;
+        flex-direction:column;
+        min-height:100vh;
+        padding-bottom:15px;
+    }
+    h1{
+        font-size:22px;
+        padding: 12px;
+    }
+    h2{font-size:18px}
+    .password-wrapper input[type=password],.password-wrapper input[type=text]{
+        font-size:14px;
+        padding:10px 40px 10px 14px
+    }
+    .nav-actions{
+        flex-direction:column;
+        width:100%;
+        gap:8px;
+        margin-top:0;
+        margin-bottom:10px;
+        padding-bottom:0;
+    }
+    .nav-actions button,
+    .nav-actions form button{
+        width:100%;
+        flex:none;
+        min-width:unset;
+        max-width:100%;
+        height:28px;
+        font-size:0.95rem;
+        padding:6px 12px;
+    }
+    .nav-actions form{
+        width:100%;
+        flex:none;
+        margin:0;
+        display:flex;
+        min-width:unset;
+        max-width:100%;
+    }
+    .nav-actions button:hover,
+    .nav-actions form:hover,
+    .nav-actions button.active{
+        flex:none;
+        transform:none;
+    }
+    .nav-actions form button:hover{
+        transform:none;
+    }
+    .nav-actions button .btn-label,
+    .nav-actions form button .btn-label{
+        display:inline-block;
+        max-width:100px;
+        opacity:1;
+        margin:0 0 0 6px;
+        font-size:0.75rem;
+    }
+    .nav-actions .theme-toggle-btn .btn-label{
+        display:inline-block;
+    }
+}
+
+@media(max-width:360px){
+    .app-container{
+        padding:15px 12px;
+        min-height:100vh;
+        border-radius:12px;
+    }
+    h1{
+        font-size:20px;
+        padding: 10px;
+    }
+    h2{font-size:16px}
+    .nav-actions button,
+    .nav-actions form button{
+        height:24px;
+        font-size:0.85rem;
+        border-radius:6px;
+        padding:6px 10px;
+        justify-content:center;
+        width:100%;
+        flex: none;
+        max-width:100%;
+    }
+    .nav-actions form{
+        width:100%;
+        flex:none;
+        max-width:100%;
+    }
+    .nav-actions button .btn-label,
+    .nav-actions form button .btn-label{
+        font-size:0.65rem;
+        margin-left:4px;
+    }
+}
+
+@media(max-width:320px){
+    .login-container,.app-container{
+        padding:12px 10px;
+        min-height:100vh;
+        border-radius:10px;
+    }
+    h1{
+        font-size:18px;
+        padding: 8px;
+    }
+    h2{font-size:15px}
+    .nav-actions button,
+    .nav-actions form button{
+        height:20px;
+        font-size:0.75rem;
+        border-radius:5px;
+        padding:4px 8px;
+    }
+    .nav-actions form{
+        width:100%;
+        flex:none;
+        max-width:100%;
+    }
+    .nav-actions button .btn-label,
+    .nav-actions form button .btn-label{
+        font-size:0.6rem;
+        margin-left:3px;
+    }
+    .password-wrapper input[type=password],
+    .password-wrapper input[type=text]{
+        font-size:13px;
+        padding:8px 35px 8px 12px;
+    }
+}
 
 .text-container {
   background: var(--text-container-bg);
-  padding: 10px 20px; /* 10px top/bottom, 20px left/right */
+  padding: 10px 20px;
   padding-top: 20px;
   padding-bottom: 20px;
   border-radius: 8px;
@@ -237,22 +369,21 @@ button[type=submit]:active{transform:translateY(0)}
   color: var(--text-primary);
   transition: all .3s ease;
   
-  /* Responsive adjustments */
   @media (max-width: 768px) {
-    padding: 16px 14px; /* reduce horizontal padding */
+    padding: 16px 14px;
     border-radius: 6px;
     margin-bottom: 16px;
   }
   
   @media (max-width: 480px) {
-    padding: 14px 10px; /* further reduce horizontal padding */
+    padding: 14px 10px;
     border-radius: 5px;
     margin-bottom: 14px;
     box-shadow: 0 1px 3px var(--text-container-shadow);
   }
   
   @media (max-width: 360px) {
-    padding: 10px 5px; /* 10px top/bottom, 5px left/right */
+    padding: 10px 5px;
     border-radius: 4px;
     margin-bottom: 10px;
     border-width: 1px;
@@ -269,13 +400,12 @@ button[type=submit]:active{transform:translateY(0)}
   align-items: center;
   width: 100%;
   gap: 15px;
-  padding: 20px 20px; /* top/bottom 20px, left/right 20px */
+  padding: 20px 20px;
   background: var(--app-info-bg);
   border-radius: 12px;
   border: 1px solid var(--app-info-border);
   transition: all .3s ease;
   
-  /* Responsive padding */
   @media (max-width: 768px) {
     padding: 20px 14px;
   }
@@ -310,8 +440,6 @@ a {
   font-weight: 500;
   transition: all .3s ease;
   position: relative;
-  
-  /* Break on slashes and other punctuation */
   word-break: break-all;
   line-break: anywhere;
   overflow-wrap: break-word;
@@ -337,8 +465,6 @@ a:hover::after{width:100%}
   transition:color .3s ease
 }
 
-/* ===== FEED PAGE STYLES ===== */
-
 .countdown-display .hours,
 .countdown-display .minutes,
 .countdown-display .seconds {
@@ -358,10 +484,33 @@ a:hover::after{width:100%}
     padding: 6px 0;
     border-bottom: 1px solid var(--border-light);
     transition: all .3s ease;
+    min-width: 0;
 }
 
 .info-item:last-child {
     border-bottom: none;
+}
+
+.info-label {
+    flex: 0 99999 auto; /* Shrink before others */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    min-width: 0;
+}
+
+.info-linktext {
+    flex: 0 1 auto;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 100%;
+    min-width: 0;
+    line-height: 2.0;
+}
+
+.info-linktext.info-value {
+    line-height: 2.0;
 }
 
 .info-value {
@@ -374,6 +523,13 @@ a:hover::after{width:100%}
     border-radius: 6px;
     border: 1px solid var(--border-light);
     transition: all .3s ease;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+    line-height: 1.0;
 }
 
 .info-value:hover {
@@ -408,7 +564,6 @@ a:hover::after{width:100%}
     animation: pulse-red 2s infinite;
 }
 
-/* Pulse animations */
 @keyframes pulse-green {
     0%, 100% {
         opacity: 1;

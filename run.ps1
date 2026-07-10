@@ -22,7 +22,7 @@ if (-not (Test-Path ".venv" -PathType Container)) {
 if (-not (Test-Path "config/settings.yaml" -PathType Leaf)) {
     ./setup.ps1
 }
-$env:TZ='UTC'
+$env:TZ='America/New_York' #'UTC'
 $env:PYTHONPATH = "${pwd}"
 $env:CONFIG_DIR="${pwd}\config"
 $env:LOG_DIR="${pwd}\logs"

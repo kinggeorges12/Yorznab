@@ -17,7 +17,7 @@ from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
 # Global logger instance
-LOGGER = CustomLogger(name="feed", enable_log=True)
+LOGGER = CustomLogger(name="feed")
 
 @dataclass
 class FilterWeights:
