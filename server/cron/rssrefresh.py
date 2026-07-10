@@ -184,7 +184,7 @@ class CronRunner:
         
         while True:
             try:
-                LOGGER.info(f"📁 Feed file(s): {", ".join(str(f.file) for f in self.feed_configs)}")
+                LOGGER.info(f"📁 Feed file(s): {', '.join(str(f.file) for f in self.feed_configs)}")
                 need_refresh = []
                 max_file_age = 0
                 for feed_config in self.feed_configs:
@@ -261,7 +261,7 @@ async def main(argv: list[str] | None = None) -> int:
     # Determine whether we need to refresh the feed
     force_msg = HELLO_WORLD
     force_msg = 'Command line argument "--force"' if not force_msg and args.force else force_msg
-    force_msg = f'RSS Feed(s) missing: {", ".join(str(f.path) for f in feed_missing)}' if not force_msg and feed_missing else force_msg
+    force_msg = f"RSS Feed(s) missing: {', '.join(str(f.path) for f in feed_missing)}" if not force_msg and feed_missing else force_msg
     
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
     if (FEED_CONFIGS):
