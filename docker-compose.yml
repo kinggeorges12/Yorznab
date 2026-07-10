@@ -8,9 +8,11 @@ services:
       - TZ=UTC # Set your local timezone for accurate cron schedules
       - HOME=/tmp # Python installation directory, change to /home for root user
       - PYTHONUNBUFFERED=1 # Real-time logging
-      - CONFIG_DIR=/app/config # Edit these files HERE: config.yaml, yorznab.yaml, filters.yaml (optional)
+      - CONFIG_DIR=/app/config # Edit these files in config directory: config.yaml, yorznab.yaml
       - LOG_DIR=/logs # Default is the temp directory
-      #- SECURE_APPID=YOUR_APPID # Change this to prevent unauthorized access of API and webhook credentials via /login?appid=YOUR_APPID
+      - LOG_LEVEL=INFO # Set logging level (default=DEBUG): DEBUG, INFO, WARNING, ERROR, CRITICAL (no logs)
+      # Optional feed configuration: add as many feed files as you want, separated by commas
+      #- FEEDS=private.yaml,public.yaml # [optional] Comma-separated list of feed files in the config directory (default=feed.yaml)
     ports:
       - "9116:9116" # Default port 9116
     extra_hosts:
@@ -18,10 +20,6 @@ services:
     volumes:
       # Only for root user to persist Python installation
       # - /path/to/yorznab/python:/home
-      # Writing RSS feed
-      - type: bind
-        source: /path/to/yorznab/export/
-        target: /export
       # Logging server output
       - type: bind
         source: /path/to/yorznab/logs

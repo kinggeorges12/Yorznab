@@ -2,36 +2,37 @@
 import argparse
 import os
 import sys
-import tempfile
 import time
 from typing import Any
+from threading import Lock
 
 # Import classes
-from server.rss.QBitFilter import QBitFilter
+from server.rss.FeedGenerator import FeedGenerator
 from server.rss.QBitClient import QBitClient
 from server.rss.ArrClient import ArrClient, ArrType
 
 # Import utilities
-from server.utils.feedfile import FeedFile
-from server.utils.keystore import KeyStore
+from server.utils.feedconfig import FeedConfig
 from utils.customlogger import CustomLogger
-from utils.filelock import FileLock
 from utils.timeformatter import IsoTimeFormatter
 
 # Global logger instance
 LOGGER = None  # Will be initialized in main() with command line arguments
+_lock = Lock()
 
 # -----------------------------
 # Publisher
 # -----------------------------
 
-def publish_results(publish_path: str, retention_days: int, results: list[dict[str, Any]], whatif: bool = False) -> None:
-    feed_file = FeedFile(publish_path).read()
+def publish_results(feed_config: FeedConfig, retention_days: int, results: list[dict[str, Any]], whatif: bool = False) -> None:
+    global LOGGER
+
+    feed_contents = feed_config.read()
 
     cutoff = IsoTimeFormatter().subtract_days(days=retention_days)
 
     recent: dict[str, dict[str, Any]] = {}
-    for item in feed_file:
+    for item in feed_contents:
         last = IsoTimeFormatter(item.get("lastAdded"))
         if last >= cutoff:
             recent[item.get("descrLink")] = item
@@ -42,9 +43,9 @@ def publish_results(publish_path: str, retention_days: int, results: list[dict[s
 
     final = list(recent.values())
     if whatif:
-        print(f"Would write {len(results)} new and {len(final)} total items to {publish_path}")
+        LOGGER.DEBUG(f"Would write {len(results)} new and {len(final)} total items to {feed_config.file}")
         return
-    FeedFile(publish_path).save(final)
+    feed_config.save(final)
 
 
 # -----------------------------
@@ -52,40 +53,28 @@ def publish_results(publish_path: str, retention_days: int, results: list[dict[s
 # -----------------------------
 
 
-def init_library(server_type: ArrType) -> tuple[QBitClient, ArrClient]:
-    """Initialize library configuration and clients with health checks"""
-    LOGGER.info(f"💡 Loading configuration file for {QBitClient.Name} and {server_type.value}")
-    qBit = QBitClient(logger=LOGGER)
-    arr = ArrClient(server_type=server_type, logger=LOGGER)
+def test_connection(name, url, fn_status, pause: int = 15, timeout: int = 15) -> bool:
+    """Check client connection"""
+    LOGGER.info(f"💡 Using {name} server: {url}")
 
-    LOGGER.info(f"💡 Using {arr.ServerName} server: {arr.Url}")
-    LOGGER.info(f"💡 Using {qBit.ServerName} server: {qBit.Url}")
-
-    # Health checks with retries
-    def retry_until_ok(fn, label: str, pause: int, timeout: int):
-        waited = 0
-        while True:
-            try:
-                fn()
-                return
-            except Exception as e:
-                if waited >= timeout:
-                    LOGGER.error(f"❌ Failed to connect to {label} server after {timeout}s: {e}")
-                    raise
-                LOGGER.warning(f"⏳ Waiting for {label} server to start for {waited}s. Pausing for {pause}s...")
-                time.sleep(pause)
-                waited += pause
-
-    retry_until_ok(fn=lambda: arr.status(), label=f"{arr.ServerName}", pause=15, timeout=15)
-    retry_until_ok(fn=lambda: qBit.version(), label=qBit.ServerName, pause=60, timeout=60)
-    
-    return qBit, arr
+    waited = 0
+    while True:
+        try:
+            fn_status()
+            return True
+        except Exception as e:
+            if waited >= timeout:
+                LOGGER.error(f"❌ Failed to connect to {name} server after {timeout}s: {e}")
+                return False
+            LOGGER.warning(f"⏳ Waiting for {name} server to start for {waited}s. Pausing for {pause}s...")
+            time.sleep(pause)
+            waited += pause
 
 # -----------------------------
 # Job Runner
 # -----------------------------
 
-def run_for_library(server_type: ArrType, external_id: str, publish_path: str, retention_days: int, do_qbit: bool, whatif: bool) -> None:
+def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: str, retention_days: int, do_download: bool, whatif: bool) -> None:
     """
     Main processing function for a specific library (Movies or TV).
     
@@ -94,19 +83,28 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
     
     Args:
         server_type: Server type ("Radarr" or "Sonarr")
+        feed_config: Feed configuration
         external_id: External ID for the library item (TMDB/TVDB ID) to process a specific video
-        publish_path: Path to JSON file for publishing results
         retention_days: Number of days to retain records in published JSON
-        do_qbit: Whether to send top result directly to qBittorrent
+        do_torrent: Whether to send top result directly to qBittorrent
         whatif: Dry-run mode (simulates execution without making changes)
     """
+    LOGGER.info(f"💡 Loading configuration file for {QBitClient.Name} and {server_type.value}")
     try:
-        qBit, arr = init_library(server_type=server_type)
+        qBit = QBitClient()
+        test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: qBit.status())
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return
+    try:
+        arr = ArrClient(server_type=server_type)
+        test_connection(name=arr.ServerName, url=arr.Url, fn_status=lambda: arr.status())
+    except Exception as e:
+        LOGGER.error(f"❌ {e}")
+        return # TODO: run with Jellyseerr info if ArrClient fails
 
-    qFilter = QBitFilter()
+    LOGGER.info(f"💡 Loading configuration file for feed: {feed_config.config_path}")
+    feedGenerator = FeedGenerator(feed_config=feed_config)
 
     # Fetch all wanted items
     wanted = arr.wanted_missing(page_size=250)
@@ -117,7 +115,7 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
     # Collect all search requests
     search_requests: list[dict[str, Any]] = []
 
-    if arr.ServerType is ArrType.Radarr:
+    if arr and arr.ServerType is ArrType.Radarr:
         for rec in wanted.get("records", []):
             if queued and rec.get("id") in [q.get("movieId") for q in queued if q.get("status") != "completed"]:
                 LOGGER.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {rec.get('title')}")
@@ -130,7 +128,7 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
                 "request": rec,
                 "meta": {"type": arr.TypeName, "imdbid": rec.get("imdbId"), "genres": rec.get("genres")},
             })
-    elif arr.ServerType is ArrType.Sonarr:
+    elif arr and arr.ServerType is ArrType.Sonarr:
         # Group by seriesId
         by_series: dict[Any, list[dict[str, Any]]] = {}
         for rec in wanted.get("records", []):
@@ -208,14 +206,15 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
             if matched and (not ignored) and (not errored):
                 filtered.append(r)
 
-        optimized = qFilter.optimize_results(results=filtered, server_type=arr.ServerType, request_obj=request_obj)
+        optimized = feedGenerator.optimize_results(results=filtered, server_type=arr.ServerType, request_obj=request_obj)
         if optimized:
-            if do_qbit and not whatif:
+            # Download top result to qBittorrent
+            if do_download and not whatif:
                 top = optimized[0]
                 LOGGER.info(f"🔍 Adding torrent to {qBit.ServerName} server: {top.get('fileName')}")
                 qBit.add_torrent(torrent_url=top.get("fileUrl"), rename=top.get("fileName"), tags=top.get("tags") or "", category=arr.TypeName)
                 LOGGER.info(f"✅ Received torrent response from {qBit.ServerName} server")
-            elif do_qbit and whatif:
+            elif do_download and whatif:
                 LOGGER.info(f"📺 Would add {arr.ProperName.lower()} torrents to {qBit.ServerName} server: {optimized[0].get('fileName')}")
             # add metadata to each optimized result
             for k, v in meta.items():
@@ -226,8 +225,8 @@ def run_for_library(server_type: ArrType, external_id: str, publish_path: str, r
         else:
             LOGGER.warning(f"🚫 No suitable {arr.ProperName.lower()} torrents found for request: {query}")
 
-    LOGGER.info(f"📝 Writing {len(all_top)} total records to JSON file: {publish_path}")
-    publish_results(publish_path=publish_path, retention_days=retention_days, results=all_top, whatif=whatif)
+    LOGGER.info(f"📝 Writing {len(all_top)} total records to JSON file: {feedGenerator.PublishPath}")
+    publish_results(feed_config=feed_config, retention_days=retention_days, results=all_top, whatif=whatif)
     arr.update_rss()
 
 # -----------------------------
@@ -246,10 +245,10 @@ def case_insensitive_choice(choices: list[str]):
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Add torrents to qBittorrent by searching wanted lists from Arr apps.")
     p.add_argument("--server", choices=["Both", "Radarr", "Sonarr"], type=case_insensitive_choice(["Both", "Radarr", "Sonarr"]), default="Both", help="Server to process: Both, Radarr, or Sonarr")
+    p.add_argument("--feed", action='append', type=str, default=None, help="Path to feed.yaml configuration file for generating RSS feed (default=config/feed.yaml).")
     p.add_argument("--external", type=str, default=None, help="External ID for the wanted video (TMDB/TVDB ID), suffixed with a colon and season number if applicable")
-    p.add_argument("--publish", default="/app/data/torrents.json", help="Path to JSON file for publishing torrent results")
     p.add_argument("--retention", type=int, default=365, help="Number of days to retain individual records in published JSON")
-    p.add_argument("--qbit", action="store_true", help="Send top result directly to qBittorrent")
+    p.add_argument("--download", action="store_true", help="Send top result directly to qBittorrent")
     p.add_argument("--whatif", action="store_true", help="Dry-run mode. Simulates execution without making actual changes")
     p.add_argument("--silent", action="store_true", help="Silent mode does not print to console")
     p.add_argument("--log", action="store_true", help="Log all output for debugging. Enabling this option will significantly increase execution time.")
@@ -276,27 +275,26 @@ def main(argv: list[str] | None = None) -> int:
             - "Both" (default): Process both Movies and TV shows
             - "Radarr": Only process movies from Radarr
             - "Sonarr": Only process TV shows from Sonarr
-            
+
+        --feed: YAML files in the configuration directory containing feed settings
+            - Path to the YAML file that defines the RSS feed structure and content
+            - Default: feed.yaml
+            - Usage: --feed private_trackers.yaml --feed public_trackers.yaml --feed feed3.yaml
+
         --external: External ID for the wanted video (TMDB/TVDB ID), suffixed with a colon and comma-separated season numbers if applicable
             - When specified, only searches for this specific item instead of processing the entire wanted list
             - Uses TMDB ID for movies or TVDB ID for TV shows
             - Bypasses the normal wanted list processing workflow
             - Not implemented
 
-        --publish: Path to JSON file for publishing torrent results
-            - Default: Value from feed:file setting, or "/app/data/torrents.json"
-            - Used by Torznab RSS feed generator to ingest torrent data
-            - Merges new results with existing data, respecting retention policy
-            
         --retention: Number of days to retain records in published JSON
             - Default: 365 days
             - Records older than this are removed from the published file
             - Based on the lastAdded timestamp field
             
-        --qbit: Enable direct torrent addition to qBittorrent
+        --download: Send top result directly to qBittorrent
             - If set, automatically adds the top-scoring torrent to qBittorrent
-            - If not set, only publishes results to JSON file
-            - Useful for automated downloading vs manual review
+            - Useful for automated downloading vs using Radarr/Sonarr to manage downloads
               
         --whatif: Dry-run mode
             - Simulates execution without making actual changes
@@ -320,36 +318,35 @@ def main(argv: list[str] | None = None) -> int:
         python builder.py --whatif
         
         # Process only movies and add torrents to qBittorrent
-        python builder.py --name Movies --qbit
+        python builder.py --name Movies --torrent
         
         # Process TV shows with custom config and publish path
         python builder.py --name TV --config /path/to/config.yaml --publish /path/to/output.yaml
     """
-    args = parse_args(argv)
-    
     # Update global logger with command line arguments
     global LOGGER
+    
+    args = parse_args(argv)
+    
     script_name = os.path.splitext(os.path.basename(__file__))[0]
     LOGGER = CustomLogger(name=script_name, silent=args.silent, enable_log=args.log)
     
-    lock_path = os.path.join(tempfile.gettempdir(), f"{KeyStore.get_key('SECURE_APPID') or 'yorznab'}.lock")
-    lock = FileLock(lock_path)
-    
-    try:
-        LOGGER.info("🔒 Waiting for lock (blocking)...")
-        with lock:
-            LOGGER.info("🔒 Lock acquired")
-            if args.server == "Both":
-                run_for_library(server_type=ArrType.Radarr, external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
-                run_for_library(server_type=ArrType.Sonarr, external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
-            else:
-                run_for_library(server_type=ArrType(args.server), external_id=args.external, publish_path=args.publish, retention_days=args.retention, do_qbit=args.qbit, whatif=args.whatif)
-    except Exception as e:
-        LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
-        return 1
-    finally:
-        LOGGER.info("🔓 Lock released")
-        LOGGER.info("👋 Exiting script...")
+    for feed_file in args.feed:
+        try:
+            LOGGER.info("🔏 Waiting for builder lock...")
+            with _lock:
+                LOGGER.info("🔒 Acquired builder lock")
+                feed_config = FeedConfig(config_file=feed_file)
+                if args.server == "Both":
+                    run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                    run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                else:
+                    run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+        except Exception as e:
+            LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
+        finally:
+            LOGGER.info("🔓 Lock released")
+            LOGGER.info("👋 Finishing RSS build...")
     return 0
 
 

@@ -23,10 +23,12 @@ fi
 if [ ! -f "config/settings.yaml" ]; then
     ./setup.sh
 fi
-export SEARCH_FILTER="filters.yaml"
+export TZ='UTC'
 export PYTHONPATH="${PWD}"
 export CONFIG_DIR="${PWD}/config"
 export LOG_DIR="${PWD}/logs"
+export LOG_LEVEL='DEBUG'
+export FEEDS='feed.yaml'
 (
     source .venv/bin/activate
     cd server || exit

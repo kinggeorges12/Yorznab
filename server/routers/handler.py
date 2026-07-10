@@ -11,10 +11,6 @@ class RouteHandlerFactory:
     _lock = Lock()
     
     API, LOGIN, STATUS, STATIC, WEBHOOK = None, None, None, None, None
-
-    @classmethod
-    def instance(cls):
-        return cls()
     
     def __new__(cls):
         with cls._lock:

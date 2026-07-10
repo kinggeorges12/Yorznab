@@ -1,25 +1,37 @@
 import os
+
 from fastapi import APIRouter, Request, HTTPException, Header, Query
 from fastapi.responses import JSONResponse
-from server.routers.handler import RouteHandler
-from utils.settings import AppSettings
-from utils.keystore import KeyStore
-import rss.builder
 import asyncio
 
-# Load libraries
+# Import classes
+from utils.settings import AppSettings
 from server.rss.ArrClient import ArrClient, ArrType
+from server.routers.handler import RouteHandler
+from server.utils.customlogger import CustomLogger
+from server.utils.feedconfig import FeedConfig
+from utils.keystore import KeyStore
+import rss.builder
 
 router = APIRouter()
 
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
 
-async def run_requests(server_type: ArrType | None = None, external_id: str = None) -> int:
+# Create logger
+LOGGER = CustomLogger(name="webhook")
+
+async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type: ArrType | None = None, external_id: str = None) -> int:
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
+    global LOGGER, SETTINGS
     try:
         # Build command arguments
-        args = ["--log", "--publish", SETTINGS.get('feed', 'file'), "--retention", str(SETTINGS.get('cron', 'retention_days'))]
+        args = ["--log", "--retention", str(SETTINGS.get('cron', 'retention_days'))]
+        
+        # Add server parameter if specified
+        if feed_configs:
+            for feed_config in feed_configs:
+                args.extend(["--feed", str(feed_config.config_path)])
         
         # Add server parameter if specified
         if server_type:
@@ -28,6 +40,11 @@ async def run_requests(server_type: ArrType | None = None, external_id: str = No
         # Add external ID parameter if specified
         if external_id:
             args.extend(["--external", external_id])
+
+        # Add download parameter from environment variable if set
+        download_env = os.environ.get('DOWNLOAD', 'false').lower() not in ['false', 'no']
+        if download_env:
+            args.extend(["--download"])
         
         # Run the blocking rssbuilder.main() in a thread pool
         loop = asyncio.get_event_loop()
@@ -35,7 +52,7 @@ async def run_requests(server_type: ArrType | None = None, external_id: str = No
         return result
         
     except Exception as e:
-        print(f"Failed to execute requests script: {e}", exc_info=True)
+        LOGGER.error(f"Failed to execute requests script: {e}", exc_info=True)
         return 1
 
 # Manual run from the web browser
@@ -107,7 +124,7 @@ async def webhook(request: Request, authorization: str = Header(None)):
             if requested_seasons:
                 external_id = f"{arr.ExternalId}:{','.join(str(s) for s in requested_seasons)}"
 
-        print(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
+        LOGGER.info(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
         
         # Define the background processing function
         async def process_request():
@@ -119,18 +136,18 @@ async def webhook(request: Request, authorization: str = Header(None)):
                 result = await run_requests(server_type=arr.ServerType, external_id=external_id)
                 
                 if result == 0:
-                    print(f"Successfully processed {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
+                    LOGGER.info(f"Successfully processed {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
                 else:
-                    print(f"Failed to process {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
+                    LOGGER.error(f"Failed to process {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
             except Exception as e:
-                print(f"Error processing {arr.ServerName} request: {str(e)}")
+                LOGGER.error(f"Error processing {arr.ServerName} request: {str(e)}", exc_info=True)
         
         # Start background task
         asyncio.create_task(process_request())
         return JSONResponse(content={"status": "ok"}, status_code=202) # 202 Accepted for async processing
         
     else:
-        print(f"Webhook received with no handler: {payload}")
+        LOGGER.info(f"Webhook received with no handler: {payload}")
         return JSONResponse(content={"status": "ok"}, status_code=200)
 
 

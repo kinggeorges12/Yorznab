@@ -40,7 +40,6 @@ app.include_router(status.router)
 app.include_router(torznab.router)
 app.include_router(webhook.router)
 app.include_router(web_routers)
-#app.include_router(login.router)
 
 
 # Mount static directory

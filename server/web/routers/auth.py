@@ -11,10 +11,13 @@ from server.web.common import LOGGER, TITLE, ID_NAME, authenticated, get_csrf_to
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
 # Helpers
-def validate_appid(appid: str) -> bool:
-    return appid and appid == KeyStore.get_key(ID_NAME)
+def validate_passkey(passkey: str) -> bool:
+    try:
+        return passkey and passkey == KeyStore.get_key(ID_NAME)
+    except RuntimeError:
+        return False
 
-def set_auth_cookies(response: RedirectResponse, appid: str, request: Request = None):
+def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request = None):
     max_age = int(timedelta(hours=24).total_seconds())
     
     # Determine if we should use secure flag
@@ -26,43 +29,62 @@ def set_auth_cookies(response: RedirectResponse, appid: str, request: Request = 
         is_secure = is_https  # Only set secure=True for HTTPS
     
     response.set_cookie("authenticated", "true", httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
-    response.set_cookie("appid", appid, httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
+    response.set_cookie("passkey", passkey, httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
 
 
 # Routes
 @router.get('')
-async def login_page(request: Request, appid: str = Query(None), failed: bool = Query(False)):
-    if authenticated(request):
-        return RedirectResponse(url=f"{RouteHandler.LOGIN}/success", status_code=303)
-    
-    if validate_appid(appid):
-        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/success", status_code=303)
-        set_auth_cookies(response, appid, request)
-        return response
+async def login_page(request: Request, passkey: str = Query(None), save: bool = Query(False), failed: bool = Query(False)):
     
     token = get_csrf_token()
+
+    if authenticated(request):
+        return RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
+    
+    if validate_passkey(passkey):
+        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
+        set_auth_cookies(response, passkey, request)
+        return response
+    
+    first_time = not KeyStore.is_ready()
+
+    temp_passkey = KeyStore.get_key(ID_NAME) if first_time else ''
+
+    get_started = f'''
+                <p>It looks like you're new here. Let's get started!</p>
+                <br>
+                <label for="{ID_NAME}">Enter a new Login Passkey or use the default randomized key:</label>''' if first_time else f'''
+                <label for="{ID_NAME}">Please enter your Login Passkey to login to the dashboard:</label>'''
+
+    login_button = f'''
+                <button type="submit">💾 Save Login Passkey</button>
+                <p class="hint-message">You can save this login passkey in your browser's keychain after clicking this button.</p>
+                ''' if first_time else f'''
+                <button type="submit">👤 Login</button>'''
+
     error = f'''
-<div class="error-container">
-    <p class="error-message">Invalid API Key provided.</p>
-    <p class="hint-message">Did you try setting the Docker environment variable "{ID_NAME}"?</p>
-</div>''' if (failed or validate_appid(appid)) else ""
+        <div class="error-container">
+            <p class="error-message">You provided an invalid Login Passkey.</p>
+            <p class="hint-message">Recover your credentials ({ID_NAME}) from the <file>app/config/keys.yaml</file> file.</p>
+        </div>''' if failed else ""
     
     content = f'''
         <div class="login-container">
             {navigation('')}
             <h1>Welcome to {TITLE}</h1>
-            <form autocomplete="off" method="POST" action="{RouteHandler.LOGIN}">
+            {get_started}
+            <form id = "loginForm" autocomplete="off" method="POST" action="{RouteHandler.LOGIN}">
                 <input type="hidden" name="csrf_token" value="{token}">
                 <div class="form-group">
-                    <label for="appid">Please enter your App ID to login to the dashboard:</label>
+                    <input type="text" value="yorznab" autocomplete="off" name="username" style="display:none">
                     <div class="password-wrapper">
-                        <input type="password" autocomplete="off" id="{ID_NAME}" name="appid" placeholder="{ID_NAME}" required>
-                        <button type="button" class="toggle-btn" id="toggleBtn" aria-label="Toggle password visibility">
+                        <input type="password" value="{temp_passkey}" autocomplete="off" id="{ID_NAME}" name="passkey" placeholder="{ID_NAME}" required>
+                        <button type="button" class="toggle-btn" {"onload" if first_time else ""} id="toggleBtn" aria-label="Toggle password visibility">
                             <span class="eye-icon">👁️</span>
                         </button>
                     </div>
                 </div>
-                <button type="submit">Submit</button>
+                {login_button}
             </form>
             {error}
         </div>'''
@@ -74,19 +96,23 @@ async def login_page(request: Request, appid: str = Query(None), failed: bool = 
 async def login_submit(request: Request):
     body = await request.body()
     parsed = parse_qs(body.decode('utf-8'))
-    appid = parsed.get('appid', [''])[0]
+    passkey = parsed.get('passkey', [''])[0]
     csrf_token = parsed.get('csrf_token', [''])[0]
     
     if not csrf_token or len(csrf_token) != 32:
         return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=303)
+
+    if not KeyStore.is_ready():
+        LOGGER.debug(f"Writing keys to file. passkey: {passkey}, CSRF Token: {csrf_token}")
+        KeyStore.write_keys(passkey)
     
-    if validate_appid(appid):
-        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/success", status_code=303)
-        set_auth_cookies(response, appid)
+    if validate_passkey(passkey):
         LOGGER.debug(f"User authenticated. CSRF Token: {csrf_token}")
+        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
+        set_auth_cookies(response, passkey)
         return response
     
-    LOGGER.error(f"User authentication failed. AppID: {appid}, CSRF Token: {csrf_token}")
+    LOGGER.error(f"User authentication failed. Passkey: {passkey}, CSRF Token: {csrf_token}")
     return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=303)
 
 
@@ -95,6 +121,6 @@ async def login_submit(request: Request):
 async def logout():
     response = RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
     response.delete_cookie("authenticated")
-    response.delete_cookie("appid")
+    response.delete_cookie("passkey")
     LOGGER.debug(f"User logged out, cookies cleared.")
     return response

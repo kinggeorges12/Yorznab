@@ -136,7 +136,7 @@
 html,body{height:100%}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg-gradient);color:var(--text-primary);display:flex;justify-content:center;align-items:flex-start;padding-top:60px;min-height:100vh;margin:0;transition:background .3s ease,color .3s ease}
 
-.login-container,.success-container{
+.login-container,.app-container{
     max-width: 710px;
     background: var(--container-bg);
     padding: clamp(20px, 5vw, 40px) clamp(20px, 5vw, 50px);
@@ -146,7 +146,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
     width: 100%;
     transition: all .3s ease;
 }
-.login-container:hover,.success-container:hover{box-shadow:0 20px 60px var(--container-shadow-hover);border-color:var(--border-success)}
+.login-container:hover,.app-container:hover{box-shadow:0 20px 60px var(--container-shadow-hover);border-color:var(--border-success)}
 h1{color:var(--heading-color);font-size:28px;font-weight:700;margin-bottom:30px;text-align:left;letter-spacing:-.5px;border-bottom:3px solid var(--heading-border);padding-bottom:15px;transition:color .3s ease,border-color .3s ease}
 
 form{display:flex;flex-direction:column;gap:20px}
@@ -193,6 +193,15 @@ button[type=submit]:active{transform:translateY(0)}
 .nav-actions .creds-btn:hover,.nav-actions .creds-btn.active{background:var(--nav-creds-hover);box-shadow:0 10px 25px rgba(139,92,246,.4)}
 .nav-actions .logout-btn{background:var(--nav-logout);color:#fff}
 .nav-actions .logout-btn:hover{background:var(--nav-logout-hover);box-shadow:0 10px 25px rgba(220,38,38,.4)}
+.nav-actions .feed-btn {
+    background: var(--nav-feed, #4CAF50);
+    color: #fff;
+}
+.nav-actions .feed-btn:hover,
+.nav-actions .feed-btn.active {
+    background: var(--nav-feed-hover, #2E7D32);
+    box-shadow: 0 10px 25px rgba(76, 175, 80, 0.4);
+}
 
 .nav-actions .theme-toggle-btn{background:0 0;color:#fff;transition:all .3s ease;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:clamp(1rem, 2.5vw, 1.5rem);display:flex;align-items:center;justify-content:center}
 [data-theme=dark] .nav-actions .theme-toggle-btn{background:#374151;color:#e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.3);border:1px solid #4b5563}
@@ -214,7 +223,7 @@ button[type=submit]:active{transform:translateY(0)}
 @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
 @keyframes fadeIn{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
 
-@media(max-width:480px){body{padding:20px;align-items:center}.login-container,.success-container{padding:30px 20px}h1{font-size:24px}.password-wrapper input[type=password],.password-wrapper input[type=text]{font-size:14px;padding:10px 40px 10px 14px}.nav-actions button,.nav-actions form button{min-width:50px;height:45px;font-size:clamp(0.8rem, 2vw, 1rem)}.nav-actions button:hover .btn-label,.nav-actions form button:hover .btn-label{font-size:clamp(0.5rem, 1vw, 0.7rem)}}
+@media(max-width:480px){body{padding:20px;align-items:center}.login-container,.app-container{padding:30px 20px}h1{font-size:24px}.password-wrapper input[type=password],.password-wrapper input[type=text]{font-size:14px;padding:10px 40px 10px 14px}.nav-actions button,.nav-actions form button{min-width:50px;height:45px;font-size:clamp(0.8rem, 2vw, 1rem)}.nav-actions button:hover .btn-label,.nav-actions form button:hover .btn-label{font-size:clamp(0.5rem, 1vw, 0.7rem)}}
 
 .text-container {
   background: var(--text-container-bg);
@@ -249,7 +258,6 @@ button[type=submit]:active{transform:translateY(0)}
     border-width: 1px;
     box-shadow: 0 1px 2px var(--text-container-shadow);
     font-size: 14px;
-    line-height: 1.5;
   }
 }
 .green-border-shadow{border:3px solid var(--border-success);border-radius:8px;box-shadow:0 0 10px rgba(76,175,80,.3)}
@@ -317,4 +325,108 @@ a:hover::after{width:100%}
 .icon-wrapper a::after{background:blue}
 .icon-wrapper a:hover::after{width:100%;background:blue}
 
-.ascii-line{font-size:clamp(0rem, 1.67vw, 0.8rem);opacity:0;animation:fadeIn .5s ease forwards;margin:0;font-family:monospace;white-space:pre;color:var(--ascii-color);transition:color .3s ease}
+.ascii-line{
+  font-size:clamp(0rem, 1.45vw, 0.73rem);
+  text-align: center;
+  opacity:0;
+  animation:fadeIn .5s ease forwards;
+  margin:0;
+  font-family:'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  color:var(--ascii-color);
+  transition:color .3s ease
+}
+
+/* ===== FEED PAGE STYLES ===== */
+
+.countdown-display .hours,
+.countdown-display .minutes,
+.countdown-display .seconds {
+    min-width: 80px;
+    display: inline-block;
+    background: var(--input-bg);
+    padding: 5px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    transition: all .3s ease;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-light);
+    transition: all .3s ease;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-value {
+    color: var(--text-primary);
+    font-size: 0.95em;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    background: var(--input-bg);
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    transition: all .3s ease;
+}
+
+.info-value:hover {
+    border-color: var(--border-success);
+    background: var(--bg-secondary);
+}
+
+.status-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: all .3s ease;
+    flex-shrink: 0;
+}
+
+.status-dot.healthy {
+    background: var(--border-success);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    animation: pulse-green 2s infinite;
+}
+
+.status-dot.unhealthy {
+    background: var(--border-error);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: pulse-red 2s infinite;
+}
+
+/* Pulse animations */
+@keyframes pulse-green {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.9);
+    }
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.9);
+    }
+}

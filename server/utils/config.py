@@ -1,11 +1,14 @@
 from pathlib import Path
 import os
 
+# Set default directory
+CONFIG_DIR = os.getenv("CONFIG_DIR", "/app/config")
+
 """Get the configuration directory path from the environment variable or default to /app/config"""
 class ConfigFile:
+    
     def __init__(self, file: str):
-        config_dir = os.getenv("CONFIG_DIR", "/app/config")
-        file_path = os.path.join(config_dir, file)
+        file_path = os.path.join(CONFIG_DIR, file)
         self._path = Path(file_path)
 
     def __str__(self):

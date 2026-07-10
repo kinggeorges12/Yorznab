@@ -5,11 +5,12 @@ from fastapi.responses import RedirectResponse
 
 # Import modules
 from server.routers.handler import RouteHandler
-from server.web.common import TITLE, authenticated, get_csrf_token, navigation, page_template
+from server.utils.keystore import KeyStore
+from server.web.common import ID_NAME, TITLE, authenticated, get_csrf_token, navigation, page_template
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
-@router.get("/success")
+@router.get("/home")
 async def login_success(request: Request):
     if not authenticated(request):
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
@@ -19,9 +20,10 @@ async def login_success(request: Request):
     # Generate random delays for the ASCII art animation
     random_delays = [round(random.uniform(0.1, 0.3) + round(random.expovariate(8)*2, 1), 1) for _ in range(11)] + [0.1] + [0.1]
     animation_timer = list(reversed(list(accumulate(random_delays))))
+    
     content = f'''
-        <div class="success-container">
-            {navigation(f'{RouteHandler.LOGIN}/success')}
+        <div class="app-container">
+            {navigation(f'{RouteHandler.LOGIN}/home')}
             <h1>{TITLE} 🏠 Home</h1>
             <div class="text-container">
                 <h2>Welcome!</h2>
@@ -35,7 +37,7 @@ async def login_success(request: Request):
                 </p>
             </div>
             <div class="text-container">
-            <div id="ascii-container"><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
+                <div id="ascii-container"><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╔══════════════════════════════════════════════════════════════════════════════╗</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ║       ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗        ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
@@ -50,6 +52,7 @@ async def login_success(request: Request):
 ║                                                                              ║</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╚══════════════════════════════════════════════════════════════════════════════╝</pre>
 
+                </div>
             </div>
         </div>'''
     

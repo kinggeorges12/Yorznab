@@ -1,4 +1,10 @@
-############# TAG OPTIONS #############
+############# OUTPUT FILE #############
+# Filename of the export file for the RSS feed.
+# Uses the feed filename by default, e.g. feed.yaml generates feed.json
+# This file is used to generate responses for the RSS feed.
+#file: feed.json
+
+############# TAG FILTERS #############
 
 # Tags are compatible with Jackett! Use the name of the tracker in Jackett or qBittorrent, not the website.
 # Any private trackers added through Jackett will show up the same as if they are added to qBittorrent search plugin.
@@ -16,7 +22,7 @@ tags:
     Private Tracker Name 2: tag2
     Private Tracker Name 3: 
 
-############# SCORING TORRENTS #############
+############# TORRENT FILTERS #############
 
 # The built-in optimizer uses this filter to create a scoring metric.
 # Minimum scores and sizes to determine which torrents to publish.

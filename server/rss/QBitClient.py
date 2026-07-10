@@ -119,7 +119,7 @@ class QBitClient:
         """Reset authentication state to force re-login"""
         self._authenticated = False
 
-    def version(self) -> str:
+    def status(self) -> str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
         url = f"{self.Url}{self.Endpoint}/app/version"
         resp = self.session.post(url, headers=self._headers, timeout=30)

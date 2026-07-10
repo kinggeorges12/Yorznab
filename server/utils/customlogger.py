@@ -10,6 +10,7 @@ import os
 import sys
 from datetime import datetime
 import tempfile
+from threading import Lock
 
 # Import classes
 from utils.keystore import KeyStore
@@ -35,8 +36,19 @@ class EmojiFormatter(logging.Formatter):
 
 class CustomLogger(logging.Logger):
     """Custom logger with emoji formatting and file logging support."""
+
+    _lock = Lock()
+    _silent: bool = False
+    _enable_log: bool = True
+    _level: int = os.environ.get("LOG_LEVEL", logging.DEBUG)
     
-    def __init__(self, name: str = None, silent: bool = False, enable_log: bool = True, logger: logging.Logger = None):
+    def __init__(self, name: str = None, silent: bool = None, enable_log: bool = None, logger: logging.Logger = None):
+        with self.__class__._lock:
+            if silent is not None:
+                self.__class__._silent = silent
+            if enable_log is not None:
+                self.__class__._enable_log = enable_log
+
         # If a logger is provided, use it as the base
         if logger is not None:
             super().__init__(logger.name)
@@ -53,21 +65,21 @@ class CustomLogger(logging.Logger):
             self.handlers.clear()
             
             # Set log level
-            self.setLevel(logging.DEBUG)
+            self.setLevel(self.__class__._level)
             
             # Console handler (also goes to Docker logs)
-            if not silent:
+            if not self.__class__._silent:
                 console_handler = logging.StreamHandler(sys.stdout)
-                console_handler.setLevel(logging.INFO)
+                console_handler.setLevel(self.__class__._level)
                 
                 console_formatter = EmojiFormatter('%(message)s')
                 console_handler.setFormatter(console_formatter)
                 self.addHandler(console_handler)
             
             # File handler (if logging enabled)
-            if enable_log:
-                app_id = KeyStore.get_key('SECURE_APPID')
-                log_id = app_id[:7] if app_id else "unknown"  # Use first 7 chars of SECURE_APPID for log file naming
+            if self.__class__._enable_log:
+                app_id = KeyStore.get_key('UNIQUE_APPID')
+                log_id = app_id[:6] if app_id else "unknown"  # Use first 6 chars of UNIQUE_APPID for log file naming
                 LOG_DIR = os.getenv("LOG_DIR")
                 if LOG_DIR:
                     os.makedirs(LOG_DIR, exist_ok=True)
@@ -76,7 +88,7 @@ class CustomLogger(logging.Logger):
                 log_file = os.path.join(LOG_DIR, f"{log_id}-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
                 
                 file_handler = logging.FileHandler(log_file, encoding='utf-8')
-                file_handler.setLevel(logging.DEBUG)
+                file_handler.setLevel(self.__class__._level)
                 
                 # Detailed formatter for file logging
                 file_formatter = logging.Formatter(
@@ -85,5 +97,5 @@ class CustomLogger(logging.Logger):
                 )
                 file_handler.setFormatter(file_formatter)
                 self.addHandler(file_handler)
-                self.info(f"🔒 Logging enabled: {log_file}")
+                self.debug(f"🪵 Logging started ({name}): {log_file}")
 

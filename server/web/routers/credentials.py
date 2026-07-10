@@ -19,7 +19,7 @@ async def keys(authenticated: str = Cookie(None)):
     webhook_key = KeyStore.get_key('WEBHOOK_KEY')
     
     content = f'''
-        <div class="success-container">
+        <div class="app-container">
             {navigation(f'{RouteHandler.LOGIN}/keys')}
             <h1>{TITLE} 🔐 Credentials</h1>
             <div class="text-container">

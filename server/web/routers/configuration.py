@@ -38,7 +38,7 @@ async def setup(authenticated: str = Cookie(None)):
         sonarr_status = ""
     try:
         qbittorrent_client = QBitClient()
-        qbittorrent_status = qbittorrent_client.version() if qbittorrent_client else ""
+        qbittorrent_status = qbittorrent_client.status() if qbittorrent_client else ""
         LOGGER.debug(f"qBittorrent Status: {qbittorrent_status}")
     except Exception as e:
         exceptions.append(f"qBittorrent: {e}")
@@ -88,7 +88,7 @@ async def setup(authenticated: str = Cookie(None)):
                                 icon_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png')
 
     content = f'''
-        <div class="success-container">
+        <div class="app-container">
             {navigation(f'{RouteHandler.LOGIN}/setup')}
             <h1>{TITLE} ⚙️ Configuration</h1>
 

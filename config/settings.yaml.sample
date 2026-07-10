@@ -29,8 +29,8 @@ qBittorrent:
   # Find API key on new versions of qBittorrent > Tools > Options > WebUI
   QApiKey: qbt_API_KEY
   # Delete the QApiKey if using username/password authentication
-  QUsername: qbittorrent
-  QPassword: password
+  QUsername: QBITTORRENT_USERNAME
+  QPassword: QBITTORRENT_PASSWORD
   # Only useful for custom qBittorrent web urls
   QEndpoint: /api/v2
   # [default=60] Time to wait for search to complete (in seconds)

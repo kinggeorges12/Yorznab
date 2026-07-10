@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, Query, Request, status
+from fastapi.responses import RedirectResponse, Response
 from collections import defaultdict
 import xml.sax.saxutils as saxutils
 from feedgen.feed import FeedGenerator
@@ -9,7 +9,7 @@ import re
 
 # Import local modules
 from server.routers.handler import RouteHandler
-from server.utils.feedfile import FeedFile
+from server.utils.feedconfig import FeedConfig
 from utils.settings import AppSettings
 from utils.keystore import KeyStore
 
@@ -160,20 +160,37 @@ def generate_rss(items, offset=0, limit=0):
 
     return fg.rss_str(pretty=True)
 
+# Default feed file
 @router.get(RouteHandler.API)
+async def base_endpoint(request: Request):
+    global SETTINGS
+    # Load first or default feed file
+    feed = FeedConfig.feed()
+    # Inject the feed parameter into the path
+    redirect_url = f"{RouteHandler.API}/{feed}"
+    # Append the original query string back onto the end if it exists
+    query_string = request.url.query
+    redirect_url += f"?{query_string}" if query_string else ""
+    # Redirect to torznab_api handler
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+@router.get(RouteHandler.API + "/{feed}")
 def torznab_api(
-    apikey: str = Query(None),
-    t: str = Query(...),
-    q: str = Query(None),
-    tvdbid: int = Query(None),
-    season: int = Query(None),
+    feed: str,
+    apikey: str = Query(None, description="API key from config file"),
+    t: str = Query(..., description="Torznab function: caps, search, tvsearch, movie, details"),
+    q: str = Query(None, description="Search query"),
+    tvdbid: int = Query(None, description="TVDB ID for TV series search"),
+    season: int = Query(None, description="Season number for TV series search"),
     ep: int = Query(None, description="Episode number within a season, or 0 for a full season download"),
-    imdbid: int = Query(None),
+    imdbid: int = Query(None, description="IMDB ID for movie search"),
     genre: str = Query(None, description="Genre defined by IMDB"),
     cat: str = Query(None, description="Comma-separated Torznab category IDs"),
     offset: int = Query(0, description="Number of results to skip"),
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
+    global SETTINGS, API_KEY, CATEGORIES, CAT_LOOKUP
+    print(apikey)
     # API key check
     if apikey != API_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -185,11 +202,25 @@ def torznab_api(
     <error code="1001" description="Missing or invalid API key"/>
   </channel>
 </rss>"""
-        return Response(content=apikey_error, media_type="application/xml")
+        return Response(content=apikey_error, media_type="application/xml", status_code=status.HTTP_401_UNAUTHORIZED)
 
     # Load torrents JSON after checking API key
-    torrents = FeedFile(SETTINGS.get('feed', 'file')).read()
-
+    feed_config = FeedConfig.feed(feed)
+    torrents = None
+    if feed_config:
+        torrents = FeedConfig(feed_config).read()
+    else:
+        feed_error = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="{NS['torznab']}">
+  <channel>
+    <title>{SETTINGS.get('feed', 'title')}</title>
+    <link>{SETTINGS.get('feed', 'link')}</link>
+    <description>Feed Error</description>
+    <error code="2" description="Missing or invalid feed name"/>
+  </channel>
+</rss>"""
+        return Response(content=feed_error, media_type="application/xml", status_code=status.HTTP_404_NOT_FOUND)
+    
     if t == "caps":
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -247,7 +278,7 @@ def torznab_api(
     elif t == "details":
         item = next((x for x in torrents if x.get("descrLink") == q), None)
         if not item:
-            return Response(status_code=404, content="Item not found")
+            return Response(status_code=status.HTTP_404_NOT_FOUND, content="Item not found")
         return Response(content=generate_rss([item]), media_type="application/xml")
 
     else:

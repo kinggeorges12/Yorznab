@@ -24,7 +24,7 @@ body {
 
 /* Containers */
 .login-container,
-.success-container {
+.app-container {
     max-width: 710px;
     background: white;
     padding: 40px 50px;
@@ -35,7 +35,7 @@ body {
 }
 
 .login-container:hover,
-.success-container:hover {
+.app-container:hover {
     box-shadow: 0 20px 60px rgba(34, 197, 94, 0.3);
 }
 
@@ -420,7 +420,7 @@ button[type="submit"]:active {
     }
 
     .login-container,
-    .success-container {
+    .app-container {
         padding: 30px 20px;
     }
 

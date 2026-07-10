@@ -35,7 +35,6 @@
         textarea.select();
         try {
             document.execCommand('copy');
-            alert('Copied to clipboard!');
         } catch (err) {
             alert('Failed to copy. Please select and copy manually.');
         }
@@ -45,7 +44,7 @@
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', function() {
         // Get elements
-        const input = document.querySelector('input[type="password"][name="appid"]');
+        const input = document.querySelector('input[name="passkey"]');
         const toggleBtn = document.getElementById('toggleBtn');
         const eyeIcon = toggleBtn?.querySelector('.eye-icon');
         const form = document.querySelector('form');
@@ -64,22 +63,33 @@
                 }
             });
             
-            // Clear input on page load
-            input.value = '';
+            if (toggleBtn.onload === null) {
+                // Clear input on page load
+                input.value = '';
+            } else {
+                // Simulate click to show passkey if first time
+                toggleBtn.click();
+            }
         }
         
         // Clear input after submit
         if (form && input) {
             form.addEventListener('submit', function() {
-                setTimeout(function() {
-                    input.value = '';
-                }, 100);
+                if (input && input.type === 'text') {
+                    input.type = 'password';
+                } else {
+                    setTimeout(function() {
+                        input.value = '';
+                    }, 100);
+                }
             });
         }
         
         // Clear on page unload
         window.addEventListener('beforeunload', function() {
-            if (input) {
+            if (input && input.type === 'text') {
+                input.type = 'password';
+            } else {
                 input.value = '';
             }
         });

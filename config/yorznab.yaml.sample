@@ -12,10 +12,9 @@ cron:
 
 # Customizable feed information for Torznab tags
 # More info here: https://nzbdrone.readthedocs.io/Implementing-a-Torznab-indexer/
+# Use FEED_DIR environment variable to change location; feeds are stored in the /app/server/feeds directory by default
 feed:
-  # This file is read when the feed is queried
-  file: /export/torrents.json
-  # Used in logs and on the web
+  # Used in logs and on the web dashboard
   title: Yorznab
   # The information below is used to advertise capabilities on the API.
   # The address should (untested) match the address when Radarr and Sonarr ping this server.

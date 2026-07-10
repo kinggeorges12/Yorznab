@@ -9,7 +9,7 @@ from server.utils.settings import AppSettings
 
 LOGGER = CustomLogger(name="LoginService")
 SETTINGS = AppSettings(filename='yorznab.yaml')
-ID_NAME = "SECURE_APPID"
+ID_NAME = "LOGIN_PASSKEY"
 TITLE = SETTINGS.get('feed', 'title') or "Yorznab"
 
 def authenticated(request: Request) -> bool:
@@ -28,9 +28,9 @@ def page_template(title: str, content: str, token: str,
         <script src="{RouteHandler.STATIC}/js/theme.js?token={token}"></script>
         <link rel="preload" href="{RouteHandler.STATIC}/css/web.css?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
-        <script src="{RouteHandler.STATIC}/js/web.js?token={token}" async></script>
+        <script src="{RouteHandler.STATIC}/js/web.js?token={token}"></script>
         {f'<link rel="stylesheet" href="{RouteHandler.STATIC}/css/{css}?token={token}">' if css else ''}
-        {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}" async></script>' if js else ''}
+        {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}"></script>' if js else ''}
         <meta name="cache-control" content="no-cache, no-store, must-revalidate">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,9 +40,10 @@ def page_template(title: str, content: str, token: str,
 
 def navigation(current_route: str = '') -> str:
     nav_items = [
-        (f"{RouteHandler.LOGIN}/success", "🏠", "Home", "home-btn"),
+        (f"{RouteHandler.LOGIN}/home", "🏠", "Home", "home-btn"),
         (f"{RouteHandler.LOGIN}/keys", "🔐", "Credentials", "creds-btn"),
         (f"{RouteHandler.LOGIN}/setup", "⚙️", "Configuration", "config-btn"),
+        (f"{RouteHandler.LOGIN}/feeds", "📻", "Feeds", "feed-btn"),
     ]
     
     buttons = ""

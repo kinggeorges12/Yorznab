@@ -1,64 +1,32 @@
-from dataclasses import asdict, dataclass, field, fields
-import os
+from pathlib import Path
 import re
 from typing import Any, Optional
-from dacite import from_dict
+from dataclasses import dataclass, fields
 
 # Import classes
 from server.rss.ArrClient import ArrType
-from server.utils.config import ConfigFile
-from server.utils.settings import AppSettings
+from server.utils.feedconfig import FeedConfig, FeedFilter, FilterApp, FilterTags, FilterWeights
 from server.utils.timeformatter import IsoTimeFormatter
 
 @dataclass
-class FilterWeights:
-    min_score: Optional[float] = None
-    seeders_10pct: Optional[float] = None
-    seeders_50pct: Optional[float] = None
-    size_preferred: Optional[float] = None
-    favorite: Optional[float] = None
-    quality: Optional[float] = None
-
-@dataclass
-class FilterApp:
-    category: Optional[list[dict[str, Optional[float]]]] = field(default_factory=list)
-    weights: Optional[FilterWeights] = field(default_factory=FilterWeights)
-    unknown_runtime: Optional[int] = None
-    quality_search: Optional[list[str]] = field(default_factory=list)
-    favorite_sites: Optional[list[str]] = field(default_factory=list)
-    required_mbps: Optional[dict[str, float]] = field(default_factory=dict)
-    best_mbps: Optional[dict[str, float]] = field(default_factory=dict)
-
-@dataclass
-class FilterTags:
-    remove_jackett_tags: Optional[bool] = None
-    tracker_tags_only: Optional[bool] = None
-    tracker_tags_skip: Optional[bool] = None
-    tracker_tags: Optional[dict[str, str]] = field(default_factory=dict)
-
-@dataclass
-class FilterConfig:
-    tags: Optional[FilterTags] = field(default_factory=FilterTags)
-    Movies: Optional[FilterApp] = field(default_factory=FilterApp)
-    TV: Optional[FilterApp] = field(default_factory=FilterApp)
-
-@dataclass
-class QBitFilter:
-    _config: FilterConfig = None
-    _config_file = "filters.yaml"
+class FeedGenerator:
     _default_category: str = "SD"
     _default_remove_jackett_tags: bool = True
 
-    def __init__(self):
-        filter_file = ConfigFile(os.getenv("SEARCH_FILTER", self._config_file))
-        # Resolve config file filters.yaml
-        if filter_file.exists:
-            config_raw = AppSettings(filename=self._config_file).get()
-            self._config = from_dict(data_class=FilterConfig, data=config_raw)
+    def __init__(self, feed_config: Optional[FeedConfig] = None):
+        self._feed_config = feed_config if feed_config else FeedConfig()
 
     @property
-    def Config(self) -> FilterConfig: return self._config
-    
+    def Config(self) -> FeedFilter:
+        return self._feed_config.config
+
+    @property
+    def File(self) -> Path:
+        return self.Config.file
+
+    @property
+    def PublishPath(self) -> Path: return self._feed_config.path
+
     @property
     def Tags(self) -> FilterTags | None:
         return self.Config.tags if self.Config else None

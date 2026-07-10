@@ -53,7 +53,8 @@ class ArrClient:
         Radarr: str
         Sonarr: str
 
-    def serve(self, mapper: Mapper) -> str:
+    def serve(self, mapper: Mapper, value: Any = None) -> str:
+        if value is not None: return value
         match self.ServerType:
             case ArrType.Radarr:
                 return mapper.Radarr
@@ -61,10 +62,6 @@ class ArrClient:
                 return mapper.Sonarr
             case _:
                 raise ValueError(f"Unknown library server: {self.ServerName}")
-
-    def _serve(self, value: Any, mapper: Mapper) -> str:
-        if value is not None: return value
-        return self.serve(mapper=mapper)
 
     @classmethod
     def init_jellyseerr(cls, type_name: str) -> ArrClient: 
@@ -89,13 +86,13 @@ class ArrClient:
     def Url(self) -> str: return self._config.Url
     
     @property
-    def Endpoint(self) -> str: return self._serve(self._config.Endpoint, self.Mapper(Radarr="movie", Sonarr="series"))
+    def Endpoint(self) -> str: return self.serve(self.Mapper(Radarr="movie", Sonarr="series"), self._config.Endpoint)
     
     @property
-    def ProperName(self) -> str: return self._serve(self._config.ProperName, self.Mapper(Radarr="Movie", Sonarr="Show"))
+    def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"), self._config.ProperName)
     
     @property
-    def ProperNames(self) -> str: return self._serve(self._config.ProperNames, self.Mapper(Radarr="Movies", Sonarr="Shows"))
+    def ProperNames(self) -> str: return self.serve(self.Mapper(Radarr="Movies", Sonarr="Shows"), self._config.ProperNames)
     
     @property
     def ExternalDb(self) -> str: return self.serve(self.Mapper(Radarr="tmdb", Sonarr="tvdb"))
