@@ -190,7 +190,6 @@ def torznab_api(
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
     global SETTINGS, API_KEY, CATEGORIES, CAT_LOOKUP
-    print(apikey)
     # API key check
     if apikey != API_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
