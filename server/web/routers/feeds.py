@@ -10,8 +10,8 @@ from server.web.common import TITLE, get_csrf_token, navigation, page_template
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
-@router.get("/feed")
-async def feed(authenticated: str = Cookie(None)):
+@router.get("/feeds")
+async def feeds(authenticated: str = Cookie(None)):
     if authenticated != "true":
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
     
