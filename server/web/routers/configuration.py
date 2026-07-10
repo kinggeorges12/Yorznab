@@ -1,22 +1,21 @@
 import os
-import platform
-from fastapi import APIRouter, Cookie, Response
+from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 # Import modules
 from server.routers.handler import RouteHandler
 from server.rss.ArrClient import ArrClient, ArrType
 from server.rss.QBitClient import QBitClient
-from server.utils.settings import AppSettingsUndefined
 from server.web.common import LOGGER, TITLE, get_csrf_token, navigation, page_template
+from server.web.routers.auth import authenticate
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
 @router.get("/setup")
-async def setup(authenticated: str = Cookie(None)):
-    if authenticated != "true":
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
-    
+async def setup(request: Request):
+    if not authenticate(request):
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+
     token = get_csrf_token()
     exceptions = []
 

@@ -12,9 +12,6 @@ SETTINGS = AppSettings(filename='yorznab.yaml')
 ID_NAME = "LOGIN_PASSKEY"
 TITLE = SETTINGS.get('feed', 'title') or "Yorznab"
 
-def authenticated(request: Request) -> bool:
-    return request.cookies.get("authenticated") == "true"
-
 def get_csrf_token() -> str:
     return secrets.token_hex(16)
 

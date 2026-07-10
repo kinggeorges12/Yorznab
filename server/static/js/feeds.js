@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const countdown = document.getElementById('countdown');
     const targetTime = parseInt(countdown.getAttribute('data-target'));
+    const statusEndpoint = countdown.getAttribute('data-status');
     let isActive = true;
     let statusCheckInterval = null;
     let countdownInterval = null;
@@ -8,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to check status
     async function checkStatus() {
         try {
-            const data = await fetch('/status')
+            const data = await fetch(statusEndpoint)
                 .catch(error => {
                     console.error('Connection failed:', error);
                     return null;

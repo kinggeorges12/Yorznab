@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Response
-from fastapi.params import Cookie
+from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 # Import modules
@@ -8,13 +7,14 @@ from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
 from server.utils.timezoneaware import TimezoneAware
 from server.web.common import TITLE, get_csrf_token, navigation, page_template
+from server.web.routers.auth import authenticate
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
 @router.get("/feeds")
-async def feeds(authenticated: str = Cookie(None)):
-    if authenticated != "true":
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
+async def feeds(request: Request):
+    if not authenticate(request):
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
     
     token = get_csrf_token()
     
@@ -69,7 +69,7 @@ async def feeds(authenticated: str = Cookie(None)):
             </h2>
             <div class="info-item">
                 <span class="info-label">Refresh starts in:</span>
-                <span class="info-value" id="countdown" data-target="{target_timestamp}" title="Refresh starts in">
+                <span class="info-value" id="countdown" data-status="{RouteHandler.STATUS}" data-target="{target_timestamp}" title="Refresh starts in">
                     <span class="hours">{hours:02d}</span>
                     <span class="separator">:</span>
                     <span class="minutes">{minutes:02d}</span>

@@ -1,19 +1,19 @@
 from itertools import accumulate
 import random
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 # Import modules
 from server.routers.handler import RouteHandler
-from server.utils.keystore import KeyStore
-from server.web.common import ID_NAME, TITLE, authenticated, get_csrf_token, navigation, page_template
+from server.web.common import TITLE, get_csrf_token, navigation, page_template
+from server.web.routers.auth import authenticate
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
 @router.get("/home")
-async def login_success(request: Request):
-    if not authenticated(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
+async def home(request: Request):
+    if not authenticate(request):
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
     
     token = get_csrf_token()
 

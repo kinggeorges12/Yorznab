@@ -37,6 +37,17 @@ class KeyStore:
     def exists(cls) -> bool:
         """Check if the keys.yaml file exists."""
         return ConfigFile(KEY_FILE).path.exists()
+    
+    @classmethod
+    def reset_keys(cls) -> dict:
+        """Reset all keys to new generated values."""
+        instance = cls()
+        with cls._lock:
+            instance._keys = {}
+            instance._config_file.path.unlink(missing_ok=True)
+            for key_name in KEYS_ALL:
+                instance._keys[key_name] = instance._generate()
+            instance._initialized = False
 
     @classmethod
     def write_keys(cls, login_passkey: str = None):
@@ -52,13 +63,13 @@ class KeyStore:
                 if key_name not in instance._keys or not instance._keys[key_name]:
                     instance._keys[key_name] = instance._generate()
         
-        # Write to file
-        instance._config_file.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(instance._config_file.path, "w", encoding="utf-8") as f:
-            yaml.safe_dump(instance._keys, f, sort_keys=False)
-        
-        # Mark as initialized since we now have all keys written
-        instance._initialized = True
+            # Write to file
+            instance._config_file.path.parent.mkdir(parents=True, exist_ok=True)
+            with open(instance._config_file.path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(instance._keys, f, sort_keys=False)
+            
+            # Mark as initialized since we now have all keys written
+            instance._initialized = True
 
     def _load(self):
         """Load keys from the file."""

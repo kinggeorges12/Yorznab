@@ -1,12 +1,16 @@
-from datetime import timedelta
-from fastapi import APIRouter, Query, Request
+import base64
+from datetime import datetime, timedelta
+import hashlib
+import hmac
+import json
+from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import Response, RedirectResponse
 from urllib.parse import parse_qs
 
 # Import modules
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, TITLE, ID_NAME, authenticated, get_csrf_token, navigation, page_template
+from server.web.common import LOGGER, TITLE, ID_NAME, get_csrf_token, navigation, page_template
 
 router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
 
@@ -16,9 +20,63 @@ def validate_passkey(passkey: str) -> bool:
         return passkey and passkey == KeyStore.get_key(ID_NAME)
     except RuntimeError:
         return False
+    
+def authenticate(request: Request) -> bool:
+    """Verify token from request cookies and return True if valid"""
+    try:
+        # Get the session token from cookies
+        session_token = request.cookies.get("session")
+        
+        if not session_token:
+            return False
+        
+        payload_b64, signature = session_token.split(".")
+        
+        # Check signature matches
+        expected = hmac.new(
+            KeyStore.get_key(ID_NAME).encode(),
+            payload_b64.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if signature != expected:
+            return False
+        
+        # Decode payload
+        json_str = base64.b64decode(payload_b64).decode()
+        payload = json.loads(json_str)
+        
+        # Check expiration
+        if payload["expires_at"] < datetime.now().timestamp():
+            return False
+        
+        return True
+        
+    except Exception as e:
+        return False
+
 
 def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request = None):
     max_age = int(timedelta(hours=24).total_seconds())
+
+    payload = {
+        "user_id": passkey,
+        "issued_at": int(datetime.now().timestamp()),
+        "expires_at": int(datetime.now().timestamp()) + max_age
+    }
+    
+    # Convert to JSON and base64
+    json_str = json.dumps(payload)
+    payload_b64 = base64.b64encode(json_str.encode()).decode()
+    
+    # Sign it
+    signature = hmac.new(
+        KeyStore.get_key(ID_NAME).encode(),
+        payload_b64.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    session_token = f"{payload_b64}.{signature}"
     
     # Determine if we should use secure flag
     is_secure = False  # Default to False for all connections
@@ -28,21 +86,18 @@ def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request 
         is_https = request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
         is_secure = is_https  # Only set secure=True for HTTPS
     
-    response.set_cookie("authenticated", "true", httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
+    response.set_cookie("session", session_token, httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
     response.set_cookie("passkey", passkey, httponly=True, secure=is_secure, samesite="lax", max_age=max_age)
 
 
 # Routes
 @router.get('')
-async def login_page(request: Request, passkey: str = Query(None), save: bool = Query(False), failed: bool = Query(False)):
+async def login_page(request: Request, passkey: str = Query(None), failed: bool = Query(False)):
     
     token = get_csrf_token()
 
-    if authenticated(request):
-        return RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
-    
     if validate_passkey(passkey):
-        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
+        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=status.HTTP_303_SEE_OTHER)
         set_auth_cookies(response, passkey, request)
         return response
     
@@ -100,7 +155,7 @@ async def login_submit(request: Request):
     csrf_token = parsed.get('csrf_token', [''])[0]
     
     if not csrf_token or len(csrf_token) != 32:
-        return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=303)
+        return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=status.HTTP_303_SEE_OTHER)
 
     if not KeyStore.is_ready():
         LOGGER.debug(f"Writing keys to file. passkey: {passkey}, CSRF Token: {csrf_token}")
@@ -108,19 +163,19 @@ async def login_submit(request: Request):
     
     if validate_passkey(passkey):
         LOGGER.debug(f"User authenticated. CSRF Token: {csrf_token}")
-        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=303)
-        set_auth_cookies(response, passkey)
+        response = RedirectResponse(url=f"{RouteHandler.LOGIN}/home", status_code=status.HTTP_303_SEE_OTHER)
+        set_auth_cookies(response, passkey, request)
         return response
     
     LOGGER.error(f"User authentication failed. Passkey: {passkey}, CSRF Token: {csrf_token}")
-    return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=303)
+    return RedirectResponse(url=f"{RouteHandler.LOGIN}?failed=true", status_code=status.HTTP_303_SEE_OTHER)
 
 
 
 @router.post(f"/logout")
 async def logout():
-    response = RedirectResponse(url=RouteHandler.LOGIN, status_code=303)
-    response.delete_cookie("authenticated")
+    response = RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie("session")
     response.delete_cookie("passkey")
     LOGGER.debug(f"User logged out, cookies cleared.")
     return response
