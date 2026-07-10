@@ -17,7 +17,6 @@ router = APIRouter()
 
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
-API_KEY = KeyStore.get_key("API_KEY")
 NS = {"torznab": "http://torznab.com/schemas/2015/feed"}
 
 # Set default categories
@@ -119,6 +118,8 @@ def filter_items(torrents, q=None, cat=None, extra_filters=None):
     return results
 
 def generate_rss(items, offset=0, limit=0):
+    global SETTINGS
+    API_KEY = KeyStore.get_key("API_KEY")
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
@@ -189,8 +190,9 @@ def torznab_api(
     offset: int = Query(0, description="Number of results to skip"),
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
-    global SETTINGS, API_KEY, CATEGORIES, CAT_LOOKUP
+    global SETTINGS, CATEGORIES, CAT_LOOKUP
     
+    API_KEY = KeyStore.get_key("API_KEY")
     # API key check
     if apikey != API_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
