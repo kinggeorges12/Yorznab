@@ -51,14 +51,6 @@ def navigation(current_route: str = '') -> str:
                 {emoji} <span class="btn-label">{label}</span>
             </button>'''
     
-    logout = f'''
-            <form method="POST" action="{RouteHandler.LOGIN}/logout">
-                <button type="submit" class="logout-btn">
-                    <span class="btn-icon">➡️</span>
-                    <span class="btn-label">Logout</span>
-                </button>
-            </form>'''
-    
     return f'''
         <div class="nav-actions">
             {buttons if current_route else ''}
@@ -66,5 +58,4 @@ def navigation(current_route: str = '') -> str:
                 <span class="btn-icon">🌙</span>
                 <span class="btn-label">Dark</span>
             </button>
-            {logout if current_route else ''}
         </div>'''

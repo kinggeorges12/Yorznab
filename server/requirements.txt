@@ -6,3 +6,5 @@ pyyaml
 dacite
 croniter
 tzdata
+websockets
+pywinpty

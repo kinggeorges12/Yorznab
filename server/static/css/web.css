@@ -191,8 +191,15 @@ button[type=submit]:active{transform:translateY(0)}
 .nav-actions .config-btn:hover,.nav-actions .config-btn.active{background:var(--nav-config-hover);box-shadow:0 10px 25px rgba(245,158,11,.4)}
 .nav-actions .creds-btn{background:var(--nav-creds);color:#fff}
 .nav-actions .creds-btn:hover,.nav-actions .creds-btn.active{background:var(--nav-creds-hover);box-shadow:0 10px 25px rgba(139,92,246,.4)}
-.nav-actions .logout-btn{background:var(--nav-logout);color:#fff}
-.nav-actions .logout-btn:hover,.nav-actions .logout-btn.active{background:var(--nav-logout-hover);box-shadow:0 10px 25px rgba(220,38,38,.4)}
+button.logout-btn {
+    background: var(--nav-logout);
+    color: #fff;
+}
+button.logout-btn:hover,
+button.logout-btn.active {
+    background: var(--nav-logout-hover);
+    box-shadow: 0 10px 25px rgba(220,38,38,.4);
+}
 .nav-actions .feed-btn {
     background: var(--nav-feed, #4CAF50);
     color: #fff;

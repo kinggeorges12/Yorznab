@@ -54,6 +54,12 @@ async def home(request: Request):
 
                 </div>
             </div>
+            <form method="POST" action="{RouteHandler.LOGIN}/logout">
+                <button type="submit" class="logout-btn">
+                    <span class="btn-icon">➡️</span>
+                    <span class="btn-label">Logout</span>
+                </button>
+            </form>
         </div>'''
     
     return Response(content=page_template(title="Home", content=content, token=token), media_type="text/html")
