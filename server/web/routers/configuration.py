@@ -10,6 +10,8 @@ from fastapi.responses import RedirectResponse
 # Web sockets
 import asyncio
 import shutil
+
+from server.utils.settings import AppSettings
 # Windows-specific imports
 if os.name == 'nt':
     try:
@@ -188,7 +190,7 @@ def get_setup_command():
         ws_command = f"bash {file}"
 
     setup_path = full_path / file
-    LOGGER.info(f"❓ File {'exists' if setup_path.exists() else 'does not exist'}: {setup_path}")
+    LOGGER.debug(f"❓ File {'exists' if setup_path.exists() else 'does not exist'}: {setup_path}")
     
     # For execution - just the commands without cd
     execution_command = ' && '.join(commands)
@@ -292,7 +294,7 @@ class WebSetup:
             env=env
         )
         
-        LOGGER.info(f"✅ Process created with PID: {self._process.pid}")
+        LOGGER.debug(f"✅ Process created with PID: {self._process.pid}")
         return True
     
     async def _read_stdout(self, websocket):
@@ -304,13 +306,12 @@ class WebSetup:
                 line = await self._process.stdout.readline()
                 self._stdin_ready.clear()
                 if not line:
-                    LOGGER.info("stdout: End of stream")
+                    LOGGER.debug("stdout: End of stream")
                     break
                 try:
-                    LOGGER.debug(f"Raw stdout line: {line}")
                     decoded_line = line.decode('utf-8', errors='replace').rstrip('\n')
-                    if decoded_line:
-                        LOGGER.info(f"📤 Sending output: {decoded_line}")
+                    if decoded_line is not None:
+                        LOGGER.debug(f"📤 Sending output: {decoded_line}")
                         await websocket.send_json({
                             "type": "output",
                             "message": decoded_line
@@ -319,7 +320,6 @@ class WebSetup:
                     LOGGER.error(f"Error decoding stdout: {e}")
         except Exception as e:
             LOGGER.error(f"Error in read_stdout: {e}")
-        LOGGER.info("read_stdout task finished")
     
     async def _read_stderr(self, websocket):
         """Read from stderr and send to WebSocket"""
@@ -330,13 +330,12 @@ class WebSetup:
                 line = await self._process.stderr.readline()
                 self._stdin_ready.clear()
                 if not line:
-                    LOGGER.info("stderr: End of stream")
+                    LOGGER.debug("stderr: End of stream")
                     break
                 try:
-                    LOGGER.debug(f"Raw stderr line: {line}")
                     decoded_line = line.decode('utf-8', errors='replace').rstrip('\n')
                     if decoded_line:
-                        LOGGER.info(f"📤 Sending stderr: {decoded_line}")
+                        LOGGER.debug(f"📤 Sending stderr: {decoded_line}")
                         await websocket.send_json({
                             "type": "error",
                             "message": f"[STDERR] {decoded_line}"
@@ -345,14 +344,11 @@ class WebSetup:
                     LOGGER.error(f"Error decoding stderr: {e}")
         except Exception as e:
             LOGGER.error(f"Error in read_stderr: {e}")
-        LOGGER.info("read_stderr task finished")
     
     async def _stdin_writer(self, text: Optional[str] = None):
         """Write text to stdin with proper formatting"""
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         # self._process.stdin.write('\r\n'.encode('utf-8'))
-        await self._process.stdin.drain()
-        await asyncio.sleep(.5)
         await self._process.stdin.drain()
         while self._process.returncode is None:
             try:
@@ -379,9 +375,7 @@ class WebSetup:
 
                     self._process.stdin.write(nl)
                     self._process.stdin.write(bytes_data)
-                    self._process.stdin.write(fn)
-                    await self._process.stdin.drain()
-                    await asyncio.sleep(.5)
+                    self._process.stdin.write(nl)
                     await self._process.stdin.drain()
                     await asyncio.sleep(.5)
                     await self._process.stdin.drain()
@@ -398,24 +392,22 @@ class WebSetup:
     async def _handle_input(self, websocket):
         """Handle user input from WebSocket"""
         try:
-            
             while self._process.returncode is None:
                 try:
                     # Wait for input from the WebSocket
                     text = await websocket.receive_text()
 
-                    LOGGER.info(f"📥 Input queued: {text}")
+                    LOGGER.debug(f"📥 Input queued: {text}")
                     await self._input_queue.put(text)
                     
                 except WebSocketDisconnect:
-                    LOGGER.info("WebSocket disconnected")
+                    LOGGER.debug("WebSocket disconnected")
                     break
                 except Exception as e:
                     LOGGER.error(f"Error in handle_input: {e}")
                     break
         except Exception as e:
             LOGGER.error(f"Error in handle_input: {e}")
-        LOGGER.info("handle_input task finished")
     
     async def cleanup(self):
         """Clean up resources"""
@@ -444,19 +436,6 @@ class WebSetup:
             websocket: WebSocket connection
         """
         await websocket.accept()
-
-        try:
-            # Wait for the command from the client
-            data = await websocket.receive_text()
-            data_json = json.loads(data)
-            LOGGER.info(f"Received from client: {data_json}")
-        except json.JSONDecodeError:
-            LOGGER.error(f"Error decoding JSON from client: {data}")
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Error decoding JSON from client: {data}"
-            })
-            return
         
         try:
             # Send initial connection messages
@@ -501,7 +480,7 @@ class WebSetup:
             
             # Wait for process to exit
             return_code = await self._process.wait()
-            LOGGER.info(f"✅ Process completed with exit code: {return_code}")
+            LOGGER.debug(f"✅ Process completed with exit code: {return_code}")
             
             # Send exit code
             await websocket.send_json({
@@ -509,10 +488,14 @@ class WebSetup:
                 "code": return_code
             })
             
-            LOGGER.info(f"✅ Setup command completed with exit code: {return_code}")
+            LOGGER.debug(f"✅ Setup command completed with exit code: {return_code}")
+
+            # Force reload the new configuration after the setup is complete
+            LOGGER.info("🔄 Reloading configuration after setup")
+            AppSettings(filename='settings.yaml').load()
             
         except WebSocketDisconnect:
-            LOGGER.info("WebSocket disconnected")
+            LOGGER.debug("WebSocket disconnected")
         except Exception as e:
             LOGGER.error(f"❌ Error in WebSocket setup: {e}")
             import traceback

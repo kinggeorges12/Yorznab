@@ -8,32 +8,50 @@ let currentStatusText = '';
 const defaultStatusType = 'idle';
 const defaultStatusText = 'Ready';
 const clearStatusDuration = 1500;
-// Rate limiting for sending messages
-let lastSendTime = 0;
-const SEND_COOLDOWN_MS = 2000; // 2 second cooldown
+// Message resending when unresponsive
+const ws_message_timeout = 3000;
+let ws_message_received = false;
+let ws_last_message = { timestamp: Date.now(), message: '', echo: '' };
 
 // Make sendInput globally accessible
-function sendInput(text, error = true) {
+function sendInput(text) {
     console.log('📤 Starting WS:', JSON.stringify(ws));
     console.log('📤 Sending text:', JSON.stringify(text));
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(text);
+        const currentTimestamp = Date.now();
+        if (!text.trim()) {
+            text = '=\f';
+        }
+        ws_last_message = { timestamp: currentTimestamp, message: text };
+        ws_message_received = false;
         console.log('📤 Sending:', text);
-    } else if (error) {
+        ws.send(text);
+        setTimeout(() => {
+            if (currentTimestamp === ws_last_message.timestamp && !ws_message_received) {
+                console.warn('⏳ No response from server after sending input:', text);
+                setStatus('⏳ Resending message...', 'warning');
+                sendInput(text)
+            }
+        }, ws_message_timeout);
+    } else {
         console.warn('WebSocket is not open. Cannot send input.');
         addTerminalLine('error', `❌ Connect before sending input: ${text}`);
     }
 }
 
 function canSendMessage() {
-    const now = Date.now();
-    if (now - lastSendTime < SEND_COOLDOWN_MS) {
-        const remainingMs = SEND_COOLDOWN_MS - (now - lastSendTime);
-        const remainingSeconds = Math.ceil(remainingMs / 1000);
-        setStatus(`⏳ Slow down and try again in ${remainingSeconds}s`, 'error');
+    if (!ws_message_received) {
+        setStatus(`⏳ Waiting for server response...`, 'warning');
         return false;
     }
-    lastSendTime = now;
+    // const time_since_last = Date.now() - ws_last_message.timestamp;
+    // if (time_since_last < SEND_COOLDOWN_MS) {
+    //     const remainingMs = SEND_COOLDOWN_MS - time_since_last;
+    //     const remainingSeconds = Math.ceil(remainingMs / 1000);
+    //     setStatus(`⏳ Try again in ${remainingSeconds}s`, 'error');
+    //     return false;
+    // }
+    ws_message_received = false;
     return true;
 }
 
@@ -68,7 +86,7 @@ function connectTerminal() {
 
     // Prevent multiple connections
     if (isRunning) {
-        setStatus('⚠️ Terminal is already connected...', type = 'error');
+        setStatus('⚠️ Terminal is already connected...', type = 'warning');
         return;
         ws.close();
     }
@@ -105,7 +123,7 @@ function connectTerminal() {
         }
         
         // Send a ready message to the server
-        ws.send(JSON.stringify({ type: 'ready' }));
+        // ws.send(JSON.stringify({ type: 'ready' }));
         
         setStatus('🤖 Running...', 'running', true);
     };
@@ -114,6 +132,7 @@ function connectTerminal() {
         try {
             const data = JSON.parse(event.data);
             console.log('Received message:', data);
+            ws_message_received = true;
             try {
                 if (data.type === 'exit') {
                     addTerminalLine('system', `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
@@ -130,15 +149,18 @@ function connectTerminal() {
                         runBtn.textContent = '▶️ Connect';
                     }
                     ws.close();
-                } else if (data.type === 'error') {
-                    addTerminalLine('error', `❌ Error: ${data.message}`);
-                    setStatus('❌ Error occurred', 'error');
+                } else if (data.type === 'echo') {
+                    // Unused, can store the response for error-checking
+                    ws_last_message.echo = data.message;
                 } else if (data.type === 'system') {
                     addTerminalLine('system', data.message);
                 } else if (data.type === 'output') {
                     addTerminalLine('output', data.message);
                 } else if (data.type === 'success') {
                     addTerminalLine('success', data.message);
+                } else if (data.type === 'error') {
+                    addTerminalLine('error', `❌ Error: ${data.message}`);
+                    setStatus('❌ Error occurred', 'error');
                 } else {
                     addTerminalLine('output', JSON.stringify(data));
                 }
@@ -195,11 +217,12 @@ function handleTerminalInputKeydown(event) {
 function addTerminalLine(type, message) {
     const terminalOutput = document.getElementById('terminalOutput');
     if (!terminalOutput) return;
+    if (!message) message = ' ';
     
     const line = document.createElement('div');
     line.className = `terminal-line ${type}`;
     
-    if (type !== 'system' && type !== 'output' && type !== 'success' && type !== 'error') {
+    if (type !== 'system' && type !== 'output' && type !== 'success' && type !== 'warning' && type !== 'error') {
         const timestamp = new Date().toLocaleTimeString();
         line.textContent = `[${timestamp}] ${message}`;
     } else {
@@ -239,7 +262,7 @@ function clearStatusTimeout(text, type) {
 
 function setStatus(text, type, persist = false) {
     const statusText = document.getElementById('statusText');
-    const statusIndicator = document.querySelector('.status-indicator');
+    const terminalContainer = document.querySelector('.terminal-container');
 
     if (statusTimeout) {
         clearTimeout(statusTimeout);
@@ -251,7 +274,7 @@ function setStatus(text, type, persist = false) {
         type = defaultStatusType;
     }
     statusText.textContent = text;
-    statusIndicator.className = `status-indicator ${type}`;
+    terminalContainer.className = `terminal-container ${type}`;
     
     if (!persist) {
         statusTimeout = setTimeout(() => {

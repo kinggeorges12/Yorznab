@@ -68,6 +68,33 @@
     background: #666;
 }
 
+.terminal-container.running .terminal-line.last-line {
+    animation: glowPulseEnhanced 2s ease-in-out infinite;
+    padding: 2px 8px;
+    margin: 0 -8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+@keyframes glowPulseEnhanced {
+    0% { 
+        text-shadow: 0 0 5px rgba(39, 201, 63, 0.2);
+        background: rgba(39, 201, 63, 0.05);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 30px rgba(39, 201, 63, 0.6), 
+                     0 0 60px rgba(39, 201, 63, 0.3);
+        background: rgba(39, 201, 63, 0.1);
+        transform: scale(1.01);
+    }
+    100% { 
+        text-shadow: 0 0 5px rgba(39, 201, 63, 0.2);
+        background: rgba(39, 201, 63, 0.05);
+        transform: scale(1);
+    }
+}
+
 .terminal-line {
     padding: 2px 0;
     white-space: pre-wrap;
@@ -118,21 +145,29 @@
     display: inline-block;
 }
 
-.status-indicator.idle {
+.terminal-container.idle .status-indicator {
     background: #888;
+    animation: none;
 }
 
-.status-indicator.running {
+.terminal-container.running .status-indicator {
     background: #ffd93d;
     animation: pulse 1s infinite;
 }
 
-.status-indicator.success {
-    background: #69db7c;
+.terminal-container.warning .status-indicator {
+    background: #ff9f43;  /* Orange - different from running yellow */
+    animation: pulseWarning 1.5s ease-in-out infinite;
 }
 
-.status-indicator.error {
+.terminal-container.success .status-indicator {
+    background: #69db7c;
+    animation: none;
+}
+
+.terminal-container.error .status-indicator {
     background: #ff6b6b;
+    animation: none;
 }
 
 @keyframes pulse {

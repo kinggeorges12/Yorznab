@@ -1,139 +1,76 @@
 # setup.ps1
-
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
-function Read-KeyWithTimeout {
-    param(
-        [bool]$AlreadyGotKey,
-        [int]$TimeoutMs = 1000
-    )
+$reader = [System.IO.StreamReader]::new([System.Console]::OpenStandardInput())
 
-    if ($AlreadyGotKey) {
-        return [PSCustomObject]@{
-            Key           = $null
-            AlreadyGotKey = $true
-        }
-    }
-
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-
-    while ($sw.ElapsedMilliseconds -lt $TimeoutMs) {
-        if ([Console]::KeyAvailable) {
-            return [PSCustomObject]@{
-                Key           = [Console]::ReadKey($true).KeyChar
-                AlreadyGotKey = $true   # Stop future reads
-            }
-        }
-
-        Start-Sleep -Milliseconds 50
-    }
-
-    # Timed out, so allow the next read
-    return [PSCustomObject]@{
-        Key           = $null
-        AlreadyGotKey = $false
-    }
+function Write-Delay {
+    param([string]$message,
+          [int]$delay = 10)
+    Write-Host $message
+    Start-Sleep -Milliseconds $delay
 }
-$gotKey = $false
-Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗"
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "║                                                                              ║"
-Write-Host "║       ██╗   ██╗ ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██████╗ ██╗        ║"
-Write-Host "║       ╚██╗ ██╔╝██╔═══██╗██╔══██╗╚══███╔╝████╗  ██║██╔══██╗██╔══██╗██║        ║"
-Write-Host "║        ╚████╔╝ ██║   ██║██████╔╝  ███╔╝ ██╔██╗ ██║███████║██████╔╝██║        ║"
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "║         ╚██╔╝  ██║   ██║██╔══██╗ ███╔╝  ██║╚██╗██║██╔══██║██╔══██╗╚═╝        ║"
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "║          ██║   ╚██████╔╝██║  ██║███████╗██║ ╚████║██║  ██║██████╔╝██╗        ║"
-Write-Host "║          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝        ║"
-Write-Host "║══════════════════════════════════════════════════════════════════════════════║"
-Write-Host "║                                                                              ║"
-Write-Host "║                                         ...a Torznab Indexer that's all YORZ ║"
-$r = Read-KeyWithTimeout $gotKey -TimeoutMs 2000
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "║                                                                              ║"
-Write-Host "║              Please fill-in the fields below to get started.                 ║"
-Write-Host "║                                                                              ║"
-Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝"
-Write-Host ""
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
+
+function Reader-Input {
+    param([string]$message = "")
+    $input = $reader.ReadLine()
+    if ($input -eq '') {
+        $input = Reader-Input $message
+    }
+    $input
+}
+
+function Reader-Prompt {
+    param([string]$message = "")
+    Write-Delay $message
+    Reader-Input $message
+}
+
+Write-Delay ""
+Write-Delay "/==============================================================================\"
+Write-Delay "|                                                                              |"
+Write-Delay "|       @@\   @@\ @@@@@@\ @@@@@@\ @@@@@@@\@@@\   @@\ @@@@@\ @@@@@@\ @@\        |"
+Write-Delay "|       \@@\ @@//@@/===@@\@@/==@@\\==@@@//@@@@\  @@|@@/==@@\@@/==@@\@@|        |"
+Write-Delay "|        \@@@@// @@|   @@|@@@@@@//  @@@// @@/@@\ @@|@@@@@@@|@@@@@@//@@|        |"
+Write-Delay "|         \@@//  @@|   @@|@@/==@@\ @@@//  @@|\@@\@@|@@/==@@|@@/==@@\\=/        |"
+Write-Delay "|          @@|   \@@@@@@//@@|  @@|@@@@@@@\@@| \@@@@|@@|  @@|@@@@@@//@@\        |"
+Write-Delay "|          \=/    \=====/ \=/  \=/\======/\=/  \===/\=/  \=/\=====/ \=/        |"
+Write-Delay "|==============================================================================|" -Delay 500
+Write-Delay "|                                                                              |"
+Write-Delay "|                                         ...a Torznab Indexer that's all YORZ |" -Delay 500
+Write-Delay "|                                                                              |"
+Write-Delay "|              Please fill-in the fields below to get started.                 |"
+Write-Delay "|                                                                              |"
+Write-Delay "\==============================================================================/"
+Write-Delay -Delay 1000 ""
+#Start-Sleep -Milliseconds 2000
 
 # Define output file
 $output_file = "config/settings.yaml"
 
 $current_dir = Get-Location
 $script_dir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Write-Delay "Current directory: $current_dir"
 if ($current_dir.Path -ne $script_dir) {
-    Write-Host "Install: $script_dir"
-    Write-Host "Current: $current_dir"
-    $reply = Read-Host "Are you in the correct directory? yes(Y)/[no(N)]/go(G) "
-    Write-Host ""
-    if ($reply -match "^[Gg]$") {
+    Write-Delay "Script directory: $script_dir"
+    $input = Reader-Prompt "Are you in the correct directory? yes(Y)/[no(N)]/go(G) "
+    if ($input -match "^[Gg]$") {
         Set-Location $script_dir
-        Write-Host "Switching directory: $(Get-Location)"
-    } elseif ($reply -notmatch "^[Yy]$") {
-        Write-Host "Cancelling..."
-        exit 1
+        Write-Delay "Switching directory: $(Get-Location)"
+    } elseif ($input -notmatch "^[Yy]$") {
+        Write-Delay "Cancelling..."
+        exit 0
     }
-    Write-Host "Continuing..."
-}
-
-if (Test-Path $output_file) {
-    Write-Host "It looks like the settings file was already created."
-    $reply = Read-Host "Do you want to (O)verwrite some values or (K)eep it the way it is? "
-    Write-Host ""
-    if ($reply -eq "") {
-        Write-Host "Alright, hang on!"
-    } elseif ($reply -notmatch "^[Oo]$") {
-        Write-Host "Keeping it the way it is... Bye!"
-        exit 1
-    }
-    Write-Host "Continuing..."
-}
-
-function Read-Password {
-    $password = ""
-    $char = $null
-
-    # Store original console settings
-    $original = [Console]::TreatControlCAsInput
-    [Console]::TreatControlCAsInput = $true
-    
-    while ($true) {
-        $key = [Console]::ReadKey($true)
-        
-        # Enter key
-        if ($key.Key -eq "Enter") {
-            break
-        }
-        # Backspace
-        elseif ($key.Key -eq "Backspace") {
-            if ($password.Length -gt 0) {
-                $password = $password.Substring(0, $password.Length - 1)
-                Write-Host "`b `b" -NoNewline
-            }
-        }
-        # All other keys
-        else {
-            $char = $key.KeyChar
-            $password += $char
-            Write-Host "*" -NoNewline
-        }
-    }
-    
-    [Console]::TreatControlCAsInput = $original
-    Write-Host ""
-    return $password
+    Write-Delay "Continuing..."
 }
 
 # Read existing settings from YAML file
 function Get-SettingValue {
-    param($section, $field)
-    $content = Get-Content $output_file -ErrorAction SilentlyContinue
+    param([string[]]$content,
+          [string]$section,
+          [string]$field,
+          [string]$default_value = "")
     if ($content) {
         $inSection = $false
         foreach ($line in $content) {
@@ -141,144 +78,216 @@ function Get-SettingValue {
                 $inSection = $true
                 continue
             }
-            if ($inSection -and $line -match "^  ${field}:\s+(.+)$") {
-                return $matches[1]
+            if ($inSection -and $line -match "^  ${field}:(.+)$") {
+                $matched = $matches[1]
+                break
             }
-            if ($inSection -and $line -match "^[^ ]" -and $line -notmatch " ") {
+            if ($inSection -and $line -match "^[^ ]") {
                 $inSection = $false
             }
         }
     }
-    return $null
+    if($matched) {
+        return $matched.Trim()
+    }
+    return $default_value
 }
 
-$r_Url = Get-SettingValue "Radarr" "Url"
-if (-not $r_Url) { $r_Url = "http://localhost:7878" }
-$r_ApiKey = Get-SettingValue "Radarr" "ApiKey"
-$r_Endpoint = Get-SettingValue "Radarr" "Endpoint"
-if (-not $r_Endpoint) { $r_Endpoint = "/api/v3/movie" }
+function Check-ForDefaults {
+    param($field_name, $new_value, $default_value, $mask = $false)
 
-$s_Url = Get-SettingValue "Sonarr" "Url"
-if (-not $s_Url) { $s_Url = "http://localhost:8989" }
-$s_ApiKey = Get-SettingValue "Sonarr" "ApiKey"
-$s_Endpoint = Get-SettingValue "Sonarr" "Endpoint"
-if (-not $s_Endpoint) { $s_Endpoint = "/api/v3/series" }
-
-$QUrl = Get-SettingValue "qBittorrent" "QUrl"
-if (-not $QUrl) { $QUrl = "http://localhost:8080" }
-$QApiKey = Get-SettingValue "qBittorrent" "QApiKey"
-$QUsername = Get-SettingValue "qBittorrent" "QUsername"
-$QPassword = Get-SettingValue "qBittorrent" "QPassword"
-$QEndpoint = Get-SettingValue "qBittorrent" "QEndpoint"
-if (-not $QEndpoint) { $QEndpoint = "/api/v2" }
-
-# Prompt user for inputs
-Write-Host ""
-Write-Host ""
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host ""
-Write-Host "To keep current settings, press enter."
-Write-Host "To delete a setting, type '-' and press enter."
-Write-Host "Default settings for Endpoints are usually fine for a basic setup."
-Write-Host ""
-
-$gotKey = $false
-$r = Read-KeyWithTimeout $gotKey -TimeoutMs 2000
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~          Radarr            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host ""
-Write-Host ">>> Lookup the API key for Radarr in: Settings > General > Security"
-Write-Host ""
-$new_r_Url = Read-Host "Url (current: $r_Url)"
-Write-Host -NoNewline "ApiKey (current: $($r_ApiKey.Length) chars): "
-$new_r_ApiKey = Read-Password
-$new_r_Endpoint = Read-Host "Endpoint (current: $r_Endpoint)"
-
-Write-Host ""
-$gotKey = $false
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~          Sonarr            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host ""
-Write-Host ">>> Lookup the API key for Sonarr in: Settings > General > Security"
-Write-Host ""
-$new_s_Url = Read-Host "Url (current: $s_Url)"
-Write-Host -NoNewline "ApiKey (current: $($s_ApiKey.Length) chars): "
-$new_s_ApiKey = Read-Password
-$new_s_Endpoint = Read-Host "Endpoint (current: $s_Endpoint)"
-
-Write-Host ""
-$gotKey = $false
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~        qBittorrent         ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Host ""
-Write-Host ">>> Login settings for qBittorrent are in: [Menu] Tools > Options > WebUI"
-Write-Host "*** Newer versions of qBittorrent allow for API authentication!"
-Write-Host "*** Enter a dash '-' for the QApiKey if using username/password authentication."
-Write-Host ""
-Write-Host "Newer versions of qBittorrent allow an API key."
-Write-Host "If your version does not support it, type a dash '-' and press enter."
-Write-Host "You must supply a username and password."
-Write-Host ""
-$new_QUrl = Read-Host "Url (current: $QUrl)"
-Write-Host -NoNewline "ApiKey (current: $($QApiKey.Length) chars): "
-$new_QApiKey = Read-Password
-$new_QUsername = Read-Host "Username (current: $QUsername)"
-Write-Host -NoNewline "Password (current: $($QPassword.Length) chars): "
-$new_QPassword = Read-Password
-$new_QEndpoint = Read-Host "Endpoint (current: $QEndpoint)"
-Write-Host ""
-
-function Check-ForDash {
-    param($field_name, $new_value, $default_value)
-    
-    if (-not $new_value -or $new_value -eq "") {
+    if (-not $new_value -or $new_value -eq "" -or $new_value -eq "=") {
+        $default_value = if ($mask -and $default_value) { '*' * $default_value.Length } else { $default_value }
         return "  ${field_name}: $default_value"
     } elseif ($new_value -ne "-") {
+        $new_value = if ($mask -and $new_value) { '*' * $new_value.Length } else { $new_value }
         return "  ${field_name}: $new_value"
     }
     return $null
 }
 
-# Write inputs to file with a timestamp
-Clear-Content $output_file -ErrorAction SilentlyContinue
+# Read existing settings from YAML file
+function Write-SettingValue {
+    param([string[]]$content,
+          [string]$section,
+          [string]$field,
+          [string]$new_value,
+          [string]$default_value)
+    $new_value = Check-ForDefaults $field $new_value $default_value
+    $newLines = @()
+    $inSection = $false
+    $fieldFound = $false
+    foreach ($line in $content) {
+        if ($fieldFound) {
+        } elseif ($line -match "^${section}:") {
+            $inSection = $true
+        } elseif ($inSection) {
+            if ($line -match "^  ${field}:") {
+                $fieldFound = $true
+                $newLines += $new_value
+                continue
+            } elseif ($line -match "^[^ ]" -and $line -notmatch "^${section}:") {
+                if (-not $fieldFound) {
+                    $newLines += $new_value
+                    $fieldFound = $true
+                }
+                $inSection = $false
+            } 
+        }
+        $newLines += $line
+    }
+    if (-not $fieldFound) {
+        if (-not $inSection) {
+            $newLines += "${section}: ${new_value}"
+        }
+        $newLines += $new_value
+    }
+    return $newLines
+}
 
-@"
+# Read current settings
+$content = Get-Content $output_file -ErrorAction SilentlyContinue
+
+$r_Url = Get-SettingValue $content "Radarr" "Url" "http://localhost:7878"
+$r_ApiKey = Get-SettingValue $content "Radarr" "ApiKey"
+$r_Endpoint = Get-SettingValue $content "Radarr" "Endpoint" "/api/v3/movie"
+
+$s_Url = Get-SettingValue $content "Sonarr" "Url" "http://localhost:8989"
+$s_ApiKey = Get-SettingValue $content "Sonarr" "ApiKey"
+$s_Endpoint = Get-SettingValue $content "Sonarr" "Endpoint" "/api/v3/series"
+
+$QUrl = Get-SettingValue $content "qBittorrent" "QUrl" "http://localhost:8080"
+$QApiKey = Get-SettingValue $content "qBittorrent" "QApiKey"
+$QUsername = Get-SettingValue $content "qBittorrent" "QUsername"
+$QPassword = Get-SettingValue $content "qBittorrent" "QPassword"
+$QEndpoint = Get-SettingValue $content "qBittorrent" "QEndpoint" "/api/v2"
+
+# Prompt user for inputs
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay ""
+Write-Delay "To keep current settings, type '=' or just press enter."
+Write-Delay "To delete a setting, type '-' and press enter."
+Write-Delay "Default settings for Endpoints are usually fine for a basic setup."
+Write-Delay -Delay 1000 ""
+
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~          Radarr            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "??? Lookup the API key for Radarr in: Settings ... General ... Security"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay ""
+
+$input = Reader-Prompt "Url (current: $r_Url)"
+$new_r_Url = $input
+$input = Reader-Prompt "ApiKey (current: $($r_ApiKey.Length) chars)"
+$new_r_ApiKey = $input
+$input = Reader-Prompt "Endpoint (current: $r_Endpoint)"
+$new_r_Endpoint = $input
+
+Write-Delay ""
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~          Sonarr            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "??? Lookup the API key for Radarr in: Settings ... General ... Security"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay ""
+
+$input = Reader-Prompt "Url (current: $s_Url)"
+$new_s_Url = $input
+$input = Reader-Prompt "ApiKey (current: $($s_ApiKey.Length) chars)"
+$new_s_ApiKey = $input
+$input = Reader-Prompt "Endpoint (current: $s_Endpoint)"
+$new_s_Endpoint = $input
+
+Write-Delay ""
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~        qBittorrent         ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "??? Login settings for qBittorrent are in: [Menu] Tools ... Options ... WebUI"
+Write-Delay "*** Newer versions of qBittorrent allow for API authentication!"
+Write-Delay "*** Enter a dash '-' for the QApiKey if using username/password authentication."
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "Newer versions of qBittorrent allow an API key."
+Write-Delay "If your version does not support it, type a dash '-' and press enter."
+Write-Delay "You must supply a username and password."
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay ""
+
+$input = Reader-Prompt "Url (current: $QUrl)"
+$new_QUrl = $input
+$input = Reader-Prompt "ApiKey (current: $($QApiKey.Length) chars)"
+$new_QApiKey = $input
+if ($new_QApiKey -eq "-") {
+    Write-Delay "You have chosen to use username/password authentication."
+    $input = Reader-Prompt "Username (current: $QUsername)"
+    $new_QUsername = $input
+    $input = Reader-Prompt "Password (current: $($QPassword.Length) chars)"
+    $new_QPassword = $input
+} else {
+    $new_QUsername = ''
+    $new_QPassword = ''
+}
+$input = Reader-Prompt "Endpoint (current: $QEndpoint)"
+$new_QEndpoint = $input
+
+$print_settings = @"
 ### Auto-generated by setup.ps1 ###
 
 Radarr:
-$(Check-ForDash "Url" $new_r_Url $r_Url)
-$(Check-ForDash "ApiKey" $new_r_ApiKey $r_ApiKey)
-$(Check-ForDash "Endpoint" $new_r_Endpoint $r_Endpoint)
+$(Check-ForDefaults "Url" $new_r_Url $r_Url)
+$(Check-ForDefaults "ApiKey" $new_r_ApiKey $r_ApiKey $true)
+$(Check-ForDefaults "Endpoint" $new_r_Endpoint $r_Endpoint)
 Sonarr:
-$(Check-ForDash "Url" $new_s_Url $s_Url)
-$(Check-ForDash "ApiKey" $new_s_ApiKey $s_ApiKey)
-$(Check-ForDash "Endpoint" $new_s_Endpoint $s_Endpoint)
+$(Check-ForDefaults "Url" $new_s_Url $s_Url)
+$(Check-ForDefaults "ApiKey" $new_s_ApiKey $s_ApiKey $true)
+$(Check-ForDefaults "Endpoint" $new_s_Endpoint $s_Endpoint)
 qBittorrent:
-$(Check-ForDash "QUrl" $new_QUrl $QUrl)
-$(Check-ForDash "QApiKey" $new_QApiKey $QApiKey)
-$(Check-ForDash "QUsername" $new_QUsername $QUsername)
-$(Check-ForDash "QPassword" $new_QPassword $QPassword)
-$(Check-ForDash "QEndpoint" $new_QEndpoint $QEndpoint)
-"@ | Out-File $output_file -Encoding utf8
+$(Check-ForDefaults "QUrl" $new_QUrl $QUrl)
+$(Check-ForDefaults "QApiKey" $new_QApiKey $QApiKey $true)
+$(Check-ForDefaults "QUsername" $new_QUsername $QUsername)
+$(Check-ForDefaults "QPassword" $new_QPassword $QPassword $true)
+$(Check-ForDefaults "QEndpoint" $new_QEndpoint $QEndpoint)
+"@
 
-Write-Host ""
-Write-Host "Settings written to: $output_file"
-Write-Host "Until next time, enjoy YOR very own Yorznab!"
-$gotKey = $false
-$r = Read-KeyWithTimeout $gotKey
-$key, $gotKey = $r.Key, $r.AlreadyGotKey
+Write-Delay ""
+Write-Delay $print_settings
+Write-Delay ""
+if (Test-Path $output_file) {
+    do {
+        $input = Reader-Prompt "Type 'Y' to overwrite the existing settings, or 'N' to cancel"
+        Start-Sleep -Milliseconds 100
+    } while ($input -ne 'Y' -and $input -ne 'N')
+    if ($input -match "^[Nn]$") {
+        Write-Delay "Keeping it the way it is... Bye!"
+        exit 0
+    }
+    Write-Delay ""
+}
 
+$content = Write-SettingValue $content "Radarr" "Url" $new_r_Url $r_Url
+$content = Write-SettingValue $content "Radarr" "ApiKey" $new_r_ApiKey $r_ApiKey
+$content = Write-SettingValue $content "Radarr" "Endpoint" $new_r_Endpoint $r_Endpoint
+
+$content = Write-SettingValue $content "Sonarr" "Url" $new_s_Url $s_Url
+$content = Write-SettingValue $content "Sonarr" "ApiKey" $new_s_ApiKey $s_ApiKey
+$content = Write-SettingValue $content "Sonarr" "Endpoint" $new_s_Endpoint $s_Endpoint
+
+$content = Write-SettingValue $content "qBittorrent" "QUrl" $new_QUrl $QUrl
+$content = Write-SettingValue $content "qBittorrent" "QApiKey" $new_QApiKey $QApiKey
+$content = Write-SettingValue $content "qBittorrent" "QUsername" $new_QUsername $QUsername
+$content = Write-SettingValue $content "qBittorrent" "QPassword" $new_QPassword $QPassword
+$content = Write-SettingValue $content "qBittorrent" "QEndpoint" $new_QEndpoint $QEndpoint
+
+[System.IO.File]::WriteAllLines($output_file, $content)
+
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay "~~~ Wrote settings to file: $output_file"
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+Write-Delay ""
+Write-Delay ""
+Write-Delay "Press Enter to exit..."
+
+exit 0

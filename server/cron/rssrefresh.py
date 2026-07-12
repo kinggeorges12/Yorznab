@@ -37,13 +37,13 @@ from server.utils.timezoneaware import TimezoneAware
 import asyncio
 
 # Global logger instance
-LOGGER:CustomLogger = CustomLogger(name="cron")
+LOGGER = CustomLogger(name="cron")
 
 # Load settings from config file
-SETTINGS:AppSettings = AppSettings(filename='yorznab.yaml')
+SETTINGS = AppSettings(filename='yorznab.yaml')
 
 # Load settings from config file
-FEED:AppSettings = AppSettings(filename='feed.yaml')
+FEED = AppSettings(filename='feed.yaml')
 
 # Load default args
 FEED_CONFIGS:list[FeedConfig] = []

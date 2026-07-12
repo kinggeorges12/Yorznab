@@ -24,19 +24,19 @@ class AppSettings:
         # prevent re-loading on repeated calls
         if getattr(self, "_initialized", False):
             return
-
         self._config_file = ConfigFile(filename)
-        self._data = self._load()
+        self.load()
         self._initialized = True
 
-    def _load(self) -> dict:
+    def load(self) -> None:
         path = self._config_file.path
 
         if path.exists():
             with open(path, "r") as f:
-                return yaml.safe_load(f) or {}
+                self._data = yaml.safe_load(f) or {}
+                return
 
-        return {}
+        self._data = {}
     
     def get(self, key: str = None, sub: str = None, exists: bool = False) -> dict | None:
         if key is not None and sub is not None:
