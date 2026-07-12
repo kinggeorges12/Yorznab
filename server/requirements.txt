@@ -7,4 +7,4 @@ dacite
 croniter
 tzdata
 websockets
-pywinpty
+# pywinpty # Install manually through pip
