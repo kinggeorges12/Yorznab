@@ -70,7 +70,6 @@ class WebSetup(IWebSetup):
                 args.extend(['-File', file])
             terminal_encoding='windows-1252'
             shell_name='PowerShell'
-            terminal_encoding='utf-8'
         else:
             file = './setup.sh'
             exec_path = shutil.which('bash') or shutil.which('sh')
@@ -84,6 +83,7 @@ class WebSetup(IWebSetup):
                 else False
             )
             preload_script_str = f"chmod +x {file}"
+            terminal_encoding='utf-8'
             shell_name='Bash'
 
         cls._os_config = OSConfig(
@@ -94,11 +94,11 @@ class WebSetup(IWebSetup):
             shell_name=shell_name,
             prompt=prompt,
             newline=newline,
+            terminal_encoding=terminal_encoding,
             env=env,
             args=args,
             on_preload=preload_script,
             preload_script=preload_script_str,
-            terminal_encoding=terminal_encoding,
         )
         cls._os_config_loaded = True
     
