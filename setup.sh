@@ -106,31 +106,23 @@ get_setting_value() {
     local matched=""
     local in_section=false
     local line=""
-    local key=""
-    local value=""
     
     for line in "${content[@]}"; do
-        # Remove carriage return
         line="${line//$'\r'/}"
         
-        # Check if this is the section header
         if [[ "$line" =~ ^${section}: ]]; then
             in_section=true
             continue
         fi
         
-        # If in the right section, look for the field
         if [ "$in_section" = true ]; then
-            # Check if we've left the section (line starts with non-space)
             if [[ "$line" =~ ^[^[:space:]] ]]; then
                 in_section=false
                 continue
             fi
             
-            # Check if this line has our field
             if [[ "$line" =~ ^[[:space:]]+${field}:[[:space:]]*(.+)$ ]]; then
                 matched="${BASH_REMATCH[1]}"
-                # Trim whitespace
                 matched="${matched#"${matched%%[![:space:]]*}"}"
                 matched="${matched%"${matched##*[![:space:]]}"}"
                 break
@@ -138,11 +130,7 @@ get_setting_value() {
         fi
     done
     
-    if [ -n "$matched" ]; then
-        echo "$matched"
-    else
-        echo "$default_value"
-    fi
+    echo "${matched:-$default_value}"
 }
 
 check_for_defaults() {
@@ -175,6 +163,7 @@ write_setting_value() {
     local new_content=()
     local in_section=false
     local field_found=false
+    local line=""
     
     if [ -z "$new_value" ] || [ "$new_value" = "" ] || [ "$new_value" = "=" ]; then
         new_line="  ${field}: $default_value"
@@ -186,14 +175,14 @@ write_setting_value() {
     
     for line in "${content[@]}"; do
         if [ "$field_found" = false ]; then
-            if echo "$line" | grep -qE "^${section}:"; then
+            if [[ "$line" =~ ^${section}: ]]; then
                 in_section=true
             elif [ "$in_section" = true ]; then
-                if echo "$line" | grep -qE "^[[:space:]]+${field}:"; then
+                if [[ "$line" =~ ^[[:space:]]+${field}: ]]; then
                     field_found=true
                     new_content+=("$new_line")
                     continue
-                elif echo "$line" | grep -qE '^[^[:space:]]' && ! echo "$line" | grep -qE "^${section}:"; then
+                elif [[ "$line" =~ ^[^[:space:]] ]] && [[ ! "$line" =~ ^${section}: ]]; then
                     if [ "$field_found" = false ]; then
                         new_content+=("$new_line")
                         field_found=true
