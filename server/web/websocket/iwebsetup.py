@@ -8,6 +8,7 @@ import signal
 from contextlib import suppress
 from fastapi import WebSocketDisconnect
 
+# Import modules
 from server.web.common import LOGGER
 from server.utils.settings import AppSettings
 

@@ -144,6 +144,10 @@
     display: inline-block;
 }
 
+.terminal-container {
+    border: 1px solid #444;
+}
+
 .terminal-container.idle .status-indicator {
     background: #888;
     animation: none;
@@ -533,7 +537,7 @@ button.active:hover {
         min-height: 150px;
         max-height: 200px;
         font-size: 8px;
-        padding: 3px;
+        padding: 2px;
     }
     
     .terminal-footer {

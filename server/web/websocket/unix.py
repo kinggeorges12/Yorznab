@@ -4,8 +4,8 @@ import signal
 import asyncio
 import pty
 import subprocess
-from contextlib import suppress
 
+# Import modules
 from server.web.common import LOGGER
 from server.web.websocket.iwebsetup import IWebSetup, OSConfig
 
@@ -39,7 +39,7 @@ class WebSetupUnix(IWebSetup):
                 LOGGER.error(f"Error killing process: {e}")
 
     async def start_process(self) -> bool:
-        if not self.exec_path:
+        if not self.os_config.exec_path:
             LOGGER.error("Bash executable not found")
             return False
         
@@ -47,9 +47,9 @@ class WebSetupUnix(IWebSetup):
             self._pty_controller_fd, terminal_fd = pty.openpty()
             
             self._process = subprocess.Popen(
-                [self.exec_path] + self.args,
-                cwd=str(self.directory) if self.directory else None,
-                env=self.env,
+                [self.os_config.exec_path] + self.os_config.args,
+                cwd=str(self.os_config.directory) if self.os_config.directory else None,
+                env=self.os_config.env,
                 stdin=terminal_fd,
                 stdout=terminal_fd,
                 stderr=subprocess.STDOUT,
