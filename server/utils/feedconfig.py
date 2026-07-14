@@ -43,7 +43,7 @@ class FilterTags:
     remove_jackett_tags: Optional[bool] = None
     tracker_tags_only: Optional[bool] = None
     tracker_tags_skip: Optional[bool] = None
-    tracker_tags: Optional[dict[str, str]] = field(default_factory=dict)
+    tracker_tags: Optional[dict[str, str | None]] = field(default_factory=dict)
 
 @dataclass
 class FeedFilter:

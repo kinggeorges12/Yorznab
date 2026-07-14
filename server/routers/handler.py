@@ -1,4 +1,6 @@
+import os
 from threading import Lock
+import psutil
 
 # Import modules
 from server.utils.settings import AppSettings
@@ -28,7 +30,13 @@ class RouteHandlerFactory:
             self.STATIC = SETTINGS.get('server', 'static_endpoint') or "/static"
             self.STATUS = SETTINGS.get('server', 'status_endpoint') or "/status"
             self.WEBHOOK = SETTINGS.get('server', 'webhook_endpoint') or "/webhook"
+            self.STATIC_DIR = os.path.join(psutil.Process().cwd(), "static")
             self._initialized = True
+
+    def get_static(self, file: str = None) -> str:
+        if file:
+            return os.path.join(self.STATIC_DIR, file)
+        return self.STATIC_DIR
 
 # Initialize routes
 RouteHandler = RouteHandlerFactory()

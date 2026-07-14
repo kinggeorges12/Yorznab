@@ -14,9 +14,6 @@ from server.routers import status, torznab, webhook
 from server.web.routers import web_routers
 from server.routers.handler import RouteHandler
 
-# Set static directory handling
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
@@ -43,12 +40,12 @@ app.include_router(web_routers)
 
 
 # Mount static directory
-app.mount(RouteHandler.STATIC, StaticFiles(directory=STATIC_DIR), name="static")
+app.mount(RouteHandler.STATIC, StaticFiles(directory=RouteHandler.STATIC_DIR), name="static")
 
 # Favicon
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse(STATIC_DIR + "/favicon.ico")
+    return FileResponse(RouteHandler.get_static("favicon.ico"))
 
 # Default route - redirects root to /login
 @app.get("/")

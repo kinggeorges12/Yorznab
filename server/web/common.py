@@ -1,5 +1,13 @@
+from datetime import datetime, timedelta
+import json
+import os
+from pathlib import Path
 import secrets
-from fastapi import Request
+from typing import List, Union
+from fastapi import HTTPException
+
+import httpx
+from websockets import Router
 
 # Import modules
 from server.routers.handler import RouteHandler
@@ -16,8 +24,28 @@ def get_csrf_token() -> str:
     return secrets.token_hex(16)
 
 def page_template(title: str, content: str, token: str,
-                  css: str = None, js: str = None) -> str:
-        
+                  css: Union[str, List[str]] = None,
+                  module: dict[str,tuple[str,str]] = None,
+                  js: Union[str, List[str]] = None) -> str:
+    # Convert single string to list for consistent handling
+    css = ([css] if isinstance(css, str) else css) if css is not None else []
+    module = module if module is not None else {}
+    js = ([js] if isinstance(js, str) else js) if js is not None else []
+    
+    load_sources = ''
+    for css_file in css:
+        load_sources += f'<link rel="stylesheet" href="{RouteHandler.STATIC}/{css_file}?token={token}">' if css_file else ''
+    for module_file, module_import in module.items():
+        if module_file and module_import:
+            load_sources += f'''<script type="module">
+            import {module_import} from "{RouteHandler.STATIC}/{module_file}?token={token}"
+            window.{module_import} = {module_import};
+        </script>'''
+        else:
+            load_sources += f'<script type="module" src="{RouteHandler.STATIC}/{module_file}?token={token}"></script>' if module_file else ''
+    for js_file in js:
+        load_sources += f'<script src="{RouteHandler.STATIC}/{js_file}?token={token}"></script>' if js_file else ''
+
     return f'''<!DOCTYPE html>
 <html>
     <head>
@@ -26,8 +54,7 @@ def page_template(title: str, content: str, token: str,
         <link rel="preload" href="{RouteHandler.STATIC}/css/web.css?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
         <script src="{RouteHandler.STATIC}/js/web.js?token={token}"></script>
-        {f'<link rel="stylesheet" href="{RouteHandler.STATIC}/css/{css}?token={token}">' if css else ''}
-        {f'<script src="{RouteHandler.STATIC}/js/{js}?token={token}"></script>' if js else ''}
+        {load_sources}
         <meta name="cache-control" content="no-cache, no-store, must-revalidate">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,3 +86,53 @@ def navigation(current_route: str = '') -> str:
                 <span class="btn-label">Dark</span>
             </button>
         </div>'''
+
+def fetch_external_file(external_url: str) -> bytes:
+    """
+    Download a file from external URL and return raw bytes
+    """
+    with httpx.Client() as client:
+        try:
+            response = client.get(external_url)
+            response.raise_for_status()
+            return response.content
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=404, detail=f"External file not found: {e}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail=f"Error connecting to external server: {e}")
+
+def download_and_cache(url, file, cache_duration_hours=None):
+    """
+    Download a file and cache it locally
+    """
+    static_file = RouteHandler.get_static(file)
+    cache_file = Path(static_file)
+    LOGGER.debug(f"Loading from cache: {cache_file}")
+    # Check if cache exists and is fresh
+    cache_ready = False
+    if os.path.exists(cache_file):
+        cache_ready = True
+        if cache_duration_hours is not None:
+            file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(cache_file))
+            cache_ready = file_age < timedelta(hours=cache_duration_hours)
+    if not cache_ready:
+        # Download fresh data
+        LOGGER.debug(f"Downloading from: {url}")
+        content_bytes = fetch_external_file(url)
+        
+        # Save to cache
+        LOGGER.debug(f"Caching to: {cache_file}")
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Check if content is JSON or binary
+        try:
+            # Try to parse as JSON
+            data = json.loads(content_bytes)
+            with open(cache_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Save as binary
+            with open(cache_file, 'wb') as f:
+                f.write(content_bytes)
+    
+    return file

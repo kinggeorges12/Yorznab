@@ -45,7 +45,7 @@ class ArrClient:
         try:
             self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
         except MissingValueError as e:
-            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.getenv('PYTHONPATH') + self._config_file}")
+            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.path.join(os.getenv('PYTHONPATH'), self._config_file)}")
             raise Exception(e)
 
     @dataclass

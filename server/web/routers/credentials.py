@@ -51,7 +51,7 @@ async def keys(request: Request):
             </div>
         </div>'''
     
-    return Response(content=page_template(title="Credentials", content=content, token=token, js="credentials.js", css="credentials.css"), media_type="text/html")
+    return Response(content=page_template(title="Credentials", content=content, token=token, js="js/credentials.js", css="css/credentials.css"), media_type="text/html")
 
 @router.post("/reset")
 async def reset_config(request: Request):

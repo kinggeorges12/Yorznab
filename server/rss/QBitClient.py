@@ -46,7 +46,7 @@ class QBitClient:
         try:
             self._config = from_dict(data_class=QBitConfig, data=config_raw)
         except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "QUrl"
-            self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.getenv('PYTHONPATH') + self._config_file}")
+            self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.path.join(os.getenv('PYTHONPATH'), self._config_file)}")
             raise Exception(e)
 
     @property

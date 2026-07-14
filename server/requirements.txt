@@ -1,6 +1,7 @@
 feedgen
 fastapi
 uvicorn
+psutil
 httpx
 pyyaml
 dacite
