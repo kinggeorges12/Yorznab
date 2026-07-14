@@ -3,51 +3,50 @@
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
-$reader = [System.IO.StreamReader]::new([System.Console]::OpenStandardInput())
 
 function Write-Delay {
     param([string]$message,
-          [int]$delay = 10)
-    Write-Host $message
+          [int]$delay = 10,
+          [switch]$NoNewline)
+    if($NoNewline) {
+        Write-Host $message -NoNewline
+    } else {
+        Write-Host $message
+    }
     Start-Sleep -Milliseconds $delay
 }
 
-function Reader-Input {
-    param([string]$message = "")
-    $input = $reader.ReadLine()
-    if ($input -eq '') {
-        $input = Reader-Input $message
+function Reader-Prompt {
+    param([string]$message = "",
+          [switch]$AsSecureString)
+    Write-Delay $message
+    if ($AsSecureString) {
+        $input = Read-Host -AsSecureString
+        $input = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($input))
+    } else {
+        $input = Read-Host
     }
+    Write-Host ""
     $input
 }
 
-function Reader-Prompt {
-    param([string]$message = "")
-    Write-Delay $message
-    Reader-Input $message
-}
-
 Write-Delay ""
-Write-Delay "/==============================================================================\"
-Write-Delay "|                                                                              |"
-Write-Delay "|       @@\   @@\ @@@@@@\ @@@@@@\ @@@@@@@\@@@\   @@\ @@@@@\ @@@@@@\ @@\        |"
-Write-Delay "|       \@@\ @@//@@/===@@\@@/==@@\\==@@@//@@@@\  @@|@@/==@@\@@/==@@\@@|        |"
-Write-Delay "|        \@@@@// @@|   @@|@@@@@@//  @@@// @@/@@\ @@|@@@@@@@|@@@@@@//@@|        |"
-Write-Delay "|         \@@//  @@|   @@|@@/==@@\ @@@//  @@|\@@\@@|@@/==@@|@@/==@@\\=/        |"
-Write-Delay "|          @@|   \@@@@@@//@@|  @@|@@@@@@@\@@| \@@@@|@@|  @@|@@@@@@//@@\        |"
-Write-Delay "|          \=/    \=====/ \=/  \=/\======/\=/  \===/\=/  \=/\=====/ \=/        |"
-Write-Delay "|==============================================================================|" -Delay 500
-Write-Delay "|                                                                              |"
-Write-Delay "|                                         ...a Torznab Indexer that's all YORZ |" -Delay 500
-Write-Delay "|                                                                              |"
-Write-Delay "|              Please fill-in the fields below to get started.                 |"
-Write-Delay "|                                                                              |"
-Write-Delay "\==============================================================================/"
+Write-Delay "╭╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╮"
+Write-Delay "╽                                                                              ╽"
+Write-Delay "╿       ██╮   ██╮ ██████╮ ██████╮ ███████╮███╮   ██╮ █████╮ ██████╮ ██╮        ╿"
+Write-Delay "╽       ╰██╮ ██╭╯██╭╼╾╼██╮██╭╼╾██╮╰╼╾███╭╯████╮  ██╽██╭╼╾██╮██╭╼╾██╮██╽        ╽" -Delay 100
+Write-Delay "╿        ╰████╭╯ ██╽   ██╽██████╭╯  ███╭╯ ██╭██╮ ██╿███████╿██████╭╯██╿        ╿"
+Write-Delay "╽         ╰██╭╯  ██╿   ██╿██╭╼╾██╮ ███╭╯  ██╽╰██╮██╽██╭╼╾██╽██╭╼╾██╮╰╼╯        ╽"
+Write-Delay "╿          ██╿   ╰██████╭╯██╿  ██╿███████╮██╿ ╰████╿██╿  ██╿██████╭╯██╮        ╿"
+Write-Delay "╽          ╰╼╯    ╰╼╾╼╾╼╯ ╰╼╯  ╰╼╯╰╼╾╼╾╼╾╯╰╼╯  ╰╼╾╼╯╰╼╯  ╰╼╯╰╼╾╼╾╼╯ ╰╼╯        ╽"
+Write-Delay "╟╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╢" -Delay 100
+Write-Delay "╿                                                                              ╿"
+Write-Delay "╽ ...a Torznab Indexer that's all YORZ                                         ╽" -Delay 2000
+Write-Delay "╿                                                                              ╿"
+Write-Delay "╽              Please fill-in the fields below to get started.                 ╽"
+Write-Delay "╿                                                                              ╿"
+Write-Delay "╰╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╯"
 Write-Delay -Delay 1000 ""
-#Start-Sleep -Milliseconds 2000
-
-# Define output file
-$output_file = "config/settings.yaml"
 
 $current_dir = Get-Location
 $script_dir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -60,7 +59,7 @@ if ($current_dir.Path -ne $script_dir) {
         Write-Delay "Switching directory: $(Get-Location)"
     } elseif ($input -notmatch "^[Yy]$") {
         Write-Delay "Cancelling..."
-        exit 0
+        exit 1
     }
     Write-Delay "Continuing..."
 }
@@ -145,6 +144,8 @@ function Write-SettingValue {
     return $newLines
 }
 
+# Define output file
+$output_file = "config/settings.yaml"
 # Read current settings
 $content = Get-Content $output_file -ErrorAction SilentlyContinue
 
@@ -178,11 +179,11 @@ Write-Delay "??? Lookup the API key for Radarr in: Settings ... General ... Secu
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay ""
 
-$input = Reader-Prompt "Url (current: $r_Url)"
+$input = Reader-Prompt "Url [$r_Url]"
 $new_r_Url = $input
-$input = Reader-Prompt "ApiKey (current: $($r_ApiKey.Length) chars)"
+$input = Reader-Prompt "ApiKey [$($r_ApiKey.Length) chars]" -AsSecureString
 $new_r_ApiKey = $input
-$input = Reader-Prompt "Endpoint (current: $r_Endpoint)"
+$input = Reader-Prompt "Endpoint [$r_Endpoint]"
 $new_r_Endpoint = $input
 
 Write-Delay ""
@@ -190,15 +191,15 @@ Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~          Sonarr            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~                            ~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Delay "??? Lookup the API key for Radarr in: Settings ... General ... Security"
+Write-Delay "??? Lookup the API key for Sonarr in: Settings ... General ... Security"
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay ""
 
-$input = Reader-Prompt "Url (current: $s_Url)"
+$input = Reader-Prompt "Url [$s_Url]"
 $new_s_Url = $input
-$input = Reader-Prompt "ApiKey (current: $($s_ApiKey.Length) chars)"
+$input = Reader-Prompt "ApiKey [$($s_ApiKey.Length) chars]" -AsSecureString
 $new_s_ApiKey = $input
-$input = Reader-Prompt "Endpoint (current: $s_Endpoint)"
+$input = Reader-Prompt "Endpoint [$s_Endpoint]"
 $new_s_Endpoint = $input
 
 Write-Delay ""
@@ -210,27 +211,27 @@ Write-Delay "??? Login settings for qBittorrent are in: [Menu] Tools ... Options
 Write-Delay "*** Newer versions of qBittorrent allow for API authentication!"
 Write-Delay "*** Enter a dash '-' for the QApiKey if using username/password authentication."
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Delay "Newer versions of qBittorrent allow an API key."
-Write-Delay "If your version does not support it, type a dash '-' and press enter."
-Write-Delay "You must supply a username and password."
+Write-Delay "%%% Newer versions of qBittorrent allow an API key."
+Write-Delay "%%% If your version does not support it, type a dash '-' and press enter."
+Write-Delay "%%% You must supply a username and password."
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay ""
 
-$input = Reader-Prompt "Url (current: $QUrl)"
+$input = Reader-Prompt "Url [$QUrl]"
 $new_QUrl = $input
-$input = Reader-Prompt "ApiKey (current: $($QApiKey.Length) chars)"
+$input = Reader-Prompt "ApiKey [$($QApiKey.Length) chars]" -AsSecureString
 $new_QApiKey = $input
 if ($new_QApiKey -eq "-") {
     Write-Delay "You have chosen to use username/password authentication."
-    $input = Reader-Prompt "Username (current: $QUsername)"
+    $input = Reader-Prompt "Username [$QUsername]"
     $new_QUsername = $input
-    $input = Reader-Prompt "Password (current: $($QPassword.Length) chars)"
+    $input = Reader-Prompt "Password [$($QPassword.Length) chars]" -AsSecureString
     $new_QPassword = $input
 } else {
     $new_QUsername = ''
     $new_QPassword = ''
 }
-$input = Reader-Prompt "Endpoint (current: $QEndpoint)"
+$input = Reader-Prompt "Endpoint [$QEndpoint]"
 $new_QEndpoint = $input
 
 $print_settings = @"
@@ -255,17 +256,6 @@ $(Check-ForDefaults "QEndpoint" $new_QEndpoint $QEndpoint)
 Write-Delay ""
 Write-Delay $print_settings
 Write-Delay ""
-if (Test-Path $output_file) {
-    do {
-        $input = Reader-Prompt "Type 'Y' to overwrite the existing settings, or 'N' to cancel"
-        Start-Sleep -Milliseconds 100
-    } while ($input -ne 'Y' -and $input -ne 'N')
-    if ($input -match "^[Nn]$") {
-        Write-Delay "Keeping it the way it is... Bye!"
-        exit 0
-    }
-    Write-Delay ""
-}
 
 $content = Write-SettingValue $content "Radarr" "Url" $new_r_Url $r_Url
 $content = Write-SettingValue $content "Radarr" "ApiKey" $new_r_ApiKey $r_ApiKey
@@ -281,13 +271,18 @@ $content = Write-SettingValue $content "qBittorrent" "QUsername" $new_QUsername 
 $content = Write-SettingValue $content "qBittorrent" "QPassword" $new_QPassword $QPassword
 $content = Write-SettingValue $content "qBittorrent" "QEndpoint" $new_QEndpoint $QEndpoint
 
+Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+if (Test-Path $output_file) {
+    $datetime = Get-Date -Format "yyyyMMdd_HHmmss"
+    $output_file_bak = "$output_file-$datetime.bak"
+    Move-Item $output_file $output_file_bak
+    Write-Delay "~~~ Moving old settings file:  $output_file_bak"
+}
+Write-Delay "~~~ Writing settings to file: $output_file"
 [System.IO.File]::WriteAllLines($output_file, $content)
-
-Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-Write-Delay "~~~ Wrote settings to file: $output_file"
 Write-Delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Write-Delay ""
-Write-Delay ""
-Write-Delay "Press Enter to exit..."
+Write-Delay "Done!"
+Write-Delay "Reloading configuration..." -Delay 1000
 
 exit 0

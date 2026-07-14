@@ -39,7 +39,8 @@ services:
         export PATH=\"$$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$$PATH\";
         cd /app/server &&
         pip install --user --upgrade pip &&
-        pip install --user -r requirements.txt && 
+        pip install --user -r requirements.txt &&
+        pip install --user termios &&
         python -m uvicorn run:app --host 0.0.0.0 --port 9116;"
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 9116); conn.request(\"GET\", \"/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]

@@ -1,36 +1,36 @@
 /* Terminal Styles */
-.terminal-container {
-    background: #1a1a1a;
-    border-radius: 8px;
-    border: 1px solid #333;
-    margin: 20px 0;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-}
-
 .terminal-header {
     background: #2d2d2d;
-    padding: 10px 15px;
+    padding: clamp(8px, 1.5vw, 15px) clamp(10px, 2vw, 20px);
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #444;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
 }
 
 .terminal-title {
     color: #fff;
-    font-size: 14px;
+    font-size: clamp(13px, 1.2vw, 16px);
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 50px;
 }
 
 .terminal-controls {
     display: flex;
-    gap: 8px;
+    gap: clamp(4px, 0.8vw, 8px);
+    flex-shrink: 0;
 }
 
 .terminal-dot {
-    width: 12px;
-    height: 12px;
+    width: clamp(10px, 1vw, 14px);
+    height: clamp(10px, 1vw, 14px);
     border-radius: 50%;
     display: inline-block;
 }
@@ -41,13 +41,11 @@
 
 .terminal-output {
     background: #1a1a1a;
-    padding: 15px;
+    padding: clamp(5px, 2vw, 10px);
     max-height: 300px;
     min-height: 300px;
     overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    line-height: 1.6;
+    overflow-x: hidden;
     color: #d4d4d4;
 }
 
@@ -68,12 +66,10 @@
     background: #666;
 }
 
-.terminal-container.running .terminal-line.last-line {
+.terminal-container.running .terminal-line:last-child {
     animation: glowPulseEnhanced 2s ease-in-out infinite;
-    padding: 2px 8px;
-    margin: 0 -8px;
-    border-radius: 4px;
     transition: all 0.3s ease;
+    font-size: 1.5em;
 }
 
 @keyframes glowPulseEnhanced {
@@ -99,11 +95,13 @@
     padding: 2px 0;
     white-space: pre-wrap;
     word-wrap: break-word;
+    font-family: monospace;
+    line-height: 1.0;
+    font-size: 13px;
 }
 
 .terminal-line.system {
     color: #888;
-    font-style: italic;
 }
 
 .terminal-line.output {
@@ -121,10 +119,10 @@
 
 .terminal-footer {
     background: #2d2d2d;
-    padding: 10px 15px;
+    padding: clamp(8px, 1.5vw, 15px) clamp(10px, 2vw, 20px);
     border-top: 1px solid #444;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
@@ -133,6 +131,7 @@
 .terminal-status {
     display: flex;
     align-items: center;
+    margin-right: auto;
     gap: 8px;
     color: #aaa;
     font-size: 13px;
@@ -156,7 +155,7 @@
 }
 
 .terminal-container.warning .status-indicator {
-    background: #ff9f43;  /* Orange - different from running yellow */
+    background: #ff9f43;
     animation: pulseWarning 1.5s ease-in-out infinite;
 }
 
@@ -176,20 +175,30 @@
     100% { opacity: 1; transform: scale(1); }
 }
 
+/* Updated terminal-actions - keep buttons horizontal and together */
 .terminal-actions {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    flex-direction: row;
+    gap: clamp(6px, 1vw, 12px);
+    flex-wrap: nowrap;
+    align-items: stretch;
 }
 
+/* All terminal buttons should have the same height */
 .term-btn {
-    padding: 6px 14px;
+    padding: clamp(8px, 1.2vw, 12px) 20px;
     border: none;
     border-radius: 4px;
-    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: 500;
+    white-space: nowrap;
+    min-width: fit-content;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 
 .term-btn-primary {
@@ -234,68 +243,76 @@
     margin: 20px 0;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .terminal-footer {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .terminal-actions {
-        justify-content: center;
-    }
-    
-    .terminal-output {
-        font-size: 10px;
-    }
-}
-
+/* Updated terminal-input-container - keep on one line */
 .terminal-input-container {
     display: flex;
     align-items: center;
     background: #1a1a1a;
-    padding: 8px 12px;
+    padding: clamp(6px, 1vw, 12px) clamp(8px, 1.5vw, 16px);
     border-top: 1px solid #333;
-    gap: 8px;
+    gap: clamp(6px, 1vw, 12px);
+    flex-wrap: nowrap; /* Prevent wrapping */
+    min-width: 0; /* Allow container to shrink */
 }
 
 .prompt-symbol {
     color: #27c93f;
     font-weight: bold;
     font-family: 'Courier New', monospace;
+    font-size: clamp(13px, 1vw, 16px);
+    flex-shrink: 0; /* Don't shrink the prompt */
 }
 
 .terminal-input {
-    flex: 1;
+    flex: 1 1 auto; /* Allow input to grow and shrink */
+    min-width: 40px; /* Minimum width before shrinking further */
+    max-width: 100%; /* Don't exceed container */
     background: transparent;
     border: none;
     color: #d4d4d4;
     font-family: 'Courier New', monospace;
-    font-size: 14px;
+    font-size: clamp(13px, 1.1vw, 16px);
     outline: none;
+    padding: clamp(4px, 0.8vw, 8px) 0;
+    width: 0; /* Allow flex to control width */
 }
 
 .terminal-input:focus {
     outline: none;
 }
 
+.terminal-input::placeholder {
+    color: #666;
+    font-size: clamp(11px, 0.9vw, 14px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Send button should not wrap */
+.terminal-input-container .term-btn {
+    flex-shrink: 0; /* Prevent button from shrinking */
+    min-height: clamp(34px, 4vw, 44px);
+    height: clamp(34px, 4vw, 44px);
+}
 
 /* Container button styles */
-
 div.button-container {
     display: flex;
-    gap: 12px;
+    gap: clamp(8px, 1.5vw, 16px);
     justify-content: center;
-    padding: 20px;
+    padding: clamp(12px, 2vw, 24px);
     background: #f8f9fa;
     border-radius: 12px;
     margin: 10px 0;
+    flex-wrap: wrap;
 }
 
 button.nav-toggle-button {
-    flex: 1; /* Add this - makes buttons equal width */
-    padding: 12px 24px;
-    font-size: 16px;
+    flex: 1;
+    min-width: 120px;
+    padding: clamp(10px, 1.5vw, 16px) clamp(16px, 2vw, 28px);
+    font-size: clamp(14px, 1.2vw, 18px);
     font-weight: 600;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     border: none;
@@ -307,7 +324,7 @@ button.nav-toggle-button {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
-    justify-content: center; /* Add this to center text */
+    justify-content: center;
     gap: 8px;
 }
 
@@ -376,7 +393,63 @@ button.active:hover {
     transform: none;
 }
 
+/* Updated Media Queries */
 @media (max-width: 768px) {
+    .terminal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .terminal-actions {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .terminal-actions .term-btn {
+        flex: 1;
+        min-width: 100px;
+        justify-content: center;
+        padding: 10px 16px;
+        height: 100%;
+        min-height: 40px;
+    }
+    
+    .terminal-footer > .term-btn-primary {
+        width: 100%;
+        min-height: 40px;
+        height: 40px;
+    }
+    
+    .terminal-line {
+        line-height: 1.0;
+        font-size: clamp(8px, 1.7vw, 13px);
+    }
+    
+    .terminal-output {
+        min-height: 200px;
+        max-height: 250px;
+    }
+    
+    /* Keep input on one line at tablet */
+    .terminal-input-container {
+        flex-wrap: nowrap;
+    }
+    
+    .terminal-input {
+        min-width: 60px;
+        font-size: 14px;
+    }
+    
+    .term-btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        min-height: 40px;
+        height: 40px;
+    }
+    
     div.button-container {
         flex-direction: column;
         padding: 15px;
@@ -388,5 +461,157 @@ button.active:hover {
         justify-content: center;
         padding: 14px 20px;
         font-size: 15px;
+        min-width: unset;
+    }
+}
+
+@media (max-width: 480px) {
+    
+    /* Keep input on one line on phones too */
+    .terminal-input-container {
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 6px 10px;
+    }
+    
+    .prompt-symbol {
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+    
+    .terminal-input {
+        min-width: 30px;
+        font-size: 13px;
+        padding: 6px 0;
+        flex: 1 1 auto;
+    }
+    
+    .terminal-input::placeholder {
+        font-size: 12px;
+    }
+    
+    /* Send button shrinks but stays on same line */
+    .terminal-input-container .term-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        min-height: 34px;
+        height: 34px;
+        flex-shrink: 0;
+        min-width: fit-content;
+    }
+    
+    .terminal-actions {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        width: 100%;
+        gap: 8px;
+    }
+    
+    .terminal-actions .term-btn {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: 13px;
+        height: 100%;
+        min-height: 38px;
+    }
+    
+    .terminal-footer > .term-btn-primary {
+        width: 100%;
+        min-height: 38px;
+        height: 38px;
+        font-size: 14px;
+    }
+    
+    .terminal-line {
+        line-height: 0.8;
+        font-size: clamp(6px, 1.9vw, 10px);
+    }
+    
+    .terminal-output {
+        min-height: 150px;
+        max-height: 200px;
+        font-size: 8px;
+        padding: 3px;
+    }
+    
+    .terminal-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .term-btn {
+        font-size: 13px;
+        padding: 8px 12px;
+        min-height: 38px;
+        height: 38px;
+    }
+}
+
+@media (max-width: 360px) {
+    
+    .terminal-line {
+        font-size: clamp(4px, 1.9vw, 10px);
+    }
+
+    .terminal-output {
+        min-height: 120px;
+        max-height: 180px;
+        padding: 1px;
+    }
+    
+    .terminal-input-container {
+        gap: 4px;
+        padding: 4px 8px;
+    }
+    
+    .terminal-input {
+        font-size: 12px;
+        min-width: 20px;
+    }
+    
+    .terminal-input::placeholder {
+        font-size: 11px;
+    }
+    
+    .terminal-input-container .term-btn {
+        font-size: 12px;
+        padding: 4px 10px;
+        min-height: 30px;
+        height: 30px;
+    }
+    
+    .prompt-symbol {
+        font-size: 12px;
+    }
+    
+    .term-btn {
+        font-size: 12px;
+        padding: 6px 10px;
+        min-height: 34px;
+        height: 34px;
+    }
+    
+    .terminal-actions .term-btn {
+        font-size: 12px;
+        padding: 6px 10px;
+        min-height: 34px;
+        height: 34px;
+    }
+    
+    .terminal-footer > .term-btn-primary {
+        min-height: 34px;
+        height: 34px;
+        font-size: 13px;
+    }
+    
+    .terminal-title {
+        font-size: 11px;
+    }
+    
+    .terminal-dot {
+        width: 8px;
+        height: 8px;
     }
 }

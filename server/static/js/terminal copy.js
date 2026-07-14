@@ -12,29 +12,6 @@ const clearStatusDuration = 1500;
 const ws_message_timeout = 3000;
 let ws_message_received = false;
 let ws_last_message = { timestamp: Date.now(), message: '', echo: '' };
-// Show disconnect button when reconnect is clicked
-let disconnectTimeout = null;
-
-// Event subscription system
-const eventHandlers = {
-    'connect': [],
-    'disconnect': [],
-    'error': [],
-    'exit': [],
-    'message': []
-};
-
-function subscribe(event, callback) {
-    if (eventHandlers[event]) {
-        eventHandlers[event].push(callback);
-    }
-}
-
-function emit(event, data) {
-    if (eventHandlers[event]) {
-        eventHandlers[event].forEach(callback => callback(data));
-    }
-}
 
 // Make sendInput globally accessible
 function sendInput(text) {
@@ -43,13 +20,12 @@ function sendInput(text) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         const currentTimestamp = Date.now();
         if (!text.trim()) {
-            text = '=';
+            text = '=\f';
         }
         ws_last_message = { timestamp: currentTimestamp, message: text };
         ws_message_received = false;
         console.log('📤 Sending:', text);
-        // Send as JSON with type 'input'
-        ws.send(JSON.stringify({ type: 'input', message: text }));
+        ws.send(text);
         setTimeout(() => {
             if (currentTimestamp === ws_last_message.timestamp && !ws_message_received) {
                 console.warn('⏳ No response from server after sending input:', text);
@@ -68,12 +44,19 @@ function canSendMessage() {
         setStatus(`⏳ Waiting for server response...`, 'warning');
         return false;
     }
+    // const time_since_last = Date.now() - ws_last_message.timestamp;
+    // if (time_since_last < SEND_COOLDOWN_MS) {
+    //     const remainingMs = SEND_COOLDOWN_MS - time_since_last;
+    //     const remainingSeconds = Math.ceil(remainingMs / 1000);
+    //     setStatus(`⏳ Try again in ${remainingSeconds}s`, 'error');
+    //     return false;
+    // }
     ws_message_received = false;
     return true;
 }
 
-// Handle sending input
-function sendInputFromField() {
+// Handle sending input from both Enter key and Send button
+function sendInputFromField(sendBtn = null) {
     const terminalInput = document.getElementById('terminalInput');
     if (!terminalInput) return
     // Check rate limit first, then leave message in input
@@ -83,41 +66,18 @@ function sendInputFromField() {
         return;
     }
 
-    let text = terminalInput.value;
-    // Handle Ctrl+C: Not implemented
-    if (text === '\x03') {
-        sendInput('\x03');
-        terminalInput.value = '';
-        terminalInput.focus();
-        return;
-    }
-    
-    // Don't add any special characters - just send the raw text
+    const text = terminalInput.value + (sendBtn ? '\f' : '');
     console.log('📤 Sending input from field:', JSON.stringify(text));
     sendInput(text);
     terminalInput.value = '';
     terminalInput.focus();
 }
 
-// Handle send button in the input field
-function handleClickSendButton(event) {
-    event.preventDefault();
-    sendInputFromField();
-}
-
-// Handle Enter key in the input field
-function handleTerminalInputKeydown(event) {
-    if (event.key === 'Enter') {
-        if (!isRunning) { return; }
-        event.preventDefault();
-        sendInputFromField();
-    }
-}
-
 function connectTerminal() {
     console.log('🔗 Attempting to connect to terminal...');
     const terminalConfig = document.getElementById('terminalConfig');
     const ws_url = terminalConfig.getAttribute('data-ws');
+    const runBtn = document.getElementById('runSetupBtn');
     const terminalOutput = document.getElementById('terminalOutput');
     const inputField = document.getElementById('terminalInput');
 
@@ -128,6 +88,21 @@ function connectTerminal() {
     if (isRunning) {
         setStatus('⚠️ Terminal is already connected...', 'running');
         return;
+        ws.close();
+    }
+    
+    // Clear any pending status timeout
+    setStatus('🛜 Connecting to websocket...', 'running', true);
+    
+    // Clear previous output and start fresh
+    terminalOutput.innerHTML = '';
+    addTerminalLine('system', '⏳ Connecting to terminal session...');
+    
+    // Update UI state
+    isRunning = true;
+    if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.textContent = '⏳ Connecting...';
     }
     
     // Close any existing connection
@@ -135,41 +110,29 @@ function connectTerminal() {
         ws.close();
     }
     
-    // Clear previous output and start fresh
-    terminalOutput.innerHTML = '';
-    addTerminalLine('system', '⏳ Connecting to terminal session...');
-    
-    // Emit connecting event
-    emit('connect', { status: 'connecting' });
-    
     // Create WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${protocol}//${window.location.host}${ws_url}`);
     
     ws.onopen = function() {
-        console.log('✅ WebSocket connection opened');
-        console.log('WebSocket readyState:', ws.readyState);
         setStatus('🔗 Connected', 'success');
         
-        // Emit connected event
-        emit('connect', { status: 'connected' });
+        if (runBtn) {
+            runBtn.disabled = false;
+            runBtn.textContent = '🔄 Reconnect';
+        }
         
         // Send a ready message to the server
-        const readyMsg = JSON.stringify({ type: 'ready' });
-        console.log('Sending ready message:', readyMsg);
-        ws.send(readyMsg);
+        // ws.send(JSON.stringify({ type: 'ready' }));
         
         setStatus('🤖 Running...', 'running', true);
     };
-
+    
     ws.onmessage = function(event) {
         try {
             const data = JSON.parse(event.data);
             console.log('Received message:', data);
-            
-            // Update received flag for any message from server
             ws_message_received = true;
-            
             try {
                 if (data.type === 'exit') {
                     addTerminalLine('system', '━'.repeat(80));
@@ -181,24 +144,25 @@ function connectTerminal() {
                         setStatus('☠️ Session failed', 'error', true);
                     }
                     isRunning = false;
-                    // Emit exit event
-                    emit('exit', data);
+                    if (runBtn) {
+                        runBtn.disabled = false;
+                        runBtn.textContent = '▶️ Connect';
+                    }
                     ws.close();
+                } else if (data.type === 'echo') {
+                    // Unused, can store the response for error-checking
+                    ws_last_message.echo = data.message;
+                } else if (data.type === 'system') {
+                    addTerminalLine('system', data.message);
+                } else if (data.type === 'output') {
+                    addTerminalLine('output', data.message);
+                } else if (data.type === 'success') {
+                    addTerminalLine('success', data.message);
                 } else if (data.type === 'error') {
                     addTerminalLine('error', `❌ Error: ${data.message}`);
                     setStatus('❌ Error occurred', 'error');
-                    emit('error', data);
-                } else if (data.type === 'echo') {
-                    // Store the response for error-checking
-                    ws_last_message.echo = data.message;
-                    console.log('✅ Echo received for:', data.message);
                 } else {
-                    if (!data.type) {
-                        data.type = 'output';
-                    }
-                    console.log('✅ Message processed:', data.message);
-                    addTerminalLine(data.type, data.message);
-                    emit('message', data);
+                    addTerminalLine('output', JSON.stringify(data));
                 }
             } catch (e) {
                 console.error('❌ WS error while handling message:', event.data);
@@ -216,7 +180,10 @@ function connectTerminal() {
         addTerminalLine('error', `🚨 WebSocket error: ${error.message || 'Connection error'}`);
         setStatus('🚨 Connection error', 'error', true);
         isRunning = false;
-        emit('error', error);
+        if (runBtn) {
+            runBtn.disabled = false;
+            runBtn.textContent = '▶️ Connect';
+        }
     };
     
     ws.onclose = function() {
@@ -224,15 +191,33 @@ function connectTerminal() {
             addTerminalLine('system', '⛓️‍💥 Connection closed');
             setStatus('⛓️‍💥 Connection lost', 'idle', true);
             isRunning = false;
+            if (runBtn) {
+                runBtn.disabled = false;
+                runBtn.textContent = '▶️ Connect';
+            }
         }
-        emit('disconnect', {});
     };
+}
+
+// Handle send button in the input field
+function handleClickSendButton(event) {
+    event.preventDefault();
+    sendInputFromField(sendBtn = true);
+}
+
+// Handle Enter key in the input field
+function handleTerminalInputKeydown(event) {
+    if (event.key === 'Enter') {
+        if (!isRunning) { return; }
+        event.preventDefault();
+        sendInputFromField();
+    }
 }
 
 function addTerminalLine(type, message) {
     const terminalOutput = document.getElementById('terminalOutput');
     if (!terminalOutput) return;
-    if (!message.trim()) message = ' ';
+    if (!message) message = ' ';
     
     const line = document.createElement('div');
     line.className = `terminal-line ${type}`;
@@ -298,119 +283,6 @@ function setStatus(text, type, persist = false) {
     }
 }
 
-// Main button handler - handles all button states
-function handleRunButtonClick() {
-    const runBtn = document.getElementById('runSetupBtn');
-    if (!runBtn) return;
-    
-    // State: Disconnect warning mode
-    if (runBtn.textContent === '⚠️ Disconnect?') {
-        // Actually disconnect
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.close();
-        }
-        isRunning = false;
-        runBtn.textContent = '▶️ Connect';
-        runBtn.style.backgroundColor = '';
-        runBtn.style.color = '';
-        if (disconnectTimeout) {
-            clearTimeout(disconnectTimeout);
-            disconnectTimeout = null;
-        }
-        setStatus('⛓️‍💥 Disconnected', 'idle', true);
-        addTerminalLine('system', '⛓️‍💥 Disconnected by user');
-        return;
-    }
-    
-    // State: Connected - show disconnect warning
-    if (runBtn.textContent === '🔄 Reconnect') {
-        runBtn.textContent = '⚠️ Disconnect?';
-        runBtn.style.backgroundColor = '#dc3545';
-        runBtn.style.color = 'white';
-        if (disconnectTimeout) clearTimeout(disconnectTimeout);
-        disconnectTimeout = setTimeout(() => {
-            runBtn.textContent = '🔄 Reconnect';
-            runBtn.style.backgroundColor = '';
-            runBtn.style.color = '';
-            disconnectTimeout = null;
-        }, 3000);
-        return;
-    }
-    
-    // State: Disconnected - connect
-    if (runBtn.textContent === '▶️ Connect') {
-        connectTerminal();
-        return;
-    }
-    
-    // State: Connecting - do nothing (button is disabled)
-    if (runBtn.textContent === '⏳ Connecting...') {
-        return;
-    }
-}
-
-// Subscribe to events to update button state
-subscribe('connect', function(data) {
-    const runBtn = document.getElementById('runSetupBtn');
-    if (!runBtn) return;
-    if (data.status === 'connecting') {
-        runBtn.disabled = true;
-        runBtn.textContent = '⏳ Connecting...';
-    } else if (data.status === 'connected') {
-        runBtn.disabled = false;
-        runBtn.textContent = '🔄 Reconnect';
-        runBtn.style.backgroundColor = '';
-        runBtn.style.color = '';
-        if (disconnectTimeout) {
-            clearTimeout(disconnectTimeout);
-            disconnectTimeout = null;
-        }
-        isRunning = true;
-    }
-});
-
-subscribe('disconnect', function() {
-    const runBtn = document.getElementById('runSetupBtn');
-    if (!runBtn) return;
-    runBtn.disabled = false;
-    runBtn.textContent = '▶️ Connect';
-    runBtn.style.backgroundColor = '';
-    runBtn.style.color = '';
-    if (disconnectTimeout) {
-        clearTimeout(disconnectTimeout);
-        disconnectTimeout = null;
-    }
-    isRunning = false;
-});
-
-subscribe('exit', function() {
-    const runBtn = document.getElementById('runSetupBtn');
-    if (!runBtn) return;
-    runBtn.disabled = false;
-    runBtn.textContent = '▶️ Connect';
-    runBtn.style.backgroundColor = '';
-    runBtn.style.color = '';
-    if (disconnectTimeout) {
-        clearTimeout(disconnectTimeout);
-        disconnectTimeout = null;
-    }
-    isRunning = false;
-});
-
-subscribe('error', function() {
-    const runBtn = document.getElementById('runSetupBtn');
-    if (!runBtn) return;
-    runBtn.disabled = false;
-    runBtn.textContent = '▶️ Connect';
-    runBtn.style.backgroundColor = '';
-    runBtn.style.color = '';
-    if (disconnectTimeout) {
-        clearTimeout(disconnectTimeout);
-        disconnectTimeout = null;
-    }
-    isRunning = false;
-});
-
 // Toggle visibility of containers
 function toggleButtons() {
     const buttons = document.querySelectorAll('.nav-toggle-button');
@@ -435,7 +307,6 @@ function toggleButtons() {
         buttons[0].click();
     }
 }
-
 function showTerminal() {
     const containerId = 'terminalConfig';
     const targetButton = document.querySelector(`[data-container="${containerId}"]`);
@@ -462,12 +333,5 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendBtn = document.getElementById('sendBtn');
     if (sendBtn) {
         sendBtn.addEventListener('click', handleClickSendButton);
-    }
-
-    // Attach click handler to the Run button
-    const runBtn = document.getElementById('runSetupBtn');
-    if (runBtn) {
-        runBtn.textContent = '▶️ Connect';
-        runBtn.addEventListener('click', handleRunButtonClick);
     }
 });
