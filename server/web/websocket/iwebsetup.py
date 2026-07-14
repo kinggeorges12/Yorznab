@@ -25,7 +25,6 @@ class OSConfig:
     terminal_encoding: str
     env: Dict[str, str] = field(default_factory=dict)
     args: List[str] = field(default_factory=list)
-    on_preload: Optional[Callable[[], bool]] = None
     preload_script: Optional[str] = None
 
 
@@ -232,24 +231,6 @@ class IWebSetup:
             "message": ""
         })
 
-    async def _run_preload_script(self):
-        """Run the preload script if defined"""
-        if self.os_config.on_preload:
-            LOGGER.info("🔄 Running preload script...")
-            try:
-                import inspect
-                if inspect.iscoroutinefunction(self.os_config.on_preload):
-                    result = await self.os_config.on_preload()
-                else:
-                    result = self.os_config.on_preload()
-                
-                if result is False:
-                    LOGGER.warning("Preload script returned False, proceeding anyway...")
-                else:
-                    LOGGER.debug("✅ Preload script completed successfully")
-            except Exception as e:
-                LOGGER.error(f"❌ Error in preload script: {e}")
-
     async def _handle_process_completion(self, return_code: int):
         """Handle process completion"""
         LOGGER.debug(f"✅ Process completed with exit code: {return_code}")
@@ -281,19 +262,14 @@ class IWebSetup:
             # Send initial connection messages
             await self._send_initial_messages()
             
-            shell_name = "PowerShell" if self.os_config.is_windows else "bash"
             LOGGER.info(f"📄 Running script: {self.os_config.file}")
-            LOGGER.info(f"🔧 Starting {shell_name} in: {self.os_config.directory}")
-            
-            # Run preload script if defined
-            await self._run_preload_script()
+            LOGGER.info(f"🔧 Starting {self.os_config.shell_name} in: {self.os_config.directory}")
             
             # Start process
             if not await self.start_process():
-                shell_name = "PowerShell" if self.os_config.is_windows else "bash"
                 await self._websocket.send_json({
                     "type": "error",
-                    "message": f"{shell_name} executable not found"
+                    "message": f"{self.os_config.shell_name} executable not found"
                 })
                 return
             

@@ -1,4 +1,22 @@
 #!/bin/bash
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+error_trap() {
+    local line=$1
+    local command=$2
+    local code=$3
+    echo "ERROR: Command '$command' failed with exit code $code at line $line" >&2
+    echo "Script: $0" >&2
+    echo "Stack trace:" >&2
+    local i=0
+    while caller $i; do
+        i=$((i+1))
+    done
+    exit $code
+}
+
+trap 'error_trap $LINENO "$BASH_COMMAND" $?' ERR
 
 set -e
 
@@ -12,31 +30,35 @@ content=()
 write_delay() {
     local message="$1"
     local delay="${2:-10}"
-    local no_newline="${3:-false}"
+    local no_newline="${3:-}"
     
-    if [ "$no_newline" = "true" ]; then
+    if [ -n "$no_newline" ]; then
         printf "%s" "$message"
     else
         printf "%s\n" "$message"
     fi
-    sleep 0.01
+    sleep "$(echo "$delay * 0.001" | bc -l)"
 }
 
-# Function to prompt user
-reader_prompt() {
-    local message="$1"
-    local secure="${2:-false}"
+write_mask() {
+    local count="$1"
+    local i=0
+    while [ $i -lt "$count" ]; do
+        printf "*"
+        i=$((i + 1))
+    done
+    printf "\n"
+}
+
+# Function to read input
+read_input() {
+    local secure="${1:-}"
+    local input=""
     
-    write_delay "$message"
-    
-    if [ "$secure" = "true" ]; then
-        stty -echo
-        read input
-        stty echo
-        echo ""
+    if [ -n "$secure" ]; then
+        read -s input || true
     else
-        read input
-        echo ""
+        read input || true
     fi
     echo "$input"
 }
@@ -64,7 +86,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 write_delay "Current directory: $current_dir"
 if [ "$current_dir" != "$script_dir" ]; then
     write_delay "Script directory: $script_dir"
-    input=$(reader_prompt "Are you in the correct directory? yes(Y)/[no(N)]/go(G) ")
+    write_delay "Are you in the correct directory? yes(Y)/[no(N)]/go(G) "
+    input=$(read_input)
     if echo "$input" | grep -qE '^[Gg]$'; then
         cd "$script_dir"
         write_delay "Switching directory: $(pwd)"
@@ -82,23 +105,41 @@ get_setting_value() {
     local default_value="${3:-}"
     local matched=""
     local in_section=false
+    local line=""
+    local key=""
+    local value=""
     
     for line in "${content[@]}"; do
-        if echo "$line" | grep -qE "^${section}:"; then
+        # Remove carriage return
+        line="${line//$'\r'/}"
+        
+        # Check if this is the section header
+        if [[ "$line" =~ ^${section}: ]]; then
             in_section=true
             continue
         fi
-        if [ "$in_section" = true ] && echo "$line" | grep -qE "^[[:space:]]+${field}:[[:space:]]*(.+)$"; then
-            matched="$(echo "$line" | sed -E "s/^[[:space:]]+${field}:[[:space:]]*(.+)$/\1/")"
-            break
-        fi
-        if [ "$in_section" = true ] && echo "$line" | grep -qE '^[^[:space:]]'; then
-            in_section=false
+        
+        # If in the right section, look for the field
+        if [ "$in_section" = true ]; then
+            # Check if we've left the section (line starts with non-space)
+            if [[ "$line" =~ ^[^[:space:]] ]]; then
+                in_section=false
+                continue
+            fi
+            
+            # Check if this line has our field
+            if [[ "$line" =~ ^[[:space:]]+${field}:[[:space:]]*(.+)$ ]]; then
+                matched="${BASH_REMATCH[1]}"
+                # Trim whitespace
+                matched="${matched#"${matched%%[![:space:]]*}"}"
+                matched="${matched%"${matched##*[![:space:]]}"}"
+                break
+            fi
         fi
     done
     
     if [ -n "$matched" ]; then
-        echo "$(echo "$matched" | xargs)"
+        echo "$matched"
     else
         echo "$default_value"
     fi
@@ -112,25 +153,13 @@ check_for_defaults() {
     
     if [ -z "$new_value" ] || [ "$new_value" = "" ] || [ "$new_value" = "=" ]; then
         if [ "$mask" = "true" ] && [ -n "$default_value" ]; then
-            local masked=""
-            i=0
-            while [ $i -lt ${#default_value} ]; do
-                masked="${masked}*"
-                i=$((i + 1))
-            done
-            echo "  ${field_name}: $masked"
+            echo "  ${field_name}: $(write_mask ${#default_value})"
         else
             echo "  ${field_name}: $default_value"
         fi
     elif [ "$new_value" != "-" ]; then
         if [ "$mask" = "true" ] && [ -n "$new_value" ]; then
-            local masked=""
-            i=0
-            while [ $i -lt ${#new_value} ]; do
-                masked="${masked}*"
-                i=$((i + 1))
-            done
-            echo "  ${field_name}: $masked"
+            echo "  ${field_name}: $(write_mask ${#new_value})"
         else
             echo "  ${field_name}: $new_value"
         fi
@@ -143,18 +172,15 @@ write_setting_value() {
     local new_value="$3"
     local default_value="$4"
     local new_line=""
-    local new_content
+    local new_content=()
     local in_section=false
     local field_found=false
     
-    # Check for defaults
     if [ -z "$new_value" ] || [ "$new_value" = "" ] || [ "$new_value" = "=" ]; then
         new_line="  ${field}: $default_value"
     elif [ "$new_value" != "-" ]; then
         new_line="  ${field}: $new_value"
     else
-        # Return the content unchanged if value is "-"
-        echo "${content[@]}"
         return
     fi
     
@@ -186,20 +212,17 @@ write_setting_value() {
         new_content+=("$new_line")
     fi
     
-    echo "${new_content[@]}"
+    content=("${new_content[@]}")
 }
 
 # Define output file
 output_file="config/settings.yaml"
 # Read current settings
 if [ -f "$output_file" ]; then
-    # POSIX-compatible alternative to mapfile for macOS bash 3.2
-    content=""
-    while IFS= read -r line; do
-        content="$content$line"$'\n'
+    content=()
+    while IFS= read -r line || [ -n "$line" ]; do
+        content+=("$line")
     done < "$output_file"
-    # Convert to array
-    IFS=$'\n' read -d '' -r -a content <<< "$content"
 else
     content=()
 fi
@@ -235,11 +258,17 @@ write_delay "??? Lookup the API key for Radarr in: Settings ... General ... Secu
 write_delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 write_delay ""
 
-input=$(reader_prompt "Url [$r_Url] ")
+write_delay "Url [$r_Url] "
+input=$(read_input)
 new_r_Url="$input"
-input=$(reader_prompt "ApiKey [${#r_ApiKey} chars] " true)
+
+write_delay "ApiKey [${#r_ApiKey} chars] "
+input=$(read_input secure)
+write_mask ${#input}
 new_r_ApiKey="$input"
-input=$(reader_prompt "Endpoint [$r_Endpoint] ")
+
+write_delay "Endpoint [$r_Endpoint] "
+input=$(read_input)
 new_r_Endpoint="$input"
 
 write_delay ""
@@ -251,11 +280,17 @@ write_delay "??? Lookup the API key for Sonarr in: Settings ... General ... Secu
 write_delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 write_delay ""
 
-input=$(reader_prompt "Url [$s_Url] ")
+write_delay "Url [$s_Url] "
+input=$(read_input)
 new_s_Url="$input"
-input=$(reader_prompt "ApiKey [${#s_ApiKey} chars] " true)
+
+write_delay "ApiKey [${#s_ApiKey} chars] "
+input=$(read_input secure)
+write_mask ${#input}
 new_s_ApiKey="$input"
-input=$(reader_prompt "Endpoint [$s_Endpoint] ")
+
+write_delay "Endpoint [$s_Endpoint] "
+input=$(read_input)
 new_s_Endpoint="$input"
 
 write_delay ""
@@ -273,21 +308,31 @@ write_delay "%%% You must supply a username and password."
 write_delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 write_delay ""
 
-input=$(reader_prompt "Url [$QUrl] ")
+write_delay "Url [$QUrl] "
+input=$(read_input)
 new_QUrl="$input"
-input=$(reader_prompt "ApiKey [${#QApiKey} chars] " true)
+
+write_delay "ApiKey [${#QApiKey} chars] "
+input=$(read_input secure)
+write_mask ${#input}
 new_QApiKey="$input"
+
 if [ "$new_QApiKey" = "-" ]; then
     write_delay "You have chosen to use username/password authentication."
-    input=$(reader_prompt "Username [$QUsername] ")
+    write_delay "Username [$QUsername] "
+    input=$(read_input)
     new_QUsername="$input"
-    input=$(reader_prompt "Password [${#QPassword} chars] " true)
+    write_delay "Password [${#QPassword} chars] "
+    input=$(read_input secure)
+    write_mask ${#input}
     new_QPassword="$input"
 else
     new_QUsername=""
     new_QPassword=""
 fi
-input=$(reader_prompt "Endpoint [$QEndpoint] ")
+
+write_delay "Endpoint [$QEndpoint] "
+input=$(read_input)
 new_QEndpoint="$input"
 
 print_settings=$(cat <<EOF
@@ -315,26 +360,26 @@ write_delay "$print_settings"
 write_delay ""
 
 # Update content array
-content=($(write_setting_value "Radarr" "Url" "$new_r_Url" "$r_Url"))
-content=($(write_setting_value "Radarr" "ApiKey" "$new_r_ApiKey" "$r_ApiKey"))
-content=($(write_setting_value "Radarr" "Endpoint" "$new_r_Endpoint" "$r_Endpoint"))
+write_setting_value "Radarr" "Url" "$new_r_Url" "$r_Url"
+write_setting_value "Radarr" "ApiKey" "$new_r_ApiKey" "$r_ApiKey"
+write_setting_value "Radarr" "Endpoint" "$new_r_Endpoint" "$r_Endpoint"
 
-content=($(write_setting_value "Sonarr" "Url" "$new_s_Url" "$s_Url"))
-content=($(write_setting_value "Sonarr" "ApiKey" "$new_s_ApiKey" "$s_ApiKey"))
-content=($(write_setting_value "Sonarr" "Endpoint" "$new_s_Endpoint" "$s_Endpoint"))
+write_setting_value "Sonarr" "Url" "$new_s_Url" "$s_Url"
+write_setting_value "Sonarr" "ApiKey" "$new_s_ApiKey" "$s_ApiKey"
+write_setting_value "Sonarr" "Endpoint" "$new_s_Endpoint" "$s_Endpoint"
 
-content=($(write_setting_value "qBittorrent" "QUrl" "$new_QUrl" "$QUrl"))
-content=($(write_setting_value "qBittorrent" "QApiKey" "$new_QApiKey" "$QApiKey"))
-content=($(write_setting_value "qBittorrent" "QUsername" "$new_QUsername" "$QUsername"))
-content=($(write_setting_value "qBittorrent" "QPassword" "$new_QPassword" "$QPassword"))
-content=($(write_setting_value "qBittorrent" "QEndpoint" "$new_QEndpoint" "$QEndpoint"))
+write_setting_value "qBittorrent" "QUrl" "$new_QUrl" "$QUrl"
+write_setting_value "qBittorrent" "QApiKey" "$new_QApiKey" "$QApiKey"
+write_setting_value "qBittorrent" "QUsername" "$new_QUsername" "$QUsername"
+write_setting_value "qBittorrent" "QPassword" "$new_QPassword" "$QPassword"
+write_setting_value "qBittorrent" "QEndpoint" "$new_QEndpoint" "$QEndpoint"
 
 write_delay "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 if [ -f "$output_file" ]; then
     datetime=$(date +%Y%m%d_%H%M%S)
     output_file_bak="$output_file-$datetime.bak"
     mv "$output_file" "$output_file_bak"
-    write_delay "~~~ Moving old settings file:  $output_file_bak"
+    write_delay "~~~ Moving old settings file: $output_file_bak"
 fi
 write_delay "~~~ Writing settings to file: $output_file"
 printf "%s\n" "${content[@]}" > "$output_file"

@@ -57,7 +57,6 @@ class WebSetup(IWebSetup):
         env['PYTHONIOENCODING'] = 'utf-8'
         env['PYTHONUTF8'] = '1'
         
-        preload_script = None
         preload_script_str = None
         
         if is_windows:
@@ -77,11 +76,6 @@ class WebSetup(IWebSetup):
             newline = '\n'
             args = [file] if file else []
             filepath = Path(os.path.join(directory, file))
-            preload_script = lambda: (
-                (os.chmod(filepath, os.stat(filepath).st_mode | os.stat.S_IXUSR) or True)
-                if not os.access(filepath, os.X_OK)
-                else False
-            )
             preload_script_str = f"chmod +x {file}"
             terminal_encoding='utf-8'
             shell_name='Bash'
@@ -97,7 +91,6 @@ class WebSetup(IWebSetup):
             terminal_encoding=terminal_encoding,
             env=env,
             args=args,
-            on_preload=preload_script,
             preload_script=preload_script_str,
         )
         cls._os_config_loaded = True
@@ -132,7 +125,7 @@ class WebSetup(IWebSetup):
         cls._load_os_config()
         commands = []
         commands += [f"cd {cls._os_config.directory}"]
-        if cls._os_config.on_preload:
+        if cls._os_config.preload_script:
             commands += [cls._os_config.preload_script]
         commands += [f"{cls._os_config.exec_path} {' '.join(cls._os_config.args)}"]
         return commands

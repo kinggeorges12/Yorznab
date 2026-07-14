@@ -276,7 +276,7 @@ if (Test-Path $output_file) {
     $datetime = Get-Date -Format "yyyyMMdd_HHmmss"
     $output_file_bak = "$output_file-$datetime.bak"
     Move-Item $output_file $output_file_bak
-    Write-Delay "~~~ Moving old settings file:  $output_file_bak"
+    Write-Delay "~~~ Moving old settings file: $output_file_bak"
 }
 Write-Delay "~~~ Writing settings to file: $output_file"
 [System.IO.File]::WriteAllLines($output_file, $content)
