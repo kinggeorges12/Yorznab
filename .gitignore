@@ -2,6 +2,7 @@
 yorznab-main.tar.gz
 yorznab-main.zip
 config/**/*.yaml
+config/**/*.yaml-*.bak
 .venv
 logs/**
 scripts

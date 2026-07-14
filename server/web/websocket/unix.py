@@ -1,9 +1,9 @@
-# unix.py
 import os
 import signal
 import asyncio
 import pty
 import subprocess
+import errno
 
 # Import modules
 from server.web.common import LOGGER
@@ -79,7 +79,7 @@ class WebSetupUnix(IWebSetup):
                 return data.decode('utf-8', errors='replace')
             return ''
         except OSError as e:
-            if e.errno == 9:  # EBADF
+            if e.errno == errno.EBADF:  # EBADF
                 return ''
             raise
 
@@ -103,17 +103,21 @@ class WebSetupUnix(IWebSetup):
                     else:
                         await asyncio.sleep(0.01)
                         
+                except OSError as e:
+                    if e.errno == errno.EIO:  # Input/output error (5)
+                        LOGGER.debug("PTY closed (I/O error), stopping output reader.")
+                        break
+                    raise
                 except Exception as e:
                     if "EOF" in str(e) or "closed" in str(e).lower():
                         LOGGER.debug("Output stream: End of stream")
                         break
-                    LOGGER.error(f"Error reading from pty: {e}")
-                    await asyncio.sleep(0.1)
+                    raise
                     
         except asyncio.CancelledError:
             LOGGER.debug("Output reader task was cancelled.")
         except Exception as e:
-            LOGGER.error(f"Error in _read_output: {e}")
+            LOGGER.error(f"Error reading from pty: {e}")
         finally:
             self._process_running = False
             self._shutdown_event.set()
@@ -170,7 +174,7 @@ class WebSetupUnix(IWebSetup):
     async def cleanup(self):
         """Clean up resources - Unix-specific cleanup"""
         # Call the common cleanup first
-        await self._common_cleanup()
+        await super().cleanup()
         
         # Now do Unix-specific cleanup
         if self._process:

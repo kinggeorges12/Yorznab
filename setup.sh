@@ -1,6 +1,5 @@
 #!/bin/bash
 export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
 
 error_trap() {
     local line=$1
@@ -37,7 +36,7 @@ write_delay() {
     else
         printf "%s\n" "$message"
     fi
-    sleep "$(echo "$delay * 0.001" | bc -l)"
+    sleep "$((delay / 1000)).$((delay % 1000))"
 }
 
 write_mask() {
