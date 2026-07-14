@@ -59,7 +59,6 @@ class WebSetup(IWebSetup):
         
         preload_script = None
         preload_script_str = None
-        terminal_encoding=None
         
         if is_windows:
             file = './setup.ps1'
@@ -71,15 +70,17 @@ class WebSetup(IWebSetup):
                 args.extend(['-File', file])
             terminal_encoding='windows-1252'
             shell_name='PowerShell'
+            terminal_encoding='utf-8'
         else:
             file = './setup.sh'
             exec_path = shutil.which('bash') or shutil.which('sh')
             prompt = '$'
             newline = '\n'
             args = [file] if file else []
+            filepath = Path(os.path.join(directory, file))
             preload_script = lambda: (
-                (os.chmod(file, os.stat(file).st_mode | os.stat.S_IXUSR) or True)
-                if not os.access(file, os.X_OK) 
+                (os.chmod(filepath, os.stat(filepath).st_mode | os.stat.S_IXUSR) or True)
+                if not os.access(filepath, os.X_OK)
                 else False
             )
             preload_script_str = f"chmod +x {file}"

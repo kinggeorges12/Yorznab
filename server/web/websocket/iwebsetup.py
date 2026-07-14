@@ -22,11 +22,11 @@ class OSConfig:
     shell_name: str
     prompt: str
     newline: str
+    terminal_encoding: str
     env: Dict[str, str] = field(default_factory=dict)
     args: List[str] = field(default_factory=list)
     on_preload: Optional[Callable[[], bool]] = None
     preload_script: Optional[str] = None
-    terminal_encoding: str = 'utf-8'
 
 
 class IWebSetup:
