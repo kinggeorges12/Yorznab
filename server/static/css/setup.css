@@ -306,7 +306,6 @@ div.button-container {
     gap: clamp(8px, 1.5vw, 16px);
     justify-content: center;
     padding: clamp(12px, 2vw, 24px);
-    background: #f8f9fa;
     border-radius: 12px;
     margin: 10px 0;
     flex-wrap: wrap;

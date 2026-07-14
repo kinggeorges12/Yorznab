@@ -35,13 +35,13 @@ Keep up-to-date using the [Update Yorznab](#update-yorznab) section.
 - Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested media.
 - Filter through qBittorrent search results to ensure high quality torrents.
 - Generate multiple feeds to handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
-- Dashboard to retrieve credentials, monitor connections to external apps, and check the status of Yorznab feeds. More coming Soon™.
+- Dashboard to retrieve credentials for Yorznab, monitor connections to external apps, enter credentials from external apps, and check the status of Yorznab feeds.
 
 # Requirements
-Compatible with Linux or Windows. Requires the following services to fully use this app. Tested versions shown below:
+Compatible with Windows or Unix-like systems. Requires the following services to fully use this app. All optional apps are recommended! Tested versions shown below:
 
 - Ubuntu v26
-- Docker v29
+- Docker v29 \(optional\)
 - [Seerr](https://github.com/seerr-team/seerr) v3 configured with Radarr and Sonarr \(optional\)
 - [Radarr](https://github.com/Radarr/Radarr) v6 configured with a download client
 - [Sonarr](https://github.com/sonarr/sonarr) v4 configured with a download client
@@ -51,7 +51,7 @@ Compatible with Linux or Windows. Requires the following services to fully use t
 # Install Yorznab
 The automated setup tool \(`setup.sh` or `setup.ps1`\) initializes the Radarr, Sonarr and qBittorrent app credentials. For help finding your credentials, see the [Help](#help) section.
 
-## Linux \(Shell\)
+## Unix \(Shell\)
 ```
 YORZNAB_DIR=/path/to/yorznab
 sudo mkdir -p "${YORZNAB_DIR}/app"
@@ -62,8 +62,6 @@ tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
 cd app
 cp --update=none ./config/yorznab.yaml.sample ./config/yorznab.yaml
 cp --update=none ./config/feed.yaml.sample ./config/feed.yaml # Recommended
-sudo chmod +x setup.sh
-./setup.sh
 ```
 
 ## Windows \(PowerShell\)
@@ -76,14 +74,13 @@ Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
 Set-Location app
 Copy-Item -Confirm -Path ./config/yorznab.yaml.sample -Destination ./config/yorznab.yaml
-Copy-Item -Confirm -Path ./config/feed.yaml.sample -Destination ./config/feed.yaml
-powershell -ExecutionPolicy Bypass -File ./setup.ps1
+Copy-Item -Confirm -Path ./config/feed.yaml.sample -Destination ./config/feed.yaml # Recommended
 ```
 
 # Docker Compose
-This starts the service in Docker. Follow instructions in the docker-compose.yml template to customize the Yorznab container.
+This starts the service in Docker. Follow instructions in the docker-compose.yml template to customize the Yorznab container. For native installation options, see the [Help](#help) section.
 
-## Linux \(Shell\)
+## Unix \(Shell\)
 ```
 YORZNAB_DIR=/path/to/yorznab
 cd "${YORZNAB_DIR}"
@@ -113,6 +110,17 @@ The Yorznab dashboard contains status information and setup help. Authenticate t
 </div>
 
 Note: if you lose your passkey, retrieve it from the server in the `config/keys.yml` file.
+
+## Interactive Setup
+The dashboard features an 🖥️ Interactive Setup that helps input your credentials from connected apps. Yorznab needs to communicate with Radarr and Sonarr to process Wanted media, and qBittorrent to search torrents. Click ▶️ Connect and follow the prompts to update your connections.
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/InteractiveSetup.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/InteractiveSetup-2.png">
+    <img src="Screenshots/InteractiveSetup-2.png" alt="Yorznab Interactive Setup" style="max-width: 600px; height:auto;">
+  </picture>
+</div>
 
 # Connect Apps
 Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automatically search for torrents. Setup the Seerr app to begin refreshing the Yorznab feed automatically and provide instant updates when content is requested. From the Yorznab dashboard, open the Credentials page to see your credentials for the API and webhook.
@@ -187,9 +195,9 @@ The Yorznab dashboard features a configuration page that provides a status of co
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration-Linux.png">
-    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-Windows-2.png">
-    <img src="Screenshots/Configuration-Windows-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-2.png">
+    <img src="Screenshots/Configuration-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
   </picture>
 </div>
 
@@ -237,7 +245,7 @@ Yorznab looks for Jackett tags in search results automatically. The brackets in 
 # Update Yorznab
 The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below. If you run into issues connecting to your apps, try running the automated setup tool \(`setup.sh` or `setup.ps1`\) to update your App settings in the new version.
 
-## Linux \(Shell\)
+## Unix \(Shell\)
 ```
 YORZNAB_DIR=/path/to/yorznab
 version=v1.0
@@ -282,20 +290,31 @@ This allows Yorznab to query the qBittorrent search engine.
 3. Copy the **API Key** (`qbt_...`).
 4. If the qBittorrent version does not have API Key option, provide the `QUsername` and `QPassword` and DO NOT include the QApiKey.
 
-## Manual Setup
+## Native Installation
+Docker is not required! To run natively on your operating system, just download, install, build & run:
+
+1. Download: Click `Code > Download Zip` at the top of this page.
+2. Install: Unzip to any folder. Ensure you have prerequisites in your command path: python 3.11+, pip, etc.
+3. Build: Open a command prompt and navigate to the project folder. Run the OS-specific build and run files:
+  - Unix: .\build.ps1 && .\run.ps1
+  - Windows: .\build.ps1 && .\run.ps1
+    - \[Unix Shell\] `sudo chmod +x build.sh run.sh && .\build.ps1 && .\run.ps1`
+    - \[Windows PowerShell\] `.\build.ps1 && .\run.ps1`
+
+## Manual Docker Setup
 Sometimes you want to do it yourself, or the installer just doesn't work. Here are the manual setup instructions.
-1. Download Yorznab: click `Code > Download Zip` at the top of this page.
-2. Install Yorznab: unzip into your Docker folder.
-3. Configure App Keys: open `config/settings.yaml` and edit the Url and ApiKey under each app. For reference, see [`settings.yaml.sample`](config/settings.yaml.sample).
-4. Docker Compose: customize the [docker-compose.yml](docker-compose.yml) file and launch the container.
-5. Connect apps: get your setup keys from `config/keys.yaml` and input them in Radarr, Sonarr, and Jellyseerr.
+1. *Download Yorznab*: Click `Code > Download Zip` at the top of this page.
+2. *Install Yorznab*: Unzip into your Docker folder.
+3. *Docker Compose*: Customize the [docker-compose.yml](docker-compose.yml) file and launch the container.
+4. *Configure App Keys*: Run the Interactive Setup from the Yorznab Dashboard > Configuration. Alternatively, open `config/settings.yaml`, edit the Url and ApiKey for each app, then restart the container. For reference, see [`settings.yaml.sample`](config/settings.yaml.sample).
+5. *Connect apps*: Retrieve your setup keys from the Yorznab Dashboard \(or open `config/keys.yaml`\) and input them in Radarr, Sonarr, and Jellyseerr.
 
 # Development
 Setup the local Python environment for running locally without Docker.
 
 1. Install [Python](https://www.python.org/downloads/) \(test on 3.11+\) on your server or PC. Ensure this is available in your shell: `python --version`
 2. Run the following commands for your OS:
-    - \[Linux Shell\] `cd /path/to/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
+    - \[Unix Shell\] `cd /path/to/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
     - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
 3. Visit https://localhost:9116/status
 
