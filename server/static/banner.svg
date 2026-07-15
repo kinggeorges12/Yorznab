@@ -1,16 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 970 250" width="970" height="250">
+  <defs>
+    <style>
+      <![CDATA[
+        @import url('https://fontlibrary.org//face/dejavu-sans-mono');
+      ]]>
+    </style>
+  </defs>
+
   <rect width="970" height="250" fill="#1a1a1a"/>
 
   <!-- Left side: Text -->
   <foreignObject x="0" y="0" width="970" height="250">
     <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;">
       <pre style="
-        font-family: monospace; 
-        font-size: 14px; 
+        font-family: 'DejaVuSansMonoBook', monospace;
+        font-size: 14px;
         color: #66BB6A;
         background: #1a1a1a;
         margin: 0;
-        padding: 15px 15px 0 300px;
+        padding: 15px 15px 0 270px;
         line-height: 1.2;
         white-space: pre;
       ">╔══════════════════════════════════════════════════════════════════════════════╗
@@ -23,7 +31,7 @@
 ║          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝        ║
 ║══════════════════════════════════════════════════════════════════════════════║
 ║                                                                              ║
-║                                         ...a Torznab Indexer that's all YORZ ║
+║       ...a Torznab Indexer that's all YORZ                                   ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝</pre>
     </div>
@@ -41,7 +49,7 @@
     <stop offset="1" stop-color="#1B5E20"/>
    </linearGradient>
   </defs>
-  <g transform="translate(50, 22) scale(0.8)">
+  <g transform="translate(35, 22) scale(0.8)">
    <rect fill="#1B5E20" height="256" id="svg_1" rx="55" ry="55" width="256" x="0" y="0"/>
    <rect fill="#4CAF50" height="246" id="svg_2" rx="50" ry="50" width="246" x="5" y="5"/>
    <rect fill="url(#RSSg)" height="236" id="svg_3" rx="47" ry="47" width="236" x="10" y="10"/>

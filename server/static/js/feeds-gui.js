@@ -1,306 +1,533 @@
 // ===== EDITOR.JS =====
-class YAMLEditor {
-    constructor() {
-        this.editor = null;
-        this.schemaData = null;
-        this.allSuggestions = [];
-        this.currentFile = '';
-        this.yamlContent = '';
-        this.apiEndpoints = {
-            list: '/feeds/list',
-            load: '/feeds/load',
-            save: '/feeds/save'
-        };
-        
-        this.initialize();
-    }
+let editor;
+let schemaData = null;
+let allSuggestions = [];
+let currentFile = '';
+let yamlContent = '';
+let apiEndpoints = {
+    list: '/feeds/list',
+    load: '/feeds/load',
+    save: '/feeds/save'
+};
+let valueSuggestions = [];
 
-    // ===== GET API ENDPOINTS FROM WRAPPER =====
-    getApiEndpoints() {
-        const wrapper = document.querySelector('.yaml-editor-wrapper');
-        if (wrapper) {
-            const listUrl = wrapper.dataset.list;
-            const loadUrl = wrapper.dataset.load;
-            const saveUrl = wrapper.dataset.save;
-            
-            if (listUrl) this.apiEndpoints.list = listUrl;
-            if (loadUrl) this.apiEndpoints.load = loadUrl;
-            if (saveUrl) this.apiEndpoints.save = saveUrl;
-            
-            console.log('📡 API Endpoints configured:', this.apiEndpoints);
-        }
+// ===== SHOW TOAST - GLOBAL SCOPE =====
+function showToast(message, type) {
+    const toast = document.getElementById('toast');
+    if (!toast) {
+        console.warn('Toast element not found:', message);
+        return;
     }
+    toast.textContent = message;
+    toast.className = 'yaml-toast ' + type + ' show';
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(function() {
+        toast.classList.remove('show');
+    }, 3000);
+}
 
-    // ===== DETECT THEME FROM URL =====
-    detectTheme() {
-        const url = window.location.hash + window.location.pathname + window.location.search;
+// ===== GET API ENDPOINTS FROM WRAPPER =====
+function getApiEndpoints() {
+    const wrapper = document.querySelector('.yaml-editor-wrapper');
+    if (wrapper) {
+        const listUrl = wrapper.dataset.list;
+        const loadUrl = wrapper.dataset.load;
+        const saveUrl = wrapper.dataset.save;
         
-        if (url.includes('gh_light') || url.includes('light') || url.includes('?light') || url.includes('#light')) {
-            return 'github_light_default';
+        console.log('🔍 Data attributes found:', { listUrl, loadUrl, saveUrl });
+        
+        // Only override if the data attributes have values
+        if (listUrl) {
+            apiEndpoints.list = listUrl;
+            console.log('✅ Set list endpoint to:', listUrl);
         }
-        if (url.includes('ghdark') || url.includes('dark') || url.includes('?dark') || url.includes('#dark')) {
-            return 'github_dark';
+        if (loadUrl) {
+            apiEndpoints.load = loadUrl;
+            console.log('✅ Set load endpoint to:', loadUrl);
         }
+        if (saveUrl) {
+            apiEndpoints.save = saveUrl;
+            console.log('✅ Set save endpoint to:', saveUrl);
+        }
+        
+        console.log('📡 API Endpoints configured:', apiEndpoints);
+    } else {
+        console.warn('⚠️ No .yaml-editor-wrapper found, using default endpoints');
+    }
+}
+
+// ===== DETECT THEME FROM URL =====
+function detectTheme() {
+    const url = window.location.hash + window.location.pathname + window.location.search;
+    
+    if (url.includes('gh_light') || url.includes('light') || url.includes('?light') || url.includes('#light')) {
+        return 'github_light_default';
+    }
+    if (url.includes('ghdark') || url.includes('dark') || url.includes('?dark') || url.includes('#dark')) {
         return 'github_dark';
     }
+    return 'github_dark';
+}
 
-    // ===== LOAD SCHEMA FROM TEXTAREA =====
-    loadSchemaFromTextarea() {
-        const textarea = document.querySelector('.yaml-schema');
-        if (!textarea) {
-            console.error('No textarea with class "yaml-schema" found');
+// ===== LOAD SCHEMA FROM TEXTAREA =====
+function loadSchemaFromTextarea() {
+    const textarea = document.querySelector('.yaml-schema');
+    if (!textarea) {
+        console.error('No textarea with class "yaml-schema" found');
+        return null;
+    }
+    
+    try {
+        const raw = textarea.value;
+        const content = raw.replace('{template_config_editor}', '').trim();
+        if (!content) {
+            console.warn('Schema textarea is empty');
             return null;
         }
-        
-        try {
-            const raw = textarea.value;
-            const content = raw.replace('{template_config_editor}', '').trim();
-            if (!content) {
-                console.warn('Schema textarea is empty');
-                return null;
-            }
-            const parsed = JSON.parse(content);
-            console.log('✅ Schema loaded:', Object.keys(parsed.schema.properties));
-            return parsed;
-        } catch (e) {
-            console.error('Failed to parse schema JSON:', e);
-            return null;
-        }
+        const parsed = JSON.parse(content);
+        console.log('✅ Schema loaded:', Object.keys(parsed.schema.properties));
+        return parsed;
+    } catch (e) {
+        console.error('Failed to parse schema JSON:', e);
+        return null;
     }
+}
 
-    // ===== BUILD AUTOCOMPLETE SUGGESTIONS FROM SCHEMA =====
-    buildSuggestions(schema, path = '') {
-        const suggestions = [];
-        
-        if (!schema || typeof schema !== 'object') return suggestions;
-        
-        if (schema.properties) {
-            Object.keys(schema.properties).forEach(key => {
-                const prop = schema.properties[key];
-                
-                let typeDesc = Array.isArray(prop.type) ? prop.type.join('|') : prop.type;
-                typeDesc = typeDesc || 'property';
-                
-                suggestions.push({
-                    caption: key,
-                    value: `${key}: `,
-                    meta: prop.title || typeDesc,
-                    score: 100,
-                    type: 'property',
-                    description: prop.description || ''
-                });
-                
-                if (prop.type === 'object' || (Array.isArray(prop.type) && prop.type.includes('object'))) {
-                    if (prop.properties) {
-                        suggestions.push(...this.buildSuggestions(prop, key));
-                    }
-                }
-            });
-        }
-        
-        return suggestions;
-    }
-
-    // ===== GENERATE VALUE SUGGESTIONS FROM DATA =====
-    getValueSuggestions() {
-        const words = [];
-        if (!this.schemaData || !this.schemaData.data) return words;
-        
-        const collectValues = (obj) => {
-            if (!obj || typeof obj !== 'object') return;
+// ===== BUILD AUTOCOMPLETE SUGGESTIONS FROM SCHEMA =====
+function buildSuggestions(schema, path = '') {
+    const suggestions = [];
+    
+    if (!schema || typeof schema !== 'object') return suggestions;
+    
+    if (schema.properties) {
+        Object.keys(schema.properties).forEach(key => {
+            const prop = schema.properties[key];
             
-            Object.values(obj).forEach(value => {
-                if (typeof value === 'string' && value.length > 0 && value.length < 50) {
-                    words.push(value);
-                }
-                if (typeof value === 'number') {
-                    words.push(String(value));
-                }
-                if (typeof value === 'boolean') {
-                    words.push(String(value));
-                }
-                if (Array.isArray(value)) {
-                    value.forEach(item => {
-                        if (typeof item === 'string' && item.length < 50) words.push(item);
-                        if (typeof item === 'object' && item !== null) collectValues(item);
-                    });
-                }
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    collectValues(value);
-                }
+            let typeDesc = Array.isArray(prop.type) ? prop.type.join('|') : prop.type;
+            typeDesc = typeDesc || 'property';
+            
+            suggestions.push({
+                caption: key,
+                value: `${key}: `,
+                meta: prop.title || typeDesc,
+                score: 100,
+                type: 'property',
+                description: prop.description || ''
             });
-        };
+            
+            if (prop.type === 'object' || (Array.isArray(prop.type) && prop.type.includes('object'))) {
+                if (prop.properties) {
+                    suggestions.push(...buildSuggestions(prop, key));
+                }
+            }
+        });
+    }
+    
+    return suggestions;
+}
+
+// ===== GENERATE VALUE SUGGESTIONS FROM DATA =====
+function getValueSuggestions() {
+    const words = [];
+    if (!schemaData || !schemaData.data) return words;
+    
+    function collectValues(obj) {
+        if (!obj || typeof obj !== 'object') return;
         
-        collectValues(this.schemaData.data);
-        return [...new Set(words)];
+        Object.values(obj).forEach(value => {
+            if (typeof value === 'string' && value.length > 0 && value.length < 50) {
+                words.push(value);
+            }
+            if (typeof value === 'number') {
+                words.push(String(value));
+            }
+            if (typeof value === 'boolean') {
+                words.push(String(value));
+            }
+            if (Array.isArray(value)) {
+                value.forEach(item => {
+                    if (typeof item === 'string' && item.length < 50) words.push(item);
+                    if (typeof item === 'object' && item !== null) collectValues(item);
+                });
+            }
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                collectValues(value);
+            }
+        });
     }
+    
+    collectValues(schemaData.data);
+    return [...new Set(words)];
+}
 
-    // ===== YAML DUMP =====
-    yamlDump(obj, indent = 0) {
-        if (obj === null || obj === undefined) return 'null';
-        if (typeof obj === 'boolean') return obj ? 'true' : 'false';
-        if (typeof obj === 'number') return String(obj);
-        if (typeof obj === 'string') {
-            if (obj.includes('\n')) {
-                return '|\n' + obj.split('\n').map(line => '  ' + line).join('\n');
-            }
-            return obj;
+// ===== YAML DUMP =====
+function yamlDump(obj, indent = 0) {
+    if (obj === null || obj === undefined) return 'null';
+    if (typeof obj === 'boolean') return obj ? 'true' : 'false';
+    if (typeof obj === 'number') return String(obj);
+    if (typeof obj === 'string') {
+        if (obj.includes('\n')) {
+            return '|\n' + obj.split('\n').map(line => '  ' + line).join('\n');
         }
-        if (Array.isArray(obj)) {
-            if (obj.length === 0) return '[]';
-            const items = obj.map(item => {
-                if (typeof item === 'object' && item !== null) {
-                    return '- ' + this.yamlDump(item, indent + 2);
-                }
-                return '- ' + this.yamlDump(item, indent + 2);
-            });
-            return items.join('\n');
-        }
-        if (typeof obj === 'object') {
-            const lines = [];
-            const prefix = '  '.repeat(indent);
-            for (const [key, value] of Object.entries(obj)) {
-                if (value === null || value === undefined) {
-                    lines.push(`${prefix}${key}: null`);
-                } else if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0) {
-                    lines.push(`${prefix}${key}:`);
-                    lines.push(this.yamlDump(value, indent + 1));
-                } else if (Array.isArray(value) && value.length > 0) {
-                    lines.push(`${prefix}${key}:`);
-                    const arrayStr = this.yamlDump(value, indent + 1);
-                    lines.push(arrayStr.split('\n').map(line => '  ' + line).join('\n'));
-                } else {
-                    lines.push(`${prefix}${key}: ${this.yamlDump(value, 0)}`);
-                }
-            }
-            return lines.join('\n');
-        }
-        return String(obj);
+        return obj;
     }
+    if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        const items = obj.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                return '- ' + yamlDump(item, indent + 2);
+            }
+            return '- ' + yamlDump(item, indent + 2);
+        });
+        return items.join('\n');
+    }
+    if (typeof obj === 'object') {
+        const lines = [];
+        const prefix = '  '.repeat(indent);
+        for (const [key, value] of Object.entries(obj)) {
+            if (value === null || value === undefined) {
+                lines.push(`${prefix}${key}: null`);
+            } else if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0) {
+                lines.push(`${prefix}${key}:`);
+                lines.push(yamlDump(value, indent + 1));
+            } else if (Array.isArray(value) && value.length > 0) {
+                lines.push(`${prefix}${key}:`);
+                const arrayStr = yamlDump(value, indent + 1);
+                lines.push(arrayStr.split('\n').map(line => '  ' + line).join('\n'));
+            } else {
+                lines.push(`${prefix}${key}: ${yamlDump(value, 0)}`);
+            }
+        }
+        return lines.join('\n');
+    }
+    return String(obj);
+}
 
-    // ===== LIST FILES FROM SERVER =====
-    async listFiles() {
-        try {
-            const response = await fetch(this.apiEndpoints.list);
-            if (!response.ok) {
-                console.error('Failed to list files:', response.status);
-                return [];
-            }
-            const result = await response.json();
-            if (typeof result === 'string' && result.includes('No YAML files found')) {
-                return [];
-            }
-            return Array.isArray(result) ? result : [];
-        } catch (e) {
-            console.error('Error listing files:', e);
+// ===== LIST FILES FROM SERVER =====
+async function listFiles() {
+    try {
+        console.log('📡 Fetching file list from:', apiEndpoints.list);
+        const response = await fetch(apiEndpoints.list);
+        if (!response.ok) {
+            console.error('Failed to list files:', response.status);
             return [];
         }
-    }
-
-    // ===== LOAD FILE FROM SERVER =====
-    async loadFileFromServer(filename) {
-        if (!filename) return;
-        this.currentFile = filename;
-        
-        try {
-            const loadUrl = this.apiEndpoints.load.endsWith('/') 
-                ? this.apiEndpoints.load + encodeURIComponent(filename)
-                : this.apiEndpoints.load + '/' + encodeURIComponent(filename);
-                
-            const response = await fetch(loadUrl);
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    this.showToast('❌ File not found: ' + filename, 'error');
-                } else {
-                    this.showToast('❌ Error loading file: ' + response.status, 'error');
-                }
-                return;
-            }
-            
-            const content = await response.text();
-            this.editor.setValue(content, -1);
-            this.yamlContent = content;
-            this.showToast('✅ Loaded: ' + filename, 'success');
-            console.log('📝 Loaded file:', filename);
-            
-        } catch (e) {
-            console.error('Failed to load file:', e);
-            this.showToast('❌ Network error loading file', 'error');
+        const result = await response.json();
+        console.log('📡 File list response:', result);
+        if (typeof result === 'string' && result.includes('No YAML files found')) {
+            return [];
         }
+        return Array.isArray(result) ? result : [];
+    } catch (e) {
+        console.error('Error listing files:', e);
+        return [];
     }
+}
 
-    // ===== SAVE YAML TO SERVER =====
-    async saveYAML() {
-        if (!this.currentFile) {
-            this.showToast('❌ No file selected', 'error');
+// ===== LOAD FILE FROM SERVER =====
+async function loadFileFromServer(filename) {
+    if (!filename) return;
+    currentFile = filename;
+    
+    try {
+        const loadUrl = apiEndpoints.load.endsWith('/') 
+            ? apiEndpoints.load + encodeURIComponent(filename)
+            : apiEndpoints.load + '/' + encodeURIComponent(filename);
+        
+        console.log('📡 Loading file from:', loadUrl);
+        const response = await fetch(loadUrl);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                showToast('❌ File not found: ' + filename, 'error');
+            } else {
+                showToast('❌ Error loading file: ' + response.status, 'error');
+            }
             return;
         }
         
-        const content = this.editor.getValue();
+        const content = await response.text();
+        editor.setValue(content, -1);
+        yamlContent = content;
         
-        try {
-            const saveUrl = this.apiEndpoints.save.endsWith('/') 
-                ? this.apiEndpoints.save + encodeURIComponent(this.currentFile)
-                : this.apiEndpoints.save + '/' + encodeURIComponent(this.currentFile);
+        const fileDisplay = document.getElementById('currentFileDisplay');
+        if (fileDisplay) fileDisplay.textContent = '📄 ' + filename;
+        
+        showToast('✅ Loaded: ' + filename, 'success');
+        console.log('📝 Loaded file:', filename);
+        
+    } catch (e) {
+        console.error('Failed to load file:', e);
+        showToast('❌ Network error loading file', 'error');
+    }
+}
+
+// ===== SAVE YAML TO SERVER =====
+window.saveYAML = async function() {
+    if (!currentFile) {
+        showToast('❌ No file selected', 'error');
+        return;
+    }
+    
+    const content = editor.getValue();
+    
+    try {
+        const saveUrl = apiEndpoints.save.endsWith('/') 
+            ? apiEndpoints.save + encodeURIComponent(currentFile)
+            : apiEndpoints.save + '/' + encodeURIComponent(currentFile);
+        
+        console.log('📡 Saving to:', saveUrl);
+        const response = await fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: content
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            showToast('❌ Error: ' + (errorData.detail || 'Unknown error'), 'error');
+            return;
+        }
+        
+        const result = await response.json();
+        if (result.message) {
+            showToast(result.message, 'success');
+            yamlContent = content;
+        } else {
+            showToast('✅ Saved: ' + currentFile, 'success');
+            yamlContent = content;
+        }
+    } catch (e) {
+        showToast('❌ Network error: ' + e.message, 'error');
+        console.error('Save error:', e);
+    }
+};
+
+// ===== LOAD FILE (from file selector) =====
+window.selectFile = async function() {
+    const fileSelect = document.getElementById('fileSelector');
+    if (fileSelect && fileSelect.value) {
+        console.log('📂 Selected file:', fileSelect.value);
+        await loadFileFromServer(fileSelect.value);
+    }
+};
+
+// ===== SHOW SUGGESTIONS AND FOCUS EDITOR =====
+window.showSuggestions = function() {
+    console.log('💡 Suggestion button clicked');
+    editor.focus();
+    const propCount = allSuggestions.length;
+    const valueCount = valueSuggestions.length;
+    console.log(`💡 Available: ${propCount} properties, ${valueCount} values`);
+    showToast(`💡 ${propCount} properties, ${valueCount} values available`, 'info');
+    
+    // Check if completer is registered
+    console.log('🔍 Editor completers:', editor.completers ? editor.completers.length : 0);
+    console.log('🔍 Editor session:', editor.session);
+    
+    // Try multiple methods to trigger autocomplete
+    try {
+        console.log('🔍 Attempting to trigger autocomplete...');
+        editor.execCommand('startAutocomplete');
+        console.log('✅ Autocomplete triggered via execCommand');
+    } catch (e) {
+        console.error('❌ Failed to trigger autocomplete:', e);
+    }
+    
+    // Check if autocomplete is enabled
+    console.log('🔍 Editor options:', editor.getOption('enableBasicAutocompletion'));
+};
+
+// ===== INITIALIZE EDITOR =====
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Initializing editor...');
+    
+    getApiEndpoints();
+    
+    schemaData = loadSchemaFromTextarea();
+    
+    if (!schemaData) {
+        console.warn('No valid schema found');
+        schemaData = { schema: {}, data: {} };
+    }
+    
+    allSuggestions = buildSuggestions(schemaData.schema);
+    console.log('📝 Schema suggestions built:', allSuggestions.map(s => s.caption).join(', '));
+    console.log('📝 Total suggestions:', allSuggestions.length);
+    
+    valueSuggestions = getValueSuggestions();
+    console.log('📝 Value suggestions:', valueSuggestions.slice(0, 10).join(', '));
+    console.log('📝 Total values:', valueSuggestions.length);
+    
+    const detectedTheme = detectTheme();
+    console.log('🎨 Detected theme:', detectedTheme);
+    
+    let initialContent = '# YAML Configuration\n\n';
+    if (schemaData.data) {
+        initialContent = yamlDump(schemaData.data);
+        console.log('📄 Loaded initial data into editor');
+    }
+    
+    // Create editor
+    console.log('🔧 Creating ACE editor...');
+    editor = ace.edit("editor");
+    console.log('✅ ACE editor created');
+    
+    editor.setTheme("ace/theme/" + detectedTheme);
+    editor.session.setMode("ace/mode/yaml");
+    editor.setValue(initialContent, -1);
+    yamlContent = initialContent;
+    
+    // ===== SET TAB SIZE TO 2 =====
+    editor.session.setTabSize(2);
+    editor.session.setUseSoftTabs(true);
+    
+    // ===== ENABLE AUTOCOMPLETE - USING CORRECT OPTION NAMES =====
+    console.log('🔧 Enabling autocomplete...');
+    try {
+        // Enable autocomplete
+        editor.setOption('enableBasicAutocompletion', true);
+        console.log('✅ enableBasicAutocompletion set to true');
+    } catch (e) {
+        console.warn('Could not set enableBasicAutocompletion:', e);
+    }
+    
+    try {
+        editor.setOption('enableLiveAutocompletion', true);
+        console.log('✅ enableLiveAutocompletion set to true');
+    } catch (e) {
+        console.warn('Could not set enableLiveAutocompletion:', e);
+    }
+    
+    // Check if options were applied
+    console.log('🔍 Editor getOption enableBasicAutocompletion:', editor.getOption('enableBasicAutocompletion'));
+    console.log('🔍 Editor getOption enableLiveAutocompletion:', editor.getOption('enableLiveAutocompletion'));
+    
+    const gutter = document.querySelector('.ace_gutter');
+    if (gutter) {
+        gutter.removeAttribute('aria-hidden');
+    }
+    
+    const themeSelector = document.getElementById('themeSelector');
+    if (themeSelector) {
+        themeSelector.value = detectedTheme;
+    }
+    
+    // ===== AUTOCOMPLETE =====
+    console.log('🔧 Registering completer...');
+    const completer = {
+        getCompletions: function(editor, session, pos, prefix, callback) {
+            console.log(`🔍 Completer called with prefix: "${prefix}" at line ${pos.row}, col ${pos.column}`);
+            
+            const line = session.getLine(pos.row);
+            const before = line.substring(0, pos.column);
+            
+            let suggestions = [];
+            const searchPrefix = prefix.toLowerCase();
+            
+            const afterColon = /:\s*$/.test(before) || /:\s+/.test(before);
+            console.log(`🔍 afterColon: ${afterColon}`);
+            
+            if (afterColon && prefix.length > 0) {
+                console.log(`🔍 Looking for value suggestions matching "${searchPrefix}"`);
+                valueSuggestions.forEach(val => {
+                    if (String(val).toLowerCase().startsWith(searchPrefix)) {
+                        suggestions.push({
+                            caption: val,
+                            value: val,
+                            meta: 'value',
+                            score: 80
+                        });
+                        console.log(`  ✅ Added value suggestion: "${val}"`);
+                    }
+                });
+            }
+            
+            console.log(`🔍 Looking for property suggestions matching "${searchPrefix}"`);
+            allSuggestions.forEach(sug => {
+                const lineContent = line.trim();
+                if (lineContent.includes(sug.caption + ':')) {
+                    console.log(`  ⏭️ Skipping "${sug.caption}" (already in line)`);
+                    return;
+                }
                 
-            const response = await fetch(saveUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: content
+                if (sug.caption.toLowerCase().startsWith(searchPrefix) || searchPrefix === '') {
+                    suggestions.push({
+                        caption: sug.caption,
+                        value: sug.value,
+                        meta: sug.meta || 'property',
+                        score: sug.score || 100,
+                        description: sug.description || ''
+                    });
+                    console.log(`  ✅ Added property suggestion: "${sug.caption}"`);
+                }
             });
             
-            if (!response.ok) {
-                const errorData = await response.json();
-                this.showToast('❌ Error: ' + (errorData.detail || 'Unknown error'), 'error');
-                return;
+            if (suggestions.length === 0 && prefix.length > 1) {
+                console.log(`🔍 Looking for fallback value suggestions matching "${searchPrefix}"`);
+                valueSuggestions.forEach(val => {
+                    if (String(val).toLowerCase().startsWith(searchPrefix)) {
+                        suggestions.push({
+                            caption: val,
+                            value: val,
+                            meta: 'value',
+                            score: 50
+                        });
+                        console.log(`  ✅ Added fallback value: "${val}"`);
+                    }
+                });
             }
             
-            const result = await response.json();
-            if (result.message) {
-                this.showToast(result.message, 'success');
-                this.yamlContent = content;
+            suggestions.sort((a, b) => (b.score || 0) - (a.score || 0));
+            suggestions = suggestions.slice(0, 30);
+            
+            console.log(`💡 Returning ${suggestions.length} suggestions for "${prefix}"`);
+            if (suggestions.length > 0) {
+                console.log('💡 First 5 suggestions:', suggestions.slice(0, 5).map(s => s.caption).join(', '));
             } else {
-                this.showToast('✅ Saved: ' + this.currentFile, 'success');
-                this.yamlContent = content;
+                console.log('⚠️ No suggestions found!');
             }
-        } catch (e) {
-            this.showToast('❌ Network error: ' + e.message, 'error');
-            console.error('Save error:', e);
+            
+            callback(null, suggestions);
+        },
+        
+        getDocTooltip: function(item) {
+            if (item.description) {
+                item.docHTML = `<div style="max-width:300px;padding:4px;">${item.description}</div>`;
+            }
+            return item;
         }
+    };
+    
+    // Add completer
+    if (!editor.completers) {
+        editor.completers = [];
+        console.log('🔧 Created new completers array');
     }
-
-    // ===== LOAD FILE (from file selector) =====
-    async loadFile(filename) {
-        if (!filename) return;
-        await this.loadFileFromServer(filename);
-    }
-
-    // ===== SHOW SUGGESTIONS AND FOCUS EDITOR =====
-    showSuggestions() {
-        this.editor.focus();
-        this.editor.execCommand('startAutocomplete');
-    }
-
-    // ===== SHOW TOAST =====
-    showToast(message, type) {
-        const toast = document.getElementById('toast');
-        if (!toast) return;
-        toast.textContent = message;
-        toast.className = 'yaml-toast ' + type + ' show';
-        clearTimeout(toast._timeout);
-        toast._timeout = setTimeout(() => {
-            toast.classList.remove('show');
-        }, 2000);
-    }
-
-    // ===== UPDATE STATUS BAR =====
-    updateStatusBar() {
-        const cursor = this.editor.getCursorPosition();
-        const selectedText = this.editor.getSelectedText();
-        const totalLines = this.editor.session.getLength();
+    editor.completers.push(completer);
+    console.log(`✅ Completer registered. Total completers: ${editor.completers.length}`);
+    
+    // ===== KEYBOARD SHORTCUT =====
+    editor.commands.addCommand({
+        name: 'showAutocomplete',
+        bindKey: { win: 'Ctrl-Space', mac: 'Ctrl-Space' },
+        exec: function(editor) {
+            console.log('⌨️ Ctrl+Space pressed (via ACE command)');
+            const propCount = allSuggestions.length;
+            const valueCount = valueSuggestions.length;
+            console.log(`💡 ${propCount} properties, ${valueCount} values available`);
+            showToast(`💡 ${propCount} properties, ${valueCount} values available`, 'info');
+            editor.execCommand('startAutocomplete');
+        }
+    });
+    
+    // ===== STATUS BAR =====
+    function updateStatusBar() {
+        const cursor = editor.getCursorPosition();
+        const selectedText = editor.getSelectedText();
+        const totalLines = editor.session.getLength();
         
         const lineEl = document.getElementById('cursorLine');
         const colEl = document.getElementById('cursorCol');
@@ -314,281 +541,118 @@ class YAMLEditor {
         if (linesEl) linesEl.textContent = totalLines;
         if (modeEl) modeEl.textContent = 'YAML';
     }
-
-    // ===== INITIALIZE EDITOR =====
-    async initialize() {
-        // Get API endpoints from wrapper
-        this.getApiEndpoints();
+    
+    editor.session.selection.on('changeCursor', updateStatusBar);
+    editor.session.on('change', updateStatusBar);
+    
+    // ===== EXPORT FUNCTIONS =====
+    window.undo = function() { editor.undo(); };
+    window.redo = function() { editor.redo(); };
+    window.find = function() { editor.execCommand('find'); };
+    window.replace = function() { editor.execCommand('replace'); };
+    
+    window.changeTheme = function(theme) {
+        editor.setTheme('ace/theme/' + theme);
+        showToast('Theme: ' + theme, 'info');
+    };
+    
+    window.changeMode = function(mode) {
+        editor.session.setMode('ace/mode/' + mode);
+        const modeEl = document.getElementById('currentMode');
+        if (modeEl) modeEl.textContent = mode.toUpperCase();
+        showToast('Mode: ' + mode.toUpperCase(), 'info');
+    };
+    
+    window.changeFontSize = function(size) {
+        editor.setFontSize(size + 'px');
+        showToast('Font size: ' + size + 'px', 'info');
+    };
+    
+    window.toggleWrap = function() {
+        const wrap = editor.session.getUseWrapMode();
+        editor.session.setUseWrapMode(!wrap);
+        document.getElementById('wrapBtn').classList.toggle('active');
+        showToast(wrap ? 'Wrap off' : 'Wrap on', 'info');
+    };
+    
+    window.toggleReadOnly = function() {
+        const readonly = editor.getReadOnly();
+        editor.setReadOnly(!readonly);
+        document.getElementById('readonlyBtn').classList.toggle('active');
+        showToast(readonly ? 'Editable' : 'Read Only', 'info');
+    };
+    
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            window.saveYAML();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+            e.preventDefault();
+            const fileSelect = document.getElementById('fileSelector');
+            if (fileSelect) fileSelect.click();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === ' ') {
+            e.preventDefault();
+            console.log('⌨️ Ctrl+Space detected via keydown');
+            const propCount = allSuggestions.length;
+            const valueCount = valueSuggestions.length;
+            showToast(`💡 ${propCount} properties, ${valueCount} values available`, 'info');
+            editor.execCommand('startAutocomplete');
+        }
+    });
+    
+    // ===== SET UP FILE SELECTOR =====
+    const fileSelect = document.getElementById('fileSelector');
+    if (fileSelect) {
+        console.log('📂 Loading file list...');
+        const files = await listFiles();
         
-        // Load schema from textarea
-        this.schemaData = this.loadSchemaFromTextarea();
-        
-        if (!this.schemaData) {
-            console.warn('No valid schema found');
-            this.schemaData = { schema: {}, data: {} };
+        while (fileSelect.options.length > 0) {
+            fileSelect.remove(0);
         }
         
-        // Build all suggestions from schema
-        this.allSuggestions = this.buildSuggestions(this.schemaData.schema);
-        console.log('📝 Schema suggestions built:', this.allSuggestions.map(s => s.caption).join(', '));
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select a file...';
+        fileSelect.appendChild(placeholder);
         
-        // Get value suggestions from data
-        const valueSuggestions = this.getValueSuggestions();
-        console.log('📝 Value suggestions:', valueSuggestions.slice(0, 10).join(', '));
-        
-        // Detect theme from URL
-        const detectedTheme = this.detectTheme();
-        console.log('🎨 Detected theme:', detectedTheme);
-        
-        // Initialize editor with default content
-        let initialContent = '# YAML Configuration\n\n';
-        if (this.schemaData.data) {
-            initialContent = this.yamlDump(this.schemaData.data);
-            console.log('📄 Loaded initial data into editor');
-        }
-        
-        // Initialize editor
-        this.editor = ace.edit("editor");
-        this.editor.setTheme("ace/theme/" + detectedTheme);
-        this.editor.session.setMode("ace/mode/yaml");
-        this.editor.setValue(initialContent, -1);
-        this.yamlContent = initialContent;
-        
-        // Fix aria-hidden warning
-        const gutter = document.querySelector('.ace_gutter');
-        if (gutter) {
-            gutter.removeAttribute('aria-hidden');
-        }
-        
-        // Set theme selector
-        const themeSelector = document.getElementById('themeSelector');
-        if (themeSelector) {
-            themeSelector.value = detectedTheme;
-        }
-        
-        // ===== AUTOCOMPLETE =====
-        const completer = {
-            getCompletions: (editor, session, pos, prefix, callback) => {
-                const line = session.getLine(pos.row);
-                const before = line.substring(0, pos.column);
-                
-                let suggestions = [];
-                const searchPrefix = prefix.toLowerCase();
-                
-                const afterColon = /:\s*$/.test(before) || /:\s+/.test(before);
-                
-                if (afterColon && prefix.length > 0) {
-                    valueSuggestions.forEach(val => {
-                        if (val.toLowerCase().startsWith(searchPrefix)) {
-                            suggestions.push({
-                                caption: val,
-                                value: val,
-                                meta: 'value',
-                                score: 80
-                            });
-                        }
-                    });
-                }
-                
-                this.allSuggestions.forEach(sug => {
-                    const lineContent = line.trim();
-                    if (lineContent.includes(sug.caption + ':')) return;
-                    
-                    if (sug.caption.toLowerCase().startsWith(searchPrefix) || searchPrefix === '') {
-                        suggestions.push({
-                            caption: sug.caption,
-                            value: sug.value,
-                            meta: sug.meta || 'property',
-                            score: sug.score || 100,
-                            description: sug.description || ''
-                        });
-                    }
-                });
-                
-                if (suggestions.length === 0 && prefix.length > 1) {
-                    valueSuggestions.forEach(val => {
-                        if (val.toLowerCase().startsWith(searchPrefix)) {
-                            suggestions.push({
-                                caption: val,
-                                value: val,
-                                meta: 'value',
-                                score: 50
-                            });
-                        }
-                    });
-                }
-                
-                suggestions.sort((a, b) => (b.score || 0) - (a.score || 0));
-                suggestions = suggestions.slice(0, 30);
-                
-                callback(null, suggestions);
-            },
-            
-            getDocTooltip: function(item) {
-                if (item.description) {
-                    item.docHTML = `<div style="max-width:300px;padding:4px;">${item.description}</div>`;
-                }
-                return item;
-            }
-        };
-        
-        if (!this.editor.completers) {
-            this.editor.completers = [];
-        }
-        this.editor.completers.push(completer);
-        
-        // ===== KEYBOARD SHORTCUT =====
-        this.editor.commands.addCommand({
-            name: 'showAutocomplete',
-            bindKey: { win: 'Ctrl-Space', mac: 'Ctrl-Space' },
-            exec: (editor) => {
-                editor.execCommand('startAutocomplete');
-            }
-        });
-        
-        // ===== STATUS BAR =====
-        this.editor.session.selection.on('changeCursor', () => this.updateStatusBar());
-        this.editor.session.on('change', () => this.updateStatusBar());
-        
-        // ===== EXPORT FUNCTIONS =====
-        this.editor.commands.addCommand({
-            name: 'undo',
-            bindKey: { win: 'Ctrl-Z', mac: 'Cmd-Z' },
-            exec: () => this.editor.undo()
-        });
-        
-        this.editor.commands.addCommand({
-            name: 'redo',
-            bindKey: { win: 'Ctrl-Y', mac: 'Cmd-Y' },
-            exec: () => this.editor.redo()
-        });
-        
-        // ===== THEME CHANGE =====
-        const themeSelectorEl = document.getElementById('themeSelector');
-        if (themeSelectorEl) {
-            themeSelectorEl.addEventListener('change', (e) => {
-                const theme = e.target.value;
-                this.editor.setTheme('ace/theme/' + theme);
-                this.showToast('Theme: ' + theme, 'info');
-            });
-        }
-        
-        // ===== MODE CHANGE =====
-        const modeSelector = document.getElementById('modeSelector');
-        if (modeSelector) {
-            modeSelector.addEventListener('change', (e) => {
-                const mode = e.target.value;
-                this.editor.session.setMode('ace/mode/' + mode);
-                const modeEl = document.getElementById('currentMode');
-                if (modeEl) modeEl.textContent = mode.toUpperCase();
-                this.showToast('Mode: ' + mode.toUpperCase(), 'info');
-            });
-        }
-        
-        // ===== FONT SIZE CHANGE =====
-        const fontSizeSelector = document.getElementById('fontSizeSelector');
-        if (fontSizeSelector) {
-            fontSizeSelector.addEventListener('change', (e) => {
-                const size = parseInt(e.target.value);
-                this.editor.setFontSize(size + 'px');
-                this.showToast('Font size: ' + size + 'px', 'info');
-            });
-        }
-        
-        // ===== WRAP TOGGLE =====
-        const wrapBtn = document.getElementById('wrapBtn');
-        if (wrapBtn) {
-            wrapBtn.addEventListener('click', () => {
-                const wrap = this.editor.session.getUseWrapMode();
-                this.editor.session.setUseWrapMode(!wrap);
-                wrapBtn.classList.toggle('active');
-                this.showToast(wrap ? 'Wrap off' : 'Wrap on', 'info');
-            });
-        }
-        
-        // ===== READ ONLY TOGGLE =====
-        const readonlyBtn = document.getElementById('readonlyBtn');
-        if (readonlyBtn) {
-            readonlyBtn.addEventListener('click', () => {
-                const readonly = this.editor.getReadOnly();
-                this.editor.setReadOnly(!readonly);
-                readonlyBtn.classList.toggle('active');
-                this.showToast(readonly ? 'Editable' : 'Read Only', 'info');
-            });
-        }
-        
-        // ===== KEYBOARD SHORTCUTS =====
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                this.saveYAML();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
-                e.preventDefault();
-                const fileSelect = document.getElementById('fileSelector');
-                if (fileSelect) fileSelect.click();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === ' ') {
-                e.preventDefault();
-                this.editor.execCommand('startAutocomplete');
-            }
-        });
-        
-        // ===== SET UP FILE SELECTOR =====
-        const fileSelect = document.getElementById('fileSelector');
-        if (fileSelect) {
-            const files = await this.listFiles();
-            
-            while (fileSelect.options.length > 0) {
-                fileSelect.remove(0);
-            }
-            
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'Select a file...';
-            fileSelect.appendChild(placeholder);
-            
-            if (files.length === 0) {
+        if (files.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No files available';
+            option.disabled = true;
+            fileSelect.appendChild(option);
+        } else {
+            files.forEach(filename => {
                 const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'No files available';
-                option.disabled = true;
+                option.value = filename;
+                option.textContent = filename;
                 fileSelect.appendChild(option);
-            } else {
-                files.forEach(filename => {
-                    const option = document.createElement('option');
-                    option.value = filename;
-                    option.textContent = filename;
-                    fileSelect.appendChild(option);
-                });
-            }
-            
-            // File selection change handler
-            fileSelect.addEventListener('change', (e) => {
-                const filename = e.target.value;
-                if (filename) {
-                    this.loadFileFromServer(filename);
-                }
             });
-            
-            if (files.length > 0) {
-                fileSelect.value = files[0];
-                this.currentFile = files[0];
-                await this.loadFileFromServer(files[0]);
-            }
         }
         
-        this.updateStatusBar();
-        
-        console.log('✅ Editor ready');
-        console.log('🎨 Theme:', detectedTheme);
-        console.log('🔑 Press Ctrl+Space or click 💡 for autocomplete');
-        console.log('📝 Available schema properties:', this.allSuggestions.map(s => s.caption).join(', '));
-        console.log('📡 Using endpoints:', this.apiEndpoints);
+        if (files.length > 0) {
+            fileSelect.value = files[0];
+            currentFile = files[0];
+            console.log('📂 Loading default file:', files[0]);
+            await loadFileFromServer(files[0]);
+        }
     }
-}
-
-// ===== INITIALIZE ON DOM READY =====
-document.addEventListener('DOMContentLoaded', function() {
-    const editor = new YAMLEditor();
+    
+    updateStatusBar();
+    
+    console.log('✅ Editor ready');
+    console.log('🎨 Theme:', detectedTheme);
+    console.log('🔑 Press Ctrl+Space or click 💡 for autocomplete');
+    console.log('📝 Available schema properties:', allSuggestions.map(s => s.caption).join(', '));
+    console.log('📡 Using endpoints:', apiEndpoints);
+    console.log('🔍 Total completers registered:', editor.completers ? editor.completers.length : 0);
+    
+    // Show initial suggestion count
+    setTimeout(() => {
+        const propCount = allSuggestions.length;
+        const valueCount = valueSuggestions.length;
+        showToast(`💡 ${propCount} properties, ${valueCount} values available for autocomplete`, 'info');
+    }, 1000);
 });

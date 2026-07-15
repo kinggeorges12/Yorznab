@@ -33,7 +33,7 @@ async def get_ace_file(file_path: str):
     local_path = Path("cache/ace")
 
     return Response(
-        media_type = "text/css",
+        media_type = "text/javascript",
         content = download_and_cache(
             f"{ace_download_path}/{file_path}",
             str(local_path / safe_path),

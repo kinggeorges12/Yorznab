@@ -40,6 +40,7 @@
 .terminal-dot.green { background: #27c93f; }
 
 .terminal-output {
+    font-family: 'DejaVuSansMonoBook', monospace;
     background: #1a1a1a;
     padding: clamp(5px, 2vw, 10px);
     max-height: 300px;
@@ -92,12 +93,12 @@
 }
 
 .terminal-line {
+    font-size: clamp(13px, 1.9vw, 13px);
     padding: 2px 0;
     white-space: pre-wrap;
     word-wrap: break-word;
-    font-family: monospace;
+    font-family: 'DejaVuSansMonoBook', monospace;
     line-height: 1.0;
-    font-size: 13px;
 }
 
 .terminal-line.system {
@@ -262,7 +263,7 @@
 .prompt-symbol {
     color: #27c93f;
     font-weight: bold;
-    font-family: 'Courier New', monospace;
+    font-family: 'DejaVuSansMonoBook', monospace;
     font-size: clamp(13px, 1vw, 16px);
     flex-shrink: 0; /* Don't shrink the prompt */
 }
@@ -274,7 +275,7 @@
     background: transparent;
     border: none;
     color: #d4d4d4;
-    font-family: 'Courier New', monospace;
+    font-family: 'DejaVuSansMonoBook', monospace;
     font-size: clamp(13px, 1.1vw, 16px);
     outline: none;
     padding: clamp(4px, 0.8vw, 8px) 0;
@@ -529,7 +530,7 @@ button.active:hover {
     
     .terminal-line {
         line-height: 0.8;
-        font-size: clamp(6px, 1.9vw, 10px);
+        font-size: clamp(6px, 1.5vw, 10px);
     }
     
     .terminal-output {

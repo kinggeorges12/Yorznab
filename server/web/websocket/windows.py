@@ -74,8 +74,7 @@ class WebSetupWindows(IWebSetup):
         """Handle Ctrl+C signal."""
         LOGGER.info("🔴 Ctrl+C received, stopping PowerShell process...")
         self._send_interrupt_to_process()
-        self._shutdown_event.set()
-        self._process_running = False
+        self.cleanup()
 
     # -------------------------------------------------------------------------
     # I/O Methods (Required by IWebSetup)
@@ -167,15 +166,15 @@ class WebSetupWindows(IWebSetup):
         """Clean up Windows-specific resources."""
         await super().cleanup()
         
-        if not self._process:
+        if not self._is_process_alive():
             return
         
         try:
-            if self._process.isalive():
+            if self._is_process_alive():
                 self._process.terminate()
                 await asyncio.sleep(1)
                 
-                if self._process.isalive():
+                if self._is_process_alive():
                     self._kill_process()
         except Exception as e:
             LOGGER.error(f"Error during process cleanup: {e}")

@@ -80,8 +80,7 @@ class WebSetupUnix(IWebSetup):
         """Handle Ctrl+C signal."""
         LOGGER.info("🔴 Ctrl+C received, stopping bash process...")
         self._send_interrupt_to_process()
-        self._shutdown_event.set()
-        self._process_running = False
+        self.cleanup()
 
     # -------------------------------------------------------------------------
     # PTY Helpers
@@ -203,9 +202,9 @@ class WebSetupUnix(IWebSetup):
         await super().cleanup()
         
         # Clean up process
-        if self._process:
+        if self._is_process_alive():
             try:
-                if self._process.poll() is None:
+                if self._is_process_alive() is None:
                     # Try SIGHUP first (graceful)
                     try:
                         os.killpg(os.getpgid(self._process.pid), signal.SIGHUP)
@@ -214,7 +213,7 @@ class WebSetupUnix(IWebSetup):
                         pass
                     
                     # If still alive, force kill
-                    if self._process.poll() is None:
+                    if self._is_process_alive() is None:
                         self._kill_process()
             except Exception as e:
                 LOGGER.error(f"Error during process cleanup: {e}")

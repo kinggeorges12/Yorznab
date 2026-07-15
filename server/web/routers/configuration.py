@@ -144,7 +144,7 @@ async def setup(request: Request):
             </div>
         </div>'''
     
-    return Response(content=page_template(title="Configuration", content=content, token=token, js="js/terminal.js", css="css/setup.css"), media_type="text/html")
+    return Response(content=page_template(title="Configuration", content=content, token=token, js="js/terminal.js", css=["css/setup.css", "cache/css/dejavu-sans-mono"]), media_type="text/html")
 
 @router.websocket("/setup/ws")
 async def websocket_setup(websocket: WebSocket):
