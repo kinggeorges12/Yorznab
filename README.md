@@ -61,7 +61,7 @@ wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/ref
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
 cd app
 cp --update=none ./config/yorznab.yaml.sample ./config/yorznab.yaml
-cp --update=none ./config/feed.yaml.sample ./config/feed.yaml # Recommended
+cp --update=none ./config/feed.yaml.sample ./config/feeds/myfeed.yaml # Recommended
 ```
 
 ## Windows \(PowerShell\)
@@ -74,7 +74,7 @@ Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
 Set-Location app
 Copy-Item -Confirm -Path ./config/yorznab.yaml.sample -Destination ./config/yorznab.yaml
-Copy-Item -Confirm -Path ./config/feed.yaml.sample -Destination ./config/feed.yaml # Recommended
+Copy-Item -Confirm -Path ./config/feed.yaml.sample -Destination ./config/myfeed.yaml # Recommended
 ```
 
 # Docker Compose

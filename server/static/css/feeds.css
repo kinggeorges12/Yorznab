@@ -1,0 +1,165 @@
+/* ===== EDITOR.CSS ===== */
+.yaml-editor-wrapper {
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.yaml-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+}
+
+.yaml-toolbar .group {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding: 0 6px;
+    border-right: 1px solid #30363d;
+}
+
+.yaml-toolbar .group:last-child {
+    border-right: none;
+}
+
+.yaml-toolbar button {
+    padding: 4px 10px;
+    background: transparent;
+    color: #c9d1d9;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.yaml-toolbar button:hover {
+    background: #30363d;
+    border-color: #484f58;
+}
+
+.yaml-toolbar select {
+    padding: 3px 6px;
+    background: #0d1117;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+}
+
+.yaml-toolbar select:focus {
+    border-color: #388bfd;
+}
+
+.yaml-toolbar label {
+    color: #8b949e;
+    font-size: 11px;
+    margin-right: 3px;
+}
+
+.yaml-toolbar input[type="number"] {
+    padding: 3px 4px;
+    background: #0d1117;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+    width: 45px;
+}
+
+.yaml-toolbar input[type="number"]:focus {
+    border-color: #388bfd;
+}
+
+.yaml-editor-area {
+    position: relative;
+    height: 500px;
+}
+
+#editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.yaml-statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 12px;
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    color: #8b949e;
+    font-size: 11px;
+    font-family: 'Consolas', monospace;
+}
+
+.yaml-statusbar .left {
+    display: flex;
+    gap: 16px;
+}
+
+.yaml-statusbar .right {
+    display: flex;
+    gap: 16px;
+}
+
+.yaml-statusbar .value {
+    color: #c9d1d9;
+    font-weight: bold;
+}
+
+.yaml-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background: #21262d;
+    color: #c9d1d9;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.yaml-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.yaml-toast.success { border-left: 3px solid #3fb950; }
+.yaml-toast.error { border-left: 3px solid #f85149; }
+
+@media (max-width: 768px) {
+    .yaml-toolbar .group {
+        border-right: none;
+        padding: 3px;
+    }
+    .yaml-toolbar button {
+        font-size: 11px;
+        padding: 3px 7px;
+    }
+    .yaml-statusbar {
+        font-size: 10px;
+    }
+    .yaml-statusbar .left,
+    .yaml-statusbar .right {
+        gap: 10px;
+    }
+    .yaml-editor-area {
+        height: 350px;
+    }
+}

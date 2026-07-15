@@ -31,7 +31,7 @@ async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type
         # Add server parameter if specified
         if feed_configs:
             for feed_config in feed_configs:
-                args.extend(["--feed", str(feed_config.config_path)])
+                args.extend(["--feed", feed_config.feed_name])
         
         # Add server parameter if specified
         if server_type:
@@ -61,7 +61,7 @@ async def webhook_get(
     server: str = Query(None, description="Server name to process (Radarr or Sonarr)"),
     id: str = Query(None, description="External ID for the wanted video (TMDB/TVDB ID)")
 ):
-    """Run the requests.py script to search for torrents and write them to the feed file"""
+    """Run the requests.py script to search for torrents and write them to the database file"""
     result = await run_requests(server_type=ArrType(server), external_id=id)
     
     if result == 0:

@@ -1,14 +1,16 @@
 
 from __future__ import annotations
+import datetime
 import os
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from dacite import from_dict
 import os
 from pathlib import Path
 import time
-from typing import Any, Optional
+from typing import Any, List, Optional
 import json
 from threading import Lock
+
 import yaml
 
 # Import modules
@@ -56,65 +58,98 @@ class FeedConfig:
 
     _lock = Lock()
     _instances: dict[str, FeedConfig] = {}
-    _default_feed_config = "feed.yaml"
-    _default_feed_folder: Path = Path(os.environ.get("FEED_DIR", "feeds"))
+    _feed_config_folder: str = 'feeds' # /app/config/feeds
+    _default_feed_name = "myfeed"
+    _default_feed_folder: Path = Path(os.environ.get("DB_DIR", "database")) # /app/database
     
-    def __new__(cls, config_file: str=_default_feed_config):  # pylint: disable=unused-argument
+    def __new__(cls, feed_name: str=_default_feed_name):  # pylint: disable=unused-argument
         with cls._lock:
-            if config_file not in cls._instances:
+            if feed_name not in cls._instances:
                 instance = super().__new__(cls)
-                cls._instances[config_file] = instance
-        return cls._instances[config_file]
+                cls._instances[feed_name] = instance
+        return cls._instances[feed_name]
 
-    def __init__(self, config_file: str=_default_feed_config):
+    def __init__(self, feed_name: str=_default_feed_name):
         # prevent re-loading on repeated calls
         if getattr(self, "_initialized", False):
             return
 
-        self._config_file = config_file or self.__class__._default_feed_config
-        self._config = None
+        self._feed_name = feed_name or self._default_feed_name
+        self._config_file = f"{self._feed_name}.yaml" # myfeed.yaml
+        self._config_path = os.path.join(self._feed_config_folder, self._config_file) # feeds/myfeed.yaml
         self._config_settings = None
-        self._feed_folder = self.__class__._default_feed_folder
-        self._feed_file = Path(self._config_file).with_suffix(".json").name
         try:
             # Check if config file exists
-            self._config_settings = AppSettings(self._config_file)
-            self._config = from_dict(data_class=FeedFilter, data=self._config_settings.get())
-            # Check for the feed file setting
-            self._feed_file = self._config.file or self._feed_file
+            self._config_settings = AppSettings(self._config_path)
+            self._config_settings.exists('FeedConfig')
         except AppSettingsUndefined as e:
             LOGGER.warning(f"⚠️ {e}")
             LOGGER.warning(f"⚠️ Using default settings for feed.")
-        self._config = self._config if self._config else FeedFilter()
+        self._config = self.load(self._config_settings.get() if self._config_settings else None)
+        self._feed_file = f"{self._feed_name}.json"
+        self._feed_folder = self.__class__._default_feed_folder
         self._feed_path = Path(os.path.join(self._feed_folder, self._feed_file))
         self._cached_json = None
         self._initialized = True
 
+    def load(self, data: dict[str, Any] = None) -> FeedFilter:
+        """Create a new feed configuration file with optional initial data"""
+        feed_filter = FeedFilter()
+        if data is not None:
+            feed_filter = from_dict(data_class=FeedFilter, data=data)
+        self._config = feed_filter
+        return feed_filter
+
+    def save(self) -> None:
+        """Save the feed configuration to a file"""
+        config_path = self.config_path # /app/config/feeds/feed.yaml
+        if not self.exists:
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            LOGGER.debug(f"✅ Created new feed configuration: {config_path}")
+        else:
+            LOGGER.warning(f"⚠️ Feed configuration '{self.feed_name}' already exists: {config_path}")
+            new_config_path = os.path.join(config_path, f"-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.bak")
+            os.rename(config_path, new_config_path)
+            LOGGER.warning(f"⚠️ Moved existing configuration '{self.feed_name}' to: {new_config_path}")
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(asdict(self._config), f, ensure_ascii=False, indent=2)
+
     @classmethod
-    def feed(cls, name = None) -> Path:
+    def feeds(cls, values: str=None) -> List[FeedConfig]:
+        if values is None:
+            return list(cls._instances.values())
+        feed_arr = (values).split(',')
+        feed_cleaned = [feed_name.strip() for feed_name in feed_arr]
+        return list([cls(feed_name) for feed_name in feed_cleaned])
+
+    @classmethod
+    def feed(cls, name = None) -> FeedConfig:
         """Get the paths to all feed files"""
         # Return the default if it exists and then the first feed file if no name is provided
         if not name:
-            feed_default = cls._instances[cls._default_feed_config] if cls._default_feed_config in cls._instances else None
+            feed_default = cls._instances[cls._default_feed_name] if cls._default_feed_name in cls._instances else None
             feed_first = next(iter(cls._instances.values())) if cls._instances else None
             feed = feed_default if feed_default else feed_first
             return feed.file
         # Match full filename or filename without extension
-        for instance in cls._instances.values():
-            filename = instance.file.rstrip('.json') if instance.file else None
-            if filename == name or instance.file == name:
-                return instance.file
+        if name in cls._instances.keys():
+            return cls._instances[name]
         return None
-
+    
     @property
-    def config_name(self) -> str:
-        """Get the name of the configuration file, e.g., feed.yaml"""
-        return self.config_path.name
+    def feed_name(self) -> str:
+        """Get the name of the configuration file, e.g., myfeed"""
+        return self._feed_name
+    
+    @property
+    def feed_filename(self) -> str:
+        """Get the name of the configuration file, e.g., myfeed"""
+        return self._config_file
 
     @property
     def config_path(self) -> Path:
         """Get the path to the configuration file, e.g., /app/config/feed.yaml"""
-        return ConfigFile(self._config_file).path
+        return ConfigFile(self._config_path).path
 
     @property
     def config(self) -> FeedFilter:
@@ -123,17 +158,17 @@ class FeedConfig:
 
     @property
     def file(self) -> Path:
-        """Get the filename of the feed file, e.g., feed.json"""
+        """Get the filename of the database file, e.g., feed.json"""
         return self._feed_file
 
     @property
     def path(self) -> Path:
-        """Get the path to the feed file, e.g., feeds/feed.json"""
+        """Get the path to the database file, e.g., database/feed.json"""
         return self._feed_path
 
     @property
     def exists(self) -> bool:
-        """Check if the configuration file exists"""
+        """Check if the database file exists"""
         return self._feed_path.exists() if self._feed_path else False
 
     def read(self, cache=False) -> Any:
@@ -152,7 +187,7 @@ class FeedConfig:
 
         return data
 
-    def save(self, data: Any) -> None:
+    def write(self, data: Any) -> None:
         if not self.exists:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with open(self.path, "w", encoding="utf-8") as f:
@@ -161,7 +196,7 @@ class FeedConfig:
     @property
     def file_age(self) -> float:
         """
-        Get the age of the feed file in seconds.
+        Get the age of the database file in seconds.
         
         Returns:
             Age in seconds, or float('inf') if file doesn't exist
@@ -175,5 +210,14 @@ class FeedConfig:
         
         return age_seconds
 
+    def _debug(self):
+        return f"""FeedConfig(_feed_name={self._feed_name},
+_config_file={self._config_file},
+_config_path={self._config_path},
+_config_settings={self._config_settings},
+_feed_folder={self._feed_folder},
+_feed_file={self._feed_file},
+_feed_path={self._feed_path})"""
+
     def __str__(self):
-        return f"FeedConfig(config={self.config_path}, feed={self.path})"
+        return f"FeedConfig(config={self._feed_name}, feed={self._config_file})"

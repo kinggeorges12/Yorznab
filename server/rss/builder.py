@@ -45,7 +45,7 @@ def publish_results(feed_config: FeedConfig, retention_days: int, results: list[
     if whatif:
         LOGGER.DEBUG(f"Would write {len(results)} new and {len(final)} total items to {feed_config.file}")
         return
-    feed_config.save(final)
+    feed_config.write(final)
 
 
 # -----------------------------
@@ -245,7 +245,7 @@ def case_insensitive_choice(choices: list[str]):
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Add torrents to qBittorrent by searching wanted lists from Arr apps.")
     p.add_argument("--server", choices=["Both", "Radarr", "Sonarr"], type=case_insensitive_choice(["Both", "Radarr", "Sonarr"]), default="Both", help="Server to process: Both, Radarr, or Sonarr")
-    p.add_argument("--feed", action='append', type=str, default=None, help="Path to feed.yaml configuration file for generating RSS feed (default=config/feed.yaml).")
+    p.add_argument("--feed", action='append', type=str, default=None, help="Name of the feed for generating RSS feed (default=myfeed).")
     p.add_argument("--external", type=str, default=None, help="External ID for the wanted video (TMDB/TVDB ID), suffixed with a colon and season number if applicable")
     p.add_argument("--retention", type=int, default=365, help="Number of days to retain individual records in published JSON")
     p.add_argument("--download", action="store_true", help="Send top result directly to qBittorrent")
@@ -278,8 +278,8 @@ def main(argv: list[str] | None = None) -> int:
 
         --feed: YAML files in the configuration directory containing feed settings
             - Path to the YAML file that defines the RSS feed structure and content
-            - Default: feed.yaml
-            - Usage: --feed private_trackers.yaml --feed public_trackers.yaml --feed feed3.yaml
+            - Default: myfeed
+            - Usage: --feed private_trackers --feed public_trackers --feed feed3
 
         --external: External ID for the wanted video (TMDB/TVDB ID), suffixed with a colon and comma-separated season numbers if applicable
             - When specified, only searches for this specific item instead of processing the entire wanted list
@@ -331,12 +331,12 @@ def main(argv: list[str] | None = None) -> int:
     script_name = os.path.splitext(os.path.basename(__file__))[0]
     LOGGER = CustomLogger(name=script_name, silent=args.silent, enable_log=args.log)
     
-    for feed_file in args.feed:
+    for feed_name in args.feed:
         try:
             LOGGER.info("🔏 Waiting for builder lock...")
             with _lock:
                 LOGGER.info("🔒 Acquired builder lock")
-                feed_config = FeedConfig(config_file=feed_file)
+                feed_config = FeedConfig(feed_name)
                 if args.server == "Both":
                     run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
                     run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)

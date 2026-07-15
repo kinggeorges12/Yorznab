@@ -57,5 +57,5 @@ class AppSettings:
     def exists(self, name: str) -> Self:
         """Check if the configuration file exists"""
         if not self._config_file.path.exists():
-            raise AppSettingsUndefined(f"The file for {name} does not exist: {self._config_file.path}")
+            raise AppSettingsUndefined(f"The file for {name or 'this'} does not exist: {self._config_file.path}")
         return self

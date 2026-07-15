@@ -210,7 +210,7 @@ def torznab_api(
     feed_config = FeedConfig.feed(feed)
     torrents = None
     if feed_config:
-        torrents = FeedConfig(feed_config).read()
+        torrents = feed_config.read()
     else:
         feed_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
@@ -218,7 +218,7 @@ def torznab_api(
     <title>{SETTINGS.get('feed', 'title')}</title>
     <link>{SETTINGS.get('feed', 'link')}</link>
     <description>Feed Error</description>
-    <error code="2" description="Missing or invalid feed name"/>
+    <error code="2" description="No feeds found"/>
   </channel>
 </rss>"""
         return Response(content=feed_error, media_type="application/xml", status_code=status.HTTP_404_NOT_FOUND)

@@ -28,7 +28,7 @@ export PYTHONPATH="${PWD}"
 export CONFIG_DIR="${PWD}/config"
 export LOG_DIR="${PWD}/logs"
 export LOG_LEVEL='DEBUG'
-export FEEDS='feed.yaml'
+export FEEDS=
 (
     source .venv/bin/activate
     cd server || exit

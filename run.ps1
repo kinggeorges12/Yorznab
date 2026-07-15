@@ -27,7 +27,7 @@ $env:PYTHONPATH = "${pwd}"
 $env:CONFIG_DIR="${pwd}\config"
 $env:LOG_DIR="${pwd}\logs"
 $env:LOG_LEVEL='DEBUG'
-$env:FEEDS='feed.yaml'
+$env:FEEDS=''
 try{
     python -m venv .venv
     .\.venv\Scripts\Activate.ps1

@@ -42,14 +42,11 @@ LOGGER = CustomLogger(name="cron")
 # Load settings from config file
 SETTINGS = AppSettings(filename='yorznab.yaml')
 
-# Load settings from config file
-FEED = AppSettings(filename='feed.yaml')
-
 # Load default args
 FEED_CONFIGS:list[FeedConfig] = []
 REFRESH_SCHEDULE:str = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
 DOWNLOAD:bool = os.environ.get('DOWNLOAD','false').lower() not in ['false', 'no'] and bool(os.environ.get('DOWNLOAD'))
-NEXT_RUN:Optional[datetime] = None
+NEXT_RUN:Optional[datetime] = datetime.now(tz=TimezoneAware.TIMEZONE)
 
 class CronRunner:
 
@@ -106,8 +103,8 @@ class CronRunner:
             from routers import webhook
             
             # Call run_requests with no server_type to process both Movies and TV
-            run_configs = feed_configs or FEED_CONFIGS
-            LOGGER.info(f"🔄 Starting RSS refresh: {', '.join([rc.config_name for rc in run_configs])}")
+            run_configs = feed_configs or FeedConfig.feeds()  # Use all feeds if none specified
+            LOGGER.info(f"🔄 Starting RSS refresh: {', '.join([rc.feed_name for rc in run_configs])}")
             
             result = await webhook.run_requests(feed_configs=run_configs)
             
@@ -172,7 +169,7 @@ class CronRunner:
         
         while True:
             try:
-                LOGGER.info(f"📁 Feed file(s): {', '.join(str(f.file) for f in self.feed_configs)}")
+                LOGGER.info(f"📁 Database file(s): {', '.join(str(f.file) for f in self.feed_configs)}")
                 need_refresh = []
                 max_file_age = 0
                 for feed_config in self.feed_configs:
@@ -182,7 +179,7 @@ class CronRunner:
                     
                     # If file doesn't exist, run immediately
                     if feed_file_age == float('inf'):
-                        LOGGER.warning("⚠️ Feed file doesn't exist - running immediate refresh")
+                        LOGGER.warning("⚠️ Database file doesn't exist - running immediate refresh")
                         need_refresh.append(feed_config)
                 if need_refresh:
                     await self.refresh_rss(feed_configs=need_refresh)
@@ -220,7 +217,7 @@ class CronRunner:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="RSS Refresh Cron Job")
-    p.add_argument("--feeds", type=str, default=None, help="Comma-separated list of configuration file(s) for filtering and serving torrent feeds (default=config/feed.yaml).")
+    p.add_argument("--feeds", type=str, default=None, help="Comma-separated list of feed names in the config directory (by default, reads all yaml files in /app/config/feeds/*.yaml)")
     p.add_argument("--schedule", default=None, help="Cron schedule: minute hour day month weekday (e.g., '30 * * * *', '0 0 * * FRI')")
     p.add_argument("--daemon", action="store_true", help="Run as a daemon (continuous background process)")
     p.add_argument("--force", action="store_true", help="Force refresh now")
@@ -233,18 +230,14 @@ async def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
     # Get feed file from config
-    feed_missing = []
-    feeds = args.feeds or os.environ.get('FEEDS') or ""
-    for feed_config_path in feeds.split(','):
-        feed_config = FeedConfig(feed_config_path.strip())
-        if not feed_config.path.exists():
-            feed_missing.append(feed_config)
-        FEED_CONFIGS.append(feed_config)
 
     # Set defaults from args
-    FEED_CONFIGS = FEED_CONFIGS or [FeedConfig()]  # Default to feed.yaml if none specified
+    FEED_CONFIGS = FeedConfig.feeds(args.feeds or os.environ.get('FEEDS') or "")
     REFRESH_SCHEDULE = args.schedule or REFRESH_SCHEDULE
     NEXT_RUN = TimezoneAware.get_now()  # Current time for first run
+
+    # Find feeds that have no database
+    feed_missing = [f for f in FEED_CONFIGS if not f.exists]
 
     # Determine whether we need to refresh the feed
     force_msg = HELLO_WORLD

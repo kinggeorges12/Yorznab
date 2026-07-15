@@ -71,66 +71,6 @@ function updateCountdown(countdownElement, targetTime) {
         }
     }
 }
-const data = {
-    name: {
-        _value: "Alice",
-        _valueType: "string",
-        _fieldType: "text",
-        _params: {
-            description: "The user's full name"  // ← Add description here
-        }
-    },
-    age: {
-        _value: 25,
-        _valueType: "number",
-        _fieldType: "number",
-        _params: {
-            description: "Age in years"  // ← Description for age
-        }
-    },
-    email: {
-        _value: "alice@example.com",
-        _valueType: "string",
-        _fieldType: "text",
-        _params: {
-            description: "Email address for notifications"  // ← Hint text
-        }
-    }
-};
-
-function saveYaml(){
-    document.getElementById('save-feed-button').addEventListener('click', function() {
-        const yamlContent = guifier_list['feed.yaml.sample'].getData('yaml');
-        const yamlOutput = document.querySelector('textarea[name="guifier-output"]');
-        yamlOutput.innerHTML = yamlContent;
-    });
-}
-
-function showYaml(name) {
-    name = name || 'feed.yaml.sample';
-    const guifier_div = document.getElementById('guifier')
-    guifier_div.style.display = 'block';
-    guifier_div.innerHTML = '';
-    const textarea = document.querySelector(`textarea.guifier[name="${name}"]`);
-    const yamlJson = textarea.value;
-    // Load yaml from cached Guifier
-    if (guifier_list[textarea.name]) {
-        const yamlJson = guifier_list[textarea.name].getData('yaml');
-    }
-    const params = {
-        rootContainerName: textarea.name,
-        // To select a container element, you can use a selector
-        // such as a hashtag followed by the element's id (similar to CSS selectors).
-        elementSelector: '#guifier',
-        // Here, you need to specify the JSON string.
-        // data: JSON.stringify(data),
-        data: yamlJson,
-        // You should specify the data type (in this case, JSON)
-        // as Guifier supports five data formats: 'json', 'yaml', 'xml', 'toml' and 'js' (javascipt object).
-        dataType: 'json'
-    }
-    guifier_list[textarea.name] = new Guifier(params)
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     const countdownElement = document.getElementById('countdown');
@@ -150,12 +90,4 @@ document.addEventListener('DOMContentLoaded', function() {
         if (statusCheckInterval) clearInterval(statusCheckInterval);
         if (countdownInterval) clearInterval(countdownInterval);
     });
-    
-    // Load YAML
-    for (const button of document.getElementsByClassName('feed-button')) {
-        button.addEventListener('click', function() {
-            const name = this.name;
-            showYaml(name);
-        });
-    }
 });
