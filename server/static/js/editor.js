@@ -14,6 +14,26 @@ class YAMLEditorHelper {
         this.TokenIterator = null;
         this.existingKeys = new Set();
         this.lastContext = null;
+        this.HoverTooltip = null;
+        this.tooltip = null;
+        this.typeEmojis = {
+            'string': '📝',
+            'number': '🔢',
+            'integer': '🔢',
+            'boolean': '✓',
+            'object': '📁',
+            'array': '📋',
+            'null': '⬜'
+        };
+        this.typeLabels = {
+            'string': 'String',
+            'number': 'Number',
+            'integer': 'Integer',
+            'boolean': 'Boolean',
+            'object': 'Object',
+            'array': 'Array',
+            'null': 'Null'
+        };
     }
 
     // ===== INITIALIZATION =====
@@ -36,10 +56,13 @@ class YAMLEditorHelper {
             this.setupUIEventListeners();
             await this.loadFileList();
             this.updateStatusBar();
+            // this.setupHoverTooltip();
+            this.setupFeedLoadListeners();
             
             this.isInitialized = true;
             console.log('✅ YAML Editor Helper initialized successfully');
             this.showReadyState();
+            this.updatePropertyLegend();
         } catch (error) {
             console.error('❌ Failed to initialize editor:', error);
             this.showToast('Failed to initialize editor: ' + error.message, 'error');
@@ -59,6 +82,12 @@ class YAMLEditorHelper {
             console.log('✅ ACE token iterator loaded');
         } catch (e) {
             console.warn('Could not load ACE token iterator:', e);
+        }
+        try {
+            this.HoverTooltip = ace.require("ace/tooltip").HoverTooltip;
+            console.log('✅ ACE hover tooltip loaded');
+        } catch (e) {
+            console.warn('Could not load ACE hover tooltip:', e);
         }
     }
 
@@ -138,7 +167,8 @@ class YAMLEditorHelper {
                     properties: prop.properties ? Object.keys(prop.properties) : [],
                     description: prop.description || '',
                     title: prop.title || key,
-                    parent: path || null
+                    parent: path || null,
+                    additionalProperties: prop.additionalProperties || null
                 };
                 
                 if (prop.type === 'object' || (Array.isArray(prop.type) && prop.type.includes('object'))) {
@@ -152,6 +182,115 @@ class YAMLEditorHelper {
         return hierarchy;
     }
 
+    getTypeInfo(prop) {
+        let type = 'unknown';
+        let typeDesc = '';
+        let isObject = false;
+        let isArray = false;
+        let isString = false;
+        let isNumber = false;
+        let isBoolean = false;
+        let isNull = false;
+        let additionalProperties = null;
+        
+        if (!prop) {
+            return { type: 'unknown', typeDesc: 'Unknown', isObject: false, isArray: false, isString: false, isNumber: false, isBoolean: false, isNull: false, additionalProperties: null };
+        }
+        
+        const propType = prop.type;
+        if (Array.isArray(propType)) {
+            if (propType.includes('object')) isObject = true;
+            if (propType.includes('string')) isString = true;
+            if (propType.includes('number') || propType.includes('integer')) isNumber = true;
+            if (propType.includes('boolean')) isBoolean = true;
+            if (propType.includes('null')) isNull = true;
+            if (propType.includes('array')) isArray = true;
+            type = propType.join('|');
+        } else {
+            if (propType === 'object') isObject = true;
+            else if (propType === 'string') isString = true;
+            else if (propType === 'number' || propType === 'integer') isNumber = true;
+            else if (propType === 'boolean') isBoolean = true;
+            else if (propType === 'array') isArray = true;
+            else if (propType === 'null') isNull = true;
+            type = propType || 'unknown';
+        }
+        
+        if (prop.additionalProperties) {
+            additionalProperties = prop.additionalProperties;
+            if (typeof additionalProperties === 'object' && additionalProperties.type) {
+                if (additionalProperties.type === 'string' || additionalProperties.type.includes('string')) {
+                    typeDesc = 'Map (str→str)';
+                } else if (additionalProperties.type === 'number' || additionalProperties.type === 'integer' || additionalProperties.type.includes('number')) {
+                    typeDesc = 'Map (str→num)';
+                } else if (additionalProperties.type === 'boolean' || additionalProperties.type.includes('boolean')) {
+                    typeDesc = 'Map (str→bool)';
+                } else {
+                    typeDesc = 'Map (str→' + (additionalProperties.type || 'any') + ')';
+                }
+            } else {
+                typeDesc = 'Map (str→any)';
+            }
+        } else if (prop.items) {
+            if (Array.isArray(prop.items)) {
+                typeDesc = 'Array of ' + prop.items.map(i => i.type || 'any').join('|');
+            } else if (prop.items.type) {
+                const itemType = prop.items.type;
+                if (itemType === 'string' || itemType.includes('string')) {
+                    typeDesc = 'Array of strings';
+                } else if (itemType === 'number' || itemType === 'integer' || itemType.includes('number')) {
+                    typeDesc = 'Array of numbers';
+                } else if (itemType === 'boolean' || itemType.includes('boolean')) {
+                    typeDesc = 'Array of booleans';
+                } else if (itemType === 'object' || itemType.includes('object')) {
+                    typeDesc = 'Array of objects';
+                } else {
+                    typeDesc = 'Array of ' + itemType;
+                }
+            }
+            isArray = true;
+        } else if (isObject) {
+            if (prop.properties) {
+                const propCount = Object.keys(prop.properties).length;
+                typeDesc = propCount > 0 ? `Object (${propCount} props)` : 'Object';
+            } else {
+                typeDesc = 'Object';
+            }
+        } else if (isString) {
+            typeDesc = 'String';
+        } else if (isNumber) {
+            typeDesc = 'Number';
+        } else if (isBoolean) {
+            typeDesc = 'Boolean';
+        } else if (isNull) {
+            typeDesc = 'Null';
+        } else {
+            typeDesc = type || 'Property';
+        }
+        
+        return {
+            type: type,
+            typeDesc: typeDesc,
+            isObject: isObject,
+            isArray: isArray,
+            isString: isString,
+            isNumber: isNumber,
+            isBoolean: isBoolean,
+            isNull: isNull,
+            additionalProperties: additionalProperties
+        };
+    }
+
+    getTypeEmoji(typeInfo) {
+        if (typeInfo.isObject) return '📁';
+        if (typeInfo.isArray) return '📋';
+        if (typeInfo.isString) return '📝';
+        if (typeInfo.isNumber) return '🔢';
+        if (typeInfo.isBoolean) return '✓';
+        if (typeInfo.isNull) return '⬜';
+        return '❓';
+    }
+
     buildSuggestions(schema, path = '') {
         const suggestions = [];
         if (!schema || typeof schema !== 'object') return suggestions;
@@ -159,31 +298,33 @@ class YAMLEditorHelper {
         if (schema.properties) {
             Object.keys(schema.properties).forEach(key => {
                 const prop = schema.properties[key];
-                let typeDesc = Array.isArray(prop.type) ? prop.type.join('|') : prop.type;
-                typeDesc = typeDesc || 'property';
+                const typeInfo = this.getTypeInfo(prop);
                 
                 if (key.startsWith('#') || key.startsWith('//') || key.startsWith('/*')) {
                     return;
                 }
                 
+                const emoji = this.getTypeEmoji(typeInfo);
+                const meta = typeInfo.typeDesc || 'Property';
+                
                 suggestions.push({
                     caption: key,
                     value: `${key}: `,
-                    meta: prop.title || typeDesc,
+                    meta: `${emoji} ${meta}`,
                     score: 100,
                     type: 'property',
                     description: prop.description || '',
                     path: path ? `${path}.${key}` : key,
                     parentPath: path || null,
                     depth: path ? path.split('.').length : 0,
-                    isObject: prop.type === 'object' || (Array.isArray(prop.type) && prop.type.includes('object'))
+                    isObject: typeInfo.isObject,
+                    typeInfo: typeInfo,
+                    schema: prop
                 });
                 
-                if (prop.type === 'object' || (Array.isArray(prop.type) && prop.type.includes('object'))) {
-                    if (prop.properties) {
-                        const nestedPath = path ? `${path}.${key}` : key;
-                        suggestions.push(...this.buildSuggestions(prop, nestedPath));
-                    }
+                if (typeInfo.isObject && prop.properties) {
+                    const nestedPath = path ? `${path}.${key}` : key;
+                    suggestions.push(...this.buildSuggestions(prop, nestedPath));
                 }
             });
         }
@@ -230,7 +371,6 @@ class YAMLEditorHelper {
         const currentIndent = currentLine.match(/^\s*/)[0].length;
         const existingKeys = new Set();
         
-        // Scan upward to find all keys at the same indent level
         for (let i = pos.row - 1; i >= 0; i--) {
             const line = session.getLine(i);
             const trimmed = line.trim();
@@ -244,7 +384,6 @@ class YAMLEditorHelper {
                 existingKeys.add(match[1]);
             }
             
-            // Stop if we hit a line with less indent (parent level)
             if (indent < currentIndent) {
                 break;
             }
@@ -259,7 +398,6 @@ class YAMLEditorHelper {
         const currentLine = session.getLine(pos.row);
         const currentIndent = currentLine.match(/^\s*/)[0].length;
         
-        // If we're on an indented line, look for the parent
         if (currentIndent > 0) {
             for (let i = pos.row - 1; i >= 0; i--) {
                 const line = session.getLine(i);
@@ -292,7 +430,6 @@ class YAMLEditorHelper {
         const trimmedLine = currentLine.trim();
         const currentIndent = currentLine.match(/^\s*/)[0].length;
         
-        // Get existing keys at this level
         const existingKeys = this.getExistingKeysAtLevel(pos);
         this.existingKeys = existingKeys;
         
@@ -301,7 +438,6 @@ class YAMLEditorHelper {
         let isOnKeyLine = false;
         let parentContext = null;
         
-        // Check if we're on a line that already has a key
         const keyMatch = trimmedLine.match(/^([a-zA-Z_][a-zA-Z0-9_\-]*)\s*:/);
         if (keyMatch) {
             isOnKeyLine = true;
@@ -311,27 +447,22 @@ class YAMLEditorHelper {
             foundContext = true;
         }
         
-        // If we're not on a key line, try to find the parent
         if (!foundContext) {
-            // Check if this is an indented line (child of something)
             if (currentIndent > 0) {
                 const parent = this.getParentContext(pos);
                 if (parent) {
                     parentContext = parent;
-                    // If the parent is an object, we should show its properties
                     const parentSuggestion = this.allSuggestions.find(s => s.caption === parent.key);
                     if (parentSuggestion && parentSuggestion.isObject) {
                         contextPath = parentSuggestion.path || parent.key;
                         foundContext = true;
                     } else {
-                        // Parent is not an object, treat as root context
                         contextPath = '';
                         foundContext = false;
                     }
                 }
             }
             
-            // If no parent found, check if there's a key on the same line
             if (!foundContext) {
                 const match = currentLine.match(/^([a-zA-Z_][a-zA-Z0-9_\-]*)\s*:/);
                 if (match) {
@@ -344,23 +475,24 @@ class YAMLEditorHelper {
             }
         }
         
-        // Get sibling properties from schema
         let siblingProperties = [];
         let childProperties = [];
+        let valueType = null;
         
         if (foundContext && contextPath) {
             const contextSuggestion = this.allSuggestions.find(s => s.path === contextPath);
             const parentPath = contextSuggestion ? contextSuggestion.parentPath : null;
             
-            // Get child properties (if context is an object)
             if (contextSuggestion && contextSuggestion.isObject) {
                 childProperties = this.allSuggestions.filter(s => 
                     s.parentPath === contextPath &&
                     !existingKeys.has(s.caption)
                 );
+                if (contextSuggestion.typeInfo) {
+                    valueType = contextSuggestion.typeInfo;
+                }
             }
             
-            // Get sibling properties (same parent)
             if (parentPath !== null) {
                 siblingProperties = this.allSuggestions.filter(s => 
                     s.parentPath === parentPath && 
@@ -376,14 +508,11 @@ class YAMLEditorHelper {
             }
         }
         
-        // Determine what to suggest based on cursor position
         let suggestedProperties = [];
         
         if (isOnKeyLine) {
-            // We're on a line with a key - suggest children
             suggestedProperties = childProperties;
         } else if (currentIndent > 0 && !trimmedLine) {
-            // We're on an empty indented line - suggest children of the parent
             if (parentContext) {
                 const parentSuggestion = this.allSuggestions.find(s => s.caption === parentContext.key);
                 if (parentSuggestion && parentSuggestion.isObject) {
@@ -398,20 +527,17 @@ class YAMLEditorHelper {
                     );
                 }
             } else {
-                // No parent context, show root properties
                 suggestedProperties = this.allSuggestions.filter(s => 
                     !s.parentPath &&
                     !existingKeys.has(s.caption)
                 );
             }
         } else if (currentIndent === 0 && !trimmedLine) {
-            // Empty line at root - show root properties
             suggestedProperties = this.allSuggestions.filter(s => 
                 !s.parentPath &&
                 !existingKeys.has(s.caption)
             );
         } else {
-            // Fallback: show context children or siblings
             if (childProperties.length > 0) {
                 suggestedProperties = childProperties;
             } else if (siblingProperties.length > 0) {
@@ -432,7 +558,8 @@ class YAMLEditorHelper {
             suggestedProperties: suggestedProperties,
             childProperties: childProperties,
             siblingProperties: siblingProperties,
-            parentContext: parentContext
+            parentContext: parentContext,
+            valueType: valueType
         };
     }
 
@@ -463,6 +590,162 @@ class YAMLEditorHelper {
         }
         return children;
     }
+
+    // ===== UPDATE PROPERTY LEGEND =====
+    updatePropertyLegend() {
+        const legendEl = document.getElementById('propertyLegend');
+        if (!legendEl) return;
+        
+        const types = [
+            { emoji: '📁', label: 'Object' },
+            { emoji: '📋', label: 'Array' },
+            { emoji: '📝', label: 'String' },
+            { emoji: '🔢', label: 'Number' },
+            { emoji: '✓', label: 'Boolean' },
+            { emoji: '⬜', label: 'Null' },
+            { emoji: '🗺️', label: 'Map (str→str)' },
+            { emoji: '🗺️', label: 'Map (str→num)' }
+        ];
+        
+        let html = '<span style="font-size: 0.9em; opacity: 0.7;">Legend: </span>';
+        types.forEach(t => {
+            html += `<span style="margin: 0 8px; font-size: 0.85em;">${t.emoji} ${t.label}</span>`;
+        });
+        
+        legendEl.innerHTML = html;
+    }
+
+    // ===== SETUP HOVER TOOLTIP =====
+    setupHoverTooltip() {
+        if (!this.HoverTooltip) {
+            console.warn('HoverTooltip not available');
+            return;
+        }
+
+        const self = this;
+        
+        // Create tooltip instance
+        this.tooltip = new this.HoverTooltip(this.editor);
+        
+        // Custom tooltip content provider
+        this.tooltip.setContentProvider(function(editor, pos) {
+            const session = editor.session;
+            const token = session.getTokenAt(pos.row, pos.column);
+            
+            if (!token) return null;
+            
+            // Get the current line and check for YAML key
+            const line = session.getLine(pos.row);
+            const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_\-]*)\s*:/);
+            
+            if (!match) return null;
+            
+            const key = match[1];
+            const suggestion = self.allSuggestions.find(s => s.caption === key);
+            
+            if (!suggestion) return null;
+            
+            // Build tooltip content
+            let content = `<div style="max-width: 400px; padding: 8px;">`;
+            content += `<strong>${suggestion.caption}</strong><br>`;
+            
+            if (suggestion.description) {
+                content += `<span style="color: #888; font-size: 0.9em;">${suggestion.description}</span><br>`;
+            }
+            
+            // Show type info
+            const typeInfo = suggestion.typeInfo;
+            if (typeInfo) {
+                const emoji = self.getTypeEmoji(typeInfo);
+                content += `<span style="font-size: 0.9em;">${emoji} Type: ${typeInfo.typeDesc}</span><br>`;
+            }
+            
+            // Show children if it's an object
+            if (suggestion.isObject) {
+                const children = self.getChildProperties(suggestion.path);
+                if (children.length > 0) {
+                    content += `<br><span style="font-weight: bold;">Children:</span><br>`;
+                    content += `<div style="padding-left: 10px; font-size: 0.9em;">`;
+                    children.slice(0, 10).forEach(child => {
+                        const childEmoji = child.typeInfo ? self.getTypeEmoji(child.typeInfo) : '📄';
+                        content += `<span>${childEmoji} ${child.caption}</span><br>`;
+                    });
+                    if (children.length > 10) {
+                        content += `<span style="color: #888;">... and ${children.length - 10} more</span>`;
+                    }
+                    content += `</div>`;
+                }
+            }
+            
+            // Show parent info
+            if (suggestion.parentPath) {
+                const parent = self.allSuggestions.find(s => s.path === suggestion.parentPath);
+                if (parent) {
+                    content += `<br><span style="font-size: 0.85em; color: #888;">Parent: ${parent.caption}</span>`;
+                }
+            }
+            
+            content += `</div>`;
+            return content;
+        });
+        
+        // Enable tooltip
+        this.tooltip.enable();
+    }
+
+    // ===== SETUP FEED LOAD LISTENERS =====
+    setupFeedLoadListeners() {
+        const feedElements = document.querySelectorAll('.edit-feed');
+        feedElements.forEach(el => {
+            // Add our event listener
+            el.addEventListener('click', (e) => {
+                const feedName = el.getAttribute('name');
+                if (feedName) {
+                    this.loadFeed(feedName);
+                }
+            });
+            // Add cursor pointer
+            el.style.cursor = 'pointer';
+        });
+        console.log(`📡 Added feed load listeners to ${feedElements.length} elements`);
+    }
+
+
+    // ===== LOAD FEED =====
+    loadFeed(feedName) {
+        if (!feedName) {
+            this.showToast('❌ No feed name provided', 'error');
+            return;
+        }
+        
+        console.log(`📂 Loading feed: ${feedName}`);
+        this.showToast(`📂 Loading feed: ${feedName}...`, 'info');
+        
+        // Find the file in the list
+        const fileSelect = document.getElementById('fileSelector');
+        if (fileSelect) {
+            // Check if the feed exists in the list
+            let found = false;
+            for (let i = 0; i < fileSelect.options.length; i++) {
+                if (fileSelect.options[i].value === feedName) {
+                    fileSelect.value = feedName;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (found) {
+                // Call selectFile directly to load the file
+                this.selectFile();
+            } else {
+                // Try loading directly
+                this.loadFileFromServer(feedName);
+            }
+        } else {
+            this.loadFileFromServer(feedName);
+        }
+    }
+
 
     // ===== YAML UTILITIES =====
     yamlDump(obj, indent = 0) {
@@ -637,7 +920,7 @@ class YAMLEditorHelper {
     detectTheme() {
         const url = window.location.hash + window.location.pathname + window.location.search;
         
-        if (url.includes('gh_light') || url.includes('light')) {
+        if (url.includes('light')) {
             return 'github_light_default';
         }
         return 'github_dark';
@@ -662,7 +945,7 @@ class YAMLEditorHelper {
         this.editor.session.setUseSoftTabs(true);
         this.editor.setOptions({
             enableBasicAutocompletion: true,
-            enableSnippets: false,
+            enableSnippets: true,
             enableLiveAutocompletion: true
         });
         
@@ -691,12 +974,7 @@ class YAMLEditorHelper {
         if (!this.editor.completers) {
             this.editor.completers = [];
         }
-        this.editor.completers = [
-            //langTools.snippetCompleter,
-            //langTools.textCompleter,
-            //langTools.keyWordCompleter,
-            this.completer
-        ];
+        this.editor.completers = [this.completer];
     }
 
     handleCompletions(editor, session, pos, prefix, callback) {
@@ -705,40 +983,288 @@ class YAMLEditorHelper {
         const trimmedLine = line.trim();
         const context = this.getCurrentContext(pos);
         const searchPrefix = prefix.toLowerCase();
-        const afterColon = /:\s*$/.test(before) || /:\s+/.test(before);
+        const afterColon = /:\s*$/.test(before) || /:\s+/.test(before) || /:\s*$/.test(trimmedLine);
         
         let suggestions = [];
         
-        // Check if we're after a colon (value context)
-        if (afterColon && prefix.length > 0) {
-            // Value suggestions
+        // Check if we're after a colon or at the start of a value (after space)
+        if (afterColon || (trimmedLine.includes(':') && prefix.length > 0)) {
+            // Get the type info for the current context
+            let typeInfo = context.valueType;
+            if (!typeInfo) {
+                const contextSuggestion = this.allSuggestions.find(s => s.path === context.path);
+                if (contextSuggestion && contextSuggestion.typeInfo) {
+                    typeInfo = contextSuggestion.typeInfo;
+                }
+            }
+            
+            // Add type-specific suggestions
+            if (typeInfo) {
+                if (typeInfo.isBoolean) {
+                    suggestions.push({
+                        caption: 'true',
+                        value: ' true',
+                        meta: '✓ Boolean',
+                        score: 100
+                    });
+                    suggestions.push({
+                        caption: 'false',
+                        value: ' false',
+                        meta: '✓ Boolean',
+                        score: 100
+                    });
+                }
+                if (typeInfo.isNumber || typeInfo.isString) {
+                    if (typeInfo.isNumber) {
+                        suggestions.push({
+                            caption: '0',
+                            value: ' 0',
+                            meta: '🔢 Number',
+                            score: 90
+                        });
+                        suggestions.push({
+                            caption: '0.0',
+                            value: ' 0.0',
+                            meta: '🔢 Float',
+                            score: 90
+                        });
+                    }
+                    if (typeInfo.isString) {
+                        suggestions.push({
+                            caption: '""',
+                            value: ' ""',
+                            meta: '📝 String (empty)',
+                            score: 90
+                        });
+                    }
+                }
+                if (typeInfo.isObject) {
+                    // If object has properties, suggest a template with children
+                    const contextSuggestion = this.allSuggestions.find(s => s.path === context.path);
+                    if (contextSuggestion) {
+                        const children = this.getChildProperties(context.path);
+                        if (children.length > 0) {
+                            // Determine the current indentation level
+                            const currentLine = session.getLine(pos.row);
+                            const currentIndent = currentLine.match(/^\s*/)[0].length;
+                            const indentStr = '  '.repeat(currentIndent / 2 + 1); // Add one level of indentation
+                            
+                            // Build template with proper indentation
+                            let template = '\n';
+                            children.forEach((child) => {
+                                // Determine child type for value hint
+                                let valueHint = '';
+                                if (child.typeInfo) {
+                                    if (child.typeInfo.isString) valueHint = ' ""';
+                                    else if (child.typeInfo.isNumber) valueHint = ' 0';
+                                    else if (child.typeInfo.isBoolean) valueHint = ' false';
+                                    else if (child.typeInfo.isObject) valueHint = ' {}';
+                                    else if (child.typeInfo.isArray) valueHint = ' []';
+                                    else if (child.typeInfo.isNull) valueHint = ' null';
+                                }
+                                template += `${indentStr}${child.caption}:${valueHint}\n`;
+                            });
+                            // Remove trailing newline for cleaner display
+                            template = template.trimEnd();
+                            
+                            suggestions.push({
+                                caption: '📁 Object Template',
+                                value: template,
+                                meta: '📁 Object with ' + children.length + ' props',
+                                score: 85
+                            });
+                        }
+                    }
+                    
+                    // Check for additionalProperties (Map/object with key-value pairs)
+                    if (typeInfo.additionalProperties) {
+                        const addProps = typeInfo.additionalProperties;
+                        if (typeof addProps === 'object' && addProps.type) {
+                            let valueType = addProps.type;
+                            if (Array.isArray(valueType)) {
+                                valueType = valueType.join('|');
+                            }
+                            
+                            // Determine the current indentation level
+                            const currentLine = session.getLine(pos.row);
+                            const currentIndent = currentLine.match(/^\s*/)[0].length;
+                            const indentStr = '  '.repeat(currentIndent / 2 + 1);
+                            
+                            // Suggest a key-value pair template
+                            let template = '\n' + indentStr + 'key: ';
+                            if (valueType === 'string' || valueType.includes('string')) {
+                                template += '""';
+                                suggestions.push({
+                                    caption: '🗺️ Map (str→str)',
+                                    value: template,
+                                    meta: '🗺️ Add string key → string value',
+                                    score: 85
+                                });
+                            } else if (valueType === 'number' || valueType === 'integer' || valueType.includes('number')) {
+                                template += '0';
+                                suggestions.push({
+                                    caption: '🗺️ Map (str→num)',
+                                    value: template,
+                                    meta: '🗺️ Add string key → number value',
+                                    score: 85
+                                });
+                            } else if (valueType === 'boolean' || valueType.includes('boolean')) {
+                                template += 'false';
+                                suggestions.push({
+                                    caption: '🗺️ Map (str→bool)',
+                                    value: template,
+                                    meta: '🗺️ Add string key → boolean value',
+                                    score: 85
+                                });
+                            } else {
+                                template += 'value';
+                                suggestions.push({
+                                    caption: '🗺️ Map (str→any)',
+                                    value: template,
+                                    meta: '🗺️ Add string key → any value',
+                                    score: 85
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (typeInfo.isArray) {
+                    // Array with items based on type
+                    const contextSuggestion = this.allSuggestions.find(s => s.path === context.path);
+                    if (contextSuggestion && contextSuggestion.schema) {
+                        const schema = contextSuggestion.schema;
+                        if (schema.items) {
+                            const itemsType = schema.items;
+                            let itemType = 'any';
+                            let isObjectItem = false;
+                            let isStringItem = false;
+                            let isNumberItem = false;
+                            let isBooleanItem = false;
+                            
+                            if (Array.isArray(itemsType)) {
+                                itemType = itemsType.map(i => i.type || 'any').join('|');
+                            } else if (itemsType.type) {
+                                const type = itemsType.type;
+                                if (Array.isArray(type)) {
+                                    itemType = type.join('|');
+                                    if (type.includes('object')) isObjectItem = true;
+                                    if (type.includes('string')) isStringItem = true;
+                                    if (type.includes('number') || type.includes('integer')) isNumberItem = true;
+                                    if (type.includes('boolean')) isBooleanItem = true;
+                                } else {
+                                    itemType = type;
+                                    if (type === 'object' || type.includes('object')) isObjectItem = true;
+                                    else if (type === 'string' || type.includes('string')) isStringItem = true;
+                                    else if (type === 'number' || type === 'integer' || type.includes('number')) isNumberItem = true;
+                                    else if (type === 'boolean' || type.includes('boolean')) isBooleanItem = true;
+                                }
+                            }
+                            
+                            // Determine the current indentation level
+                            const currentLine = session.getLine(pos.row);
+                            const currentIndent = currentLine.match(/^\s*/)[0].length;
+                            const indentStr = '  '.repeat(currentIndent / 2 + 1);
+                            
+                            // Suggest an array item on the next line with proper indentation
+                            if (isObjectItem) {
+                                // Object item - look for its properties
+                                let template = '\n' + indentStr + '- ';
+                                if (itemsType.properties) {
+                                    const objProps = Object.keys(itemsType.properties);
+                                    if (objProps.length > 0) {
+                                        // Show first property as example
+                                        const firstProp = objProps[0];
+                                        const firstPropSchema = itemsType.properties[firstProp];
+                                        let valueHint = '';
+                                        if (firstPropSchema) {
+                                            const type = firstPropSchema.type;
+                                            if (type === 'string' || (Array.isArray(type) && type.includes('string'))) {
+                                                valueHint = ' ""';
+                                            } else if (type === 'number' || type === 'integer' || (Array.isArray(type) && (type.includes('number') || type.includes('integer')))) {
+                                                valueHint = ' 0';
+                                            } else if (type === 'boolean' || (Array.isArray(type) && type.includes('boolean'))) {
+                                                valueHint = ' false';
+                                            } else if (type === 'object' || (Array.isArray(type) && type.includes('object'))) {
+                                                valueHint = ' {}';
+                                            }
+                                        }
+                                        template += `${firstProp}:${valueHint}`;
+                                        if (objProps.length > 1) {
+                                            template += `  # +${objProps.length - 1} more props`;
+                                        }
+                                    } else {
+                                        template += '"key": 0.0';
+                                    }
+                                } else {
+                                    template += '"key": 0.0';
+                                }
+                                suggestions.push({
+                                    caption: '📋 Object item',
+                                    value: template,
+                                    meta: '📋 Add object item to array',
+                                    score: 85
+                                });
+                            } else if (isStringItem) {
+                                suggestions.push({
+                                    caption: '📋 String item',
+                                    value: '\n' + indentStr + '- ""',
+                                    meta: '📋 Add string item to array',
+                                    score: 85
+                                });
+                            } else if (isNumberItem) {
+                                suggestions.push({
+                                    caption: '📋 Number item',
+                                    value: '\n' + indentStr + '- 0',
+                                    meta: '📋 Add number item to array',
+                                    score: 85
+                                });
+                            } else if (isBooleanItem) {
+                                suggestions.push({
+                                    caption: '📋 Boolean item',
+                                    value: '\n' + indentStr + '- false',
+                                    meta: '📋 Add boolean item to array',
+                                    score: 85
+                                });
+                            } else {
+                                // Generic item
+                                suggestions.push({
+                                    caption: '📋 Array item',
+                                    value: '\n' + indentStr + '- ',
+                                    meta: '📋 Add item to array',
+                                    score: 85
+                                });
+                            }
+                        }
+                    }
+                }
+                if (typeInfo.isNull) {
+                    suggestions.push({
+                        caption: 'null',
+                        value: 'null',
+                        meta: '⬜ Null',
+                        score: -100
+                    });
+                }
+            }
+            
+            // Value suggestions from data
             this.valueSuggestions.forEach(val => {
                 if (String(val).toLowerCase().startsWith(searchPrefix)) {
                     suggestions.push({
                         caption: val,
                         value: val,
-                        meta: 'value',
+                        meta: '📊 Value',
                         score: 80
                     });
                 }
             });
-            
-            // Also suggest boolean values
-            ['true', 'false'].forEach(val => {
-                if (val.startsWith(searchPrefix)) {
-                    suggestions.push({
-                        caption: val,
-                        value: val,
-                        meta: 'boolean',
-                        score: 90
-                    });
-                }
-            });
-        } else {
-            // Property suggestions - use the context's suggested properties
+        }
+        
+        // Property suggestions (when not after colon)
+        if (!afterColon || suggestions.length === 0) {
             const suggestedProps = context.suggestedProperties || [];
             
-            // Add suggestions from context
             suggestedProps.forEach(sug => {
                 const lineContent = line.trim();
                 if (lineContent.includes(sug.caption + ':')) return;
@@ -750,14 +1276,13 @@ class YAMLEditorHelper {
                     suggestions.push({
                         caption: sug.caption,
                         value: sug.value,
-                        meta: sug.isObject ? '📁 ' + (sug.meta || 'object') : '📄 ' + (sug.meta || 'property'),
+                        meta: sug.meta || 'Property',
                         score: score,
                         description: sug.description || ''
                     });
                 }
             });
             
-            // If no suggestions from context, show root properties
             if (suggestions.length === 0) {
                 this.allSuggestions.forEach(sug => {
                     const lineContent = line.trim();
@@ -767,38 +1292,16 @@ class YAMLEditorHelper {
                         const exists = context.existingKeys && context.existingKeys.has(sug.caption);
                         const score = exists ? 50 : 100;
                         
+                        const meta = exists ? '⚠️ ' + sug.meta : sug.meta;
+                        
                         suggestions.push({
                             caption: sug.caption,
                             value: sug.value,
-                            meta: (exists ? '⚠️ ' : '') + (sug.meta || 'property'),
+                            meta: meta || 'Property',
                             score: score,
                             description: sug.description || ''
                         });
                     }
-                });
-            }
-        }
-        
-        // Always add value suggestions as fallback for numbers/booleans
-        if (suggestions.length === 0 && prefix.length > 1) {
-            this.valueSuggestions.forEach(val => {
-                if (String(val).toLowerCase().startsWith(searchPrefix)) {
-                    suggestions.push({
-                        caption: val,
-                        value: val,
-                        meta: 'value',
-                        score: 50
-                    });
-                }
-            });
-            
-            // Add number suggestions
-            if (/^\d*$/.test(prefix)) {
-                suggestions.push({
-                    caption: '0',
-                    value: '0',
-                    meta: 'number',
-                    score: 40
                 });
             }
         }
@@ -832,18 +1335,6 @@ class YAMLEditorHelper {
             bindKey: 'Ctrl-Space',
             exec: () => this.editor.execCommand('startAutocomplete')
         });
-
-        this.editor.commands.addCommand({
-            name: 'find',
-            bindKey: { win: 'Ctrl-F', mac: 'Cmd-F' },
-            exec: () => this.editor.execCommand('find')
-        });
-
-        this.editor.commands.addCommand({
-            name: 'replace',
-            bindKey: { win: 'Ctrl-H', mac: 'Cmd-Option-F' },
-            exec: () => this.editor.execCommand('replace')
-        });
     }
 
     // ===== UI EVENT LISTENERS =====
@@ -864,6 +1355,7 @@ class YAMLEditorHelper {
         window.saveYAML = () => this.saveYAML();
         window.selectFile = () => this.selectFile();
         window.showSuggestions = () => this.showSuggestions();
+        window.loadFeed = (feedName) => this.loadFeed(feedName);
         window.undo = () => this.editor.undo();
         window.redo = () => this.editor.redo();
         window.find = () => this.editor.execCommand('find');
@@ -975,8 +1467,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         themeToggleBtn.addEventListener('click', function() {
             const currentTheme = this.dataset.theme;
             const newTheme = currentTheme && currentTheme.includes('dark') 
-                ? 'github_light_default' 
-                : 'github_dark';
+                ? 'github_dark' 
+                : 'github_light_default';
             editorHelper.changeTheme(newTheme);
         });
     }

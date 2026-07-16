@@ -4,12 +4,11 @@ from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 import re
 
-from fastapi import APIRouter, HTTPException, Request, Response
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import FileResponse
 import httpx
 
 # Import modules
-from server.routers import status
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.web.routers.auth import authenticate

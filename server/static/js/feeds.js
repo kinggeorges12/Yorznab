@@ -71,6 +71,67 @@ function updateCountdown(countdownElement, targetTime) {
         }
     }
 }
+    
+function hideEditor() {
+    const editorContainer = document.getElementById('editor-container');
+    const mainPage = document.getElementById('main-page');
+    editorContainer.style.display = 'none';
+    mainPage.style.display = 'block';
+};
+function showEditor(name) {
+    const editorContainer = document.getElementById('editor-container');
+    const mainPage = document.getElementById('main-page');
+    const editorTitle = document.getElementById('editor-title');
+    editorContainer.style.display = 'block';
+    mainPage.style.display = 'none';
+    editorTitle.innerHTML = name;
+    window.editorHelper.editor.focus();
+};
+
+async function refreshFeed(event, url, iconId) {
+    event.preventDefault();
+    
+    const icon = document.getElementById(iconId);
+    if (!icon) {
+        console.error('Icon element not found:', iconId);
+        return;
+    }
+    
+    const originalText = icon.textContent;
+    
+    // Loading state
+    icon.textContent = '⏳';
+    let dots = 0;
+    const loadingInterval = setInterval(() => {
+        dots = (dots + 1) % 4;
+        icon.textContent = '⏳' + '.'.repeat(dots);
+    }, 500);
+    
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        clearInterval(loadingInterval);
+        icon.textContent = '✅';
+        
+        setTimeout(() => {
+            icon.textContent = originalText;
+        }, 2000);
+        
+    } catch (error) {
+        clearInterval(loadingInterval);
+        icon.textContent = '❌';
+        
+        setTimeout(() => {
+            icon.textContent = originalText;
+        }, 10000);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const countdownElement = document.getElementById('countdown');

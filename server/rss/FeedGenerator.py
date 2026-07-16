@@ -93,8 +93,8 @@ class FeedGenerator:
             r["quality"] = any(q in file_name for q in APP.quality_search) if APP and APP.quality_search else None
             r["favorite"] = r.get("siteUrl") in APP.favorite_sites if APP and APP.favorite_sites else None
             # Size heuristics
-            r["size_required"] = APP.required_mbps.get("lower", 0) <= r.get("file_mbps", 0) <= APP.required_mbps.get("upper", float("inf")) if APP and APP.required_mbps else None
-            r["size_preferred"] = APP.best_mbps.get("lower", 0) <= r.get("file_mbps", 0) <= APP.best_mbps.get("upper", float("inf")) if APP and APP.best_mbps else None
+            r["size_required"] = (APP.required_mbps.lower or 0) <= r.get("file_mbps", 0) <= (APP.required_mbps.upper or float("inf")) if APP and APP.required_mbps else None
+            r["size_preferred"] = (APP.best_mbps.lower or 0) <= r.get("file_mbps", 0) <= (APP.best_mbps.upper or float("inf")) if APP and APP.best_mbps else None
             # Categories: [('WEB-DL', 0), ('SD', 3.33), ('HD', 5.33), ('UHD', 8)]
             tiers = [(k, v) for d in APP.category for k, v in d.items()] if APP and APP.category else [(self._default_category, 0)]
             r["category"] = self._default_category

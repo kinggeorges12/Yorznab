@@ -51,13 +51,13 @@
         if (theme === 'dark') {
             toggleBtn.innerHTML = `
                 <span class="btn-icon">🌙</span>
-                <span class="btn-label">Light</span>
+                <span class="btn-label">Dark</span>
             `;
             toggleBtn.dataset.theme = 'dark';
         } else {
             toggleBtn.innerHTML = `
                 <span class="btn-icon">☀️</span>
-                <span class="btn-label">Dark</span>
+                <span class="btn-label">Light</span>
             `;
             toggleBtn.dataset.theme = 'light';
         }

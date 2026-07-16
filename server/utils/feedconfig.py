@@ -41,7 +41,7 @@ class FilterRange:
 class FilterApp:
     category: Optional[list[dict[str, Optional[float]]]] = field(default_factory=list)
     weights: Optional[FilterWeights] = field(default_factory=FilterWeights)
-    unknown_runtime: Optional[int] = None
+    unknown_runtime: Optional[float] = None
     quality_search: Optional[list[str]] = field(default_factory=list)
     favorite_sites: Optional[list[str]] = field(default_factory=list)
     required_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
@@ -113,10 +113,10 @@ class FeedConfig:
             os.makedirs(os.path.dirname(config_path), exist_ok=True)
             LOGGER.debug(f"✅ Created new feed configuration: {config_path}")
         else:
-            LOGGER.warning(f"⚠️ Feed configuration '{self.feed_name}' already exists: {config_path}")
+            LOGGER.warning(f"📦 Feed configuration '{self.feed_name}' already exists: {config_path}")
             new_config_path = os.path.join(f"{config_path}-{TimezoneAware('%Y-%m-%d_%H-%M-%S')}.bak")
             os.rename(config_path, new_config_path)
-            LOGGER.warning(f"⚠️ Moved existing configuration '{self.feed_name}' to: {new_config_path}")
+            LOGGER.warning(f"📦 Moved existing configuration '{self.feed_name}' to: {new_config_path}")
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(yaml_content)
 
@@ -124,9 +124,7 @@ class FeedConfig:
     def feeds(cls, values: str=None) -> List[FeedConfig]:
         if values is None:
             feed_config_pattern = ConfigFile(os.path.join(cls._feed_config_folder, "*.yaml"))
-            print(f"Searching for feed configuration files in: {feed_config_pattern.path}")
             feed_files = glob(str(feed_config_pattern.path.as_posix()))
-            print(f"Found feed configuration files: {feed_files}")
             for feed_file in feed_files:
                 feed_name = Path(feed_file).stem
                 cls(feed_name)

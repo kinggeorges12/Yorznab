@@ -1,7 +1,6 @@
-from dataclasses import asdict
 import json
 
-from fastapi import APIRouter, Body, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
 import yaml
 
@@ -53,17 +52,26 @@ async def feeds(request: Request):
 
     # Load each feeds config
     api_key = KeyStore.get_key('API_KEY')
+    webhook_key = KeyStore.get_key('WEBHOOK_KEY')
     feed_configs = CronRunner().feed_configs
     feed_info = ""
     for feed_config in feed_configs:
         feed_info += f'''
             <div class="info-item">
-                <button type="button" class="feed-button" name="{feed_config.feed_name}" onclick="loadFeed(this.name)">✏️{feed_config.feed_name}</button>
-                <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=movie" target="_blank">
+                <span class="info-value edit-feed" name="{feed_config.feed_name}" title="Edit Feed" onclick="showEditor('{feed_config.feed_name}')">✏️
+                    <span class="info-label">{feed_config.feed_name}</span>
+                </span>
+                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=caps" target="_blank">
+                    <span class="info-value" title="Capabilities">⚙️</span>
+                </a>
+                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=movie" target="_blank">
                     <span class="info-value" title="Movie Search">🎬</span>
                 </a>
-                <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=tvsearch" target="_blank">
+                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=tvsearch" target="_blank">
                     <span class="info-value" title="TV Search">📺</span>
+                </a>
+                <a href="#" onclick="refreshFeed(event, '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
+                    <span class="info-value" id="refresh-icon-{feed_config.feed_name}" title="Refresh Feed">🔄</span>
                 </a>
             </div>'''
 
@@ -72,37 +80,43 @@ async def feeds(request: Request):
             {navigation(f'{RouteHandler.LOGIN}/feed')}
             <h1>{TITLE} 📻 Feeds</h1>
             
-            <div class="text-container">
-                <h2 class="status-container">
-                    <span class="status-dot" id="status-dot"></span>
-                    Cron Status: <span id="status-label">⏳ Loading...</span>
-                </h2>
-                <div class="info-item">
-                    <span class="info-label">Refresh starts in:</span>
-                    <span class="info-value" id="countdown" data-status="{RouteHandler.STATUS}" data-target="{target_timestamp}" title="Refresh starts in">
-                        <span class="hours">{hours:02d}</span>
-                        <span class="separator">:</span>
-                        <span class="minutes">{minutes:02d}</span>
-                        <span class="separator">:</span>
-                        <span class="seconds">{seconds:02d}</span>
-                    </span>
+            <div id="main-page">
+                <div class="text-container">
+                    <h2 class="status-container">
+                        <span class="status-dot" id="status-dot"></span>
+                        Cron Status: <span id="status-label">⏳ Loading...</span>
+                    </h2>
+                    <div class="info-item">
+                        <span class="info-label">Refresh starts in:</span>
+                        <span class="info-value" id="countdown" data-status="{RouteHandler.STATUS}" data-target="{target_timestamp}" title="Refresh starts in">
+                            <span class="hours">{hours:02d}</span>
+                            <span class="separator">:</span>
+                            <span class="minutes">{minutes:02d}</span>
+                            <span class="separator">:</span>
+                            <span class="seconds">{seconds:02d}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Scheduled:</span>
+                        <span class="info-value" title="Scheduled">{refresh_time_str}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Server time:</span>
+                        <span class="info-value" title="Server time">{server_time_str}</span>
+                    </div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Scheduled:</span>
-                    <span class="info-value" title="Scheduled">{refresh_time_str}</span>
+                <div class="text-container">
+                    <h2>API Links</h2>
+                    {feed_info}
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Server time:</span>
-                    <span class="info-value" title="Server time">{server_time_str}</span>
-                </div>
-            </div>
-            <div class="text-container">
-                <h2>API Links</h2>
-                {feed_info}
             </div>
 
             <!-- Ace Editor container -->
-            <div id="editor-container" class="yaml-editor-wrapper" data-schema="{RouteHandler.LOGIN}/feeds/schema" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
+            <div id="editor-container" style="display: none;" class="yaml-editor-wrapper" data-schema="{RouteHandler.LOGIN}/feeds/schema" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
+                <div id="editor-header">
+                    <h2>☁️ YAML Editor: <span id="editor-title"></span></h2>
+                    <button id="close-editor" class="editor-btn-back" type="button" onclick="hideEditor()">❌ Close</button>
+                </div>
                 <!-- Toolbar -->
                 <div class="yaml-toolbar">
                     <div class="group">
@@ -120,8 +134,8 @@ async def feeds(request: Request):
                             onchange="changeFontSize(this.value)">
                         <button onclick="undo()">↩</button>
                         <button onclick="redo()">↪</button>
-                        <button onclick="editor.execCommand('find')">🔍</button>
-                        <button onclick="editor.execCommand('replace')">🔃</button>
+                        <button onclick="window.find()">🔍</button>
+                        <button onclick="window.replace()">🔃</button>
                         <button onclick="showSuggestions()">💡 Suggest</button>
                         <button onclick="toggleWrap()" id="wrapBtn">🔠 Wrap</button>
                     </div>
@@ -139,7 +153,7 @@ async def feeds(request: Request):
                         <span>Col: <span class="value" id="cursorCol">1</span></span>
                         <span>Sel: <span class="value" id="selectedChars">0</span></span>
                     </div>
-                    <div class="center">
+                    <div class="center" style="display: none;">
                         <span id="propertyLegend"></span>
                     </div>
                     <div class="right">
@@ -147,10 +161,9 @@ async def feeds(request: Request):
                         <span id="currentFileDisplay"></span>
                     </div>
                 </div>
+                <!-- Toast -->
+                <div id="toast" class="yaml-toast"></div>
             </div>
-
-            <!-- Toast -->
-            <div id="toast" class="yaml-toast"></div>
         </div>'''
     
     return Response(content=page_template(title="Feeds", content=content, token=token, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")

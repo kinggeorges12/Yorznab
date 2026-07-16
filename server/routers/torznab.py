@@ -9,6 +9,7 @@ import re
 
 # Import local modules
 from server.routers.handler import RouteHandler
+from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
 from utils.settings import AppSettings
 from utils.keystore import KeyStore
@@ -18,6 +19,7 @@ router = APIRouter()
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
 NS = {"torznab": "http://torznab.com/schemas/2015/feed"}
+LOGGER = CustomLogger(name="torznab")
 
 # Set default categories
 CATEGORIES = [
@@ -208,6 +210,7 @@ def torznab_api(
 
     # Load torrents JSON after checking API key
     feed_config = FeedConfig.feed(feed)
+    LOGGER.debug(f"Loaded feed config for '{feed}': {feed_config}")
     torrents = None
     if feed_config:
         torrents = feed_config.read()

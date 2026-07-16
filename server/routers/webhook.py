@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Request, HTTPException, Header, Query
+from fastapi import APIRouter, Request, HTTPException, Header, Query, status
 from fastapi.responses import JSONResponse
 import asyncio
 
@@ -54,55 +54,45 @@ async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type
     except Exception as e:
         LOGGER.error(f"Failed to execute requests script: {e}", exc_info=True)
         return 1
-
+    
 # Manual run from the web browser
 @router.get(RouteHandler.WEBHOOK)
 async def webhook_get(
-    server: str = Query(None, description="Server name to process (Radarr or Sonarr)"),
-    id: str = Query(None, description="External ID for the wanted video (TMDB/TVDB ID)")
+    feed: str,
+    apikey: str = Query(None, description="API key from config file"),
 ):
-    """Run the requests.py script to search for torrents and write them to the database file"""
-    result = await run_requests(server_type=ArrType(server), external_id=id)
+    # API key check
+    if apikey != KeyStore.get_key("WEBHOOK_KEY"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
     
-    if result == 0:
-        message = "Requests script executed successfully"
-        if server:
-            message += f" for {server}"
-        if id is not None:
-            message += f" with external ID {id}"
-        
-        return JSONResponse(
-            content={
-                "status": "success", 
-                "message": message
-            }, 
-            status_code=200
-        )
-    else:
-        return JSONResponse(
-            content={
-                "status": "error", 
-                "message": "Requests script failed",
-                "exit_code": result
-            }, 
-            status_code=500
-        )
+    try:
+        feed_config = FeedConfig(feed_name=feed)
+        result = await run_requests(feed_configs=[feed_config])
+        if result == 0:
+            LOGGER.info(f"Successfully processed '{feed_config.feed_name}' feed: {feed_config.file}")
+        else:
+            raise
+    except Exception as e:
+        LOGGER.error(f"Error processing '{feed_config.feed_name}' feed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error processing '{feed_config.feed_name}' feed")
+    return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_200_OK)
+
 
 # Runs from the Jellyseerr webhook
 @router.post(RouteHandler.WEBHOOK)
 async def webhook(request: Request, authorization: str = Header(None)):
     # Check header exists
     if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Authorization header")
     # Expect format: "<API_KEY>"
     elif authorization != KeyStore.get_key("WEBHOOK_KEY"):
-        raise HTTPException(status_code=403, detail="Invalid API key")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
 
     # Parse JSON payload
     try:
         payload = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
 
     # Handle MEDIA_AUTO_APPROVED and MEDIA_APPROVED notifications
     if payload.get("notification_type") in ["MEDIA_AUTO_APPROVED", "MEDIA_APPROVED"] and payload.get("media"):
@@ -144,11 +134,11 @@ async def webhook(request: Request, authorization: str = Header(None)):
         
         # Start background task
         asyncio.create_task(process_request())
-        return JSONResponse(content={"status": "ok"}, status_code=202) # 202 Accepted for async processing
+        return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_202_ACCEPTED) # 202 Accepted for async processing
         
     else:
         LOGGER.info(f"Webhook received with no handler: {payload}")
-        return JSONResponse(content={"status": "ok"}, status_code=200)
+        return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_200_OK)
 
 
 # Example payloads from Jellyseerr
