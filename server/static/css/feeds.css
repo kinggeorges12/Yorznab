@@ -1,8 +1,10 @@
 /* ===== EDITOR.CSS ===== */
 .yaml-editor-wrapper {
-    border: 1px solid #30363d;
-    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     overflow: hidden;
+    background: var(--container-bg);
+    transition: all .3s ease;
 }
 
 .yaml-toolbar {
@@ -11,8 +13,8 @@
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
 }
 
 .yaml-toolbar .group {
@@ -20,7 +22,7 @@
     gap: 3px;
     align-items: center;
     padding: 0 6px;
-    border-right: 1px solid #30363d;
+    border-right: 1px solid var(--border-light);
 }
 
 .yaml-toolbar .group:last-child {
@@ -30,58 +32,70 @@
 .yaml-toolbar button {
     padding: 4px 10px;
     background: transparent;
-    color: #c9d1d9;
     border: 1px solid transparent;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    transition: all 0.15s;
+    transition: all .3s ease;
     white-space: nowrap;
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
 .yaml-toolbar button:hover {
-    background: #30363d;
-    border-color: #484f58;
+    border-color: var(--border-color);
+    background: var(--key-hover);
+    transform: translateY(-1px);
+}
+
+.yaml-toolbar button:active {
+    transform: translateY(0);
 }
 
 .yaml-toolbar select {
     padding: 3px 6px;
-    background: #0d1117;
-    color: #c9d1d9;
-    border: 1px solid #30363d;
+    border: 1px solid var(--input-border);
     border-radius: 4px;
     font-size: 12px;
     outline: none;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: all .3s ease;
 }
 
 .yaml-toolbar select:focus {
-    border-color: #388bfd;
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 3px rgba(34,197,94,.15);
 }
 
 .yaml-toolbar label {
-    color: #8b949e;
     font-size: 11px;
     margin-right: 3px;
+    color: var(--text-secondary);
+    font-weight: 600;
 }
 
 .yaml-toolbar input[type="number"] {
     padding: 3px 4px;
-    background: #0d1117;
-    color: #c9d1d9;
-    border: 1px solid #30363d;
+    border: 1px solid var(--input-border);
     border-radius: 4px;
     font-size: 12px;
     outline: none;
     width: 45px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: all .3s ease;
 }
 
 .yaml-toolbar input[type="number"]:focus {
-    border-color: #388bfd;
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 3px rgba(34,197,94,.15);
 }
 
 .yaml-editor-area {
     position: relative;
     height: 500px;
+    background: var(--bg-primary);
 }
 
 #editor {
@@ -96,11 +110,11 @@
     display: flex;
     justify-content: space-between;
     padding: 4px 12px;
-    background: #161b22;
-    border-top: 1px solid #30363d;
-    color: #8b949e;
+    border-top: 1px solid var(--border-color);
     font-size: 11px;
     font-family: 'DejaVuSansMonoBook', monospace;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
 }
 
 .yaml-statusbar .left {
@@ -114,8 +128,8 @@
 }
 
 .yaml-statusbar .value {
-    color: #c9d1d9;
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .yaml-toast {
@@ -123,16 +137,17 @@
     bottom: 20px;
     right: 20px;
     padding: 10px 20px;
-    background: #21262d;
-    color: #c9d1d9;
-    border-radius: 6px;
-    border: 1px solid #30363d;
+    background: var(--container-bg);
+    border-radius: 8px;
+    border: 1px solid var(--container-border);
     font-size: 13px;
     opacity: 0;
     transform: translateY(10px);
-    transition: all 0.3s ease;
+    transition: all .3s ease;
     pointer-events: none;
     z-index: 9999;
+    color: var(--text-primary);
+    box-shadow: 0 20px 60px var(--container-shadow);
 }
 
 .yaml-toast.show {
@@ -140,26 +155,101 @@
     transform: translateY(0);
 }
 
-.yaml-toast.success { border-left: 3px solid #3fb950; }
-.yaml-toast.error { border-left: 3px solid #f85149; }
+.yaml-toast.success {
+    border-left: 3px solid var(--border-success);
+}
 
-@media (max-width: 768px) {
-    .yaml-toolbar .group {
-        border-right: none;
-        padding: 3px;
-    }
-    .yaml-toolbar button {
-        font-size: 11px;
-        padding: 3px 7px;
-    }
-    .yaml-statusbar {
-        font-size: 10px;
-    }
-    .yaml-statusbar .left,
-    .yaml-statusbar .right {
-        gap: 10px;
-    }
+.yaml-toast.error {
+    border-left: 3px solid var(--border-error);
+}
+
+/* Responsive adjustments */
+@media(max-width:480px) {
     .yaml-editor-area {
         height: 350px;
+    }
+    
+    .yaml-toolbar {
+        padding: 4px 8px;
+        gap: 3px;
+    }
+    
+    .yaml-toolbar .group {
+        padding: 0 4px;
+    }
+    
+    .yaml-toolbar button {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+    
+    .yaml-toolbar select,
+    .yaml-toolbar input[type="number"] {
+        font-size: 11px;
+        padding: 2px 4px;
+    }
+    
+    .yaml-statusbar {
+        font-size: 10px;
+        padding: 3px 8px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .yaml-statusbar .left,
+    .yaml-statusbar .right {
+        gap: 8px;
+    }
+}
+
+@media(max-width:360px) {
+    .yaml-editor-area {
+        height: 300px;
+    }
+    
+    .yaml-toolbar {
+        padding: 3px 6px;
+        gap: 2px;
+    }
+    
+    .yaml-toolbar .group {
+        padding: 0 3px;
+    }
+    
+    .yaml-toolbar button {
+        padding: 2px 5px;
+        font-size: 10px;
+    }
+    
+    .yaml-toolbar select,
+    .yaml-toolbar input[type="number"] {
+        font-size: 10px;
+        padding: 2px 3px;
+        width: 35px;
+    }
+    
+    .yaml-statusbar {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+    
+    .yaml-statusbar .left,
+    .yaml-statusbar .right {
+        gap: 4px;
+    }
+}
+
+@media(max-width:320px) {
+    .yaml-editor-area {
+        height: 250px;
+    }
+    
+    .yaml-toolbar .group {
+        border-right: none;
+        padding: 0 2px;
+    }
+    
+    .yaml-toolbar label {
+        font-size: 9px;
     }
 }

@@ -138,7 +138,7 @@ class CronRunner:
         """
         
         if base_time is None:
-            base_time = TimezoneAware.get_now()
+            base_time = TimezoneAware.now()
         
         # Validate and create cron iterator
         if not croniter.is_valid(schedule):
@@ -187,7 +187,7 @@ class CronRunner:
                     continue
                 
                 # Calculate the file's modification time from its age
-                now = TimezoneAware.get_now()
+                now = TimezoneAware.now()
                 file_mtime = now - timedelta(seconds=max_file_age)
 
                 # Calculate next run time based on when the file was last modified
@@ -231,10 +231,10 @@ async def main(argv: list[str] | None = None) -> int:
 
     # Get feed file from config
 
-    # Set defaults from args
-    FEED_CONFIGS = FeedConfig.feeds(args.feeds or os.environ.get('FEEDS') or "")
+    # Set defaults from args, or fetches all feeds
+    FEED_CONFIGS = FeedConfig.feeds(args.feeds or os.environ.get('FEEDS') or None)
     REFRESH_SCHEDULE = args.schedule or REFRESH_SCHEDULE
-    NEXT_RUN = TimezoneAware.get_now()  # Current time for first run
+    NEXT_RUN = TimezoneAware.now()  # Current time for first run
 
     # Find feeds that have no database
     feed_missing = [f for f in FEED_CONFIGS if not f.exists]
@@ -246,7 +246,7 @@ async def main(argv: list[str] | None = None) -> int:
     
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
     if (FEED_CONFIGS):
-        LOGGER.info(f"🔎 Feed config(s): {', '.join(str(f.config_path) for f in FEED_CONFIGS)}")
+        LOGGER.info(f"🔎 Feed config(s): {', '.join(str(f.feed_name) for f in FEED_CONFIGS)}")
     LOGGER.info(f"⚡ Run now: {force_msg or 'Nope'}")
     if (DOWNLOAD):
         LOGGER.info(f"📥 Download top result: {DOWNLOAD}")

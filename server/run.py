@@ -45,7 +45,7 @@ app.mount(RouteHandler.STATIC, StaticFiles(directory=RouteHandler.STATIC_DIR), n
 # Favicon
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse(RouteHandler.get_static("favicon.ico"))
+    return FileResponse(RouteHandler.get_static_dir("favicon.ico"))
 
 # Default route - redirects root to /login
 @app.get("/")

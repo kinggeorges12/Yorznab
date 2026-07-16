@@ -1,4 +1,5 @@
 import os
+from pathlib import PurePosixPath
 from threading import Lock
 import psutil
 
@@ -33,7 +34,12 @@ class RouteHandlerFactory:
             self.STATIC_DIR = os.path.join(psutil.Process().cwd(), "static")
             self._initialized = True
 
-    def get_static(self, file: str = None) -> str:
+    def get_static_url(self, file: str = None) -> str:
+        if file:
+            return PurePosixPath(self.STATIC, file)
+        return self.STATIC
+
+    def get_static_dir(self, file: str = None) -> str:
         if file:
             return os.path.join(self.STATIC_DIR, file)
         return self.STATIC_DIR

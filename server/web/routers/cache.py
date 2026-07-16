@@ -36,7 +36,7 @@ async def get_ace_file(file_path: str):
         media_type = "text/javascript",
         content = download_and_cache(
             f"{ace_download_path}/{file_path}",
-            str(local_path / safe_path),
+            PurePosixPath(local_path, safe_path),
         )
     )
 
@@ -57,8 +57,8 @@ async def get_font_file(file_path: str):
             f"{font_download_path}",
             local_path,
         )
-    fonts_css = re.sub(r"(src: url\(')/assets/fonts/([^']+'\))", f"\\1{RouteHandler.STATIC}/cache/fonts/\\2", fonts_css)
-    with open(RouteHandler.get_static(local_path), 'w') as f:
+    fonts_css = re.sub(r"(src: url\(')/assets/fonts/([^']+'\))", f"\\1{RouteHandler.get_static_url('cache/fonts')}/\\2", fonts_css)
+    with open(RouteHandler.get_static_dir(local_path), 'w') as f:
         f.write(fonts_css)
 
     return Response(
@@ -86,7 +86,7 @@ async def get_font_file(file_path: str):
     )
 
     return FileResponse(
-        path=RouteHandler.get_static(local_path),
+        path=RouteHandler.get_static_dir(local_path),
         media_type='application/font-sfnt'
     )
 
@@ -108,7 +108,7 @@ def download_and_cache(url, file, read_mode='r', cache_duration_hours=None) -> b
     """
     Download a file and cache it locally
     """
-    static_file = RouteHandler.get_static(file)
+    static_file = RouteHandler.get_static_dir(file)
     cache_file = Path(static_file)
     LOGGER.debug(f"Checking cache for file: {cache_file}")
     # Check if cache exists and is fresh

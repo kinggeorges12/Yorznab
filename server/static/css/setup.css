@@ -93,7 +93,7 @@
 }
 
 .terminal-line {
-    font-size: clamp(13px, 1.9vw, 13px);
+    font-size: clamp(12px, 1.0vw, 12px);
     padding: 2px 0;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -429,7 +429,7 @@ button.active:hover {
     
     .terminal-line {
         line-height: 1.0;
-        font-size: clamp(8px, 1.7vw, 13px);
+        font-size: calc(100cqi/65);
     }
     
     .terminal-output {
@@ -530,7 +530,7 @@ button.active:hover {
     
     .terminal-line {
         line-height: 0.8;
-        font-size: clamp(6px, 1.5vw, 10px);
+        font-size: calc(100cqi/60);
     }
     
     .terminal-output {
@@ -554,10 +554,10 @@ button.active:hover {
 }
 
 @media (max-width: 360px) {
-    
+    /*
     .terminal-line {
-        font-size: clamp(4px, 1.9vw, 10px);
-    }
+        font-size: clamp(1px, 1.7vw, 6.5px);
+    }*/
 
     .terminal-output {
         min-height: 120px;

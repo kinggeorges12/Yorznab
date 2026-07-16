@@ -30,7 +30,7 @@ def page_template(title: str, content: str, token: str,
         if css_file.startswith(("https://", "http://")):
             load_sources += f'<link rel="stylesheet" type="text/css" href="{css_file}">'
         else:
-            load_sources += f'<link rel="stylesheet" type="text/css" href="{RouteHandler.STATIC}/{css_file}?token={token}" >' if css_file else ''
+            load_sources += f'<link rel="stylesheet" type="text/css" href="{RouteHandler.get_static_url(css_file)}?token={token}" >' if css_file else ''
     for module_file, module_imports in module.items():
         # Module imports should be an array or None for the default
         if module_imports:
@@ -39,22 +39,22 @@ def page_template(title: str, content: str, token: str,
             module_import_string = re.sub(r'^.*/?([^./]+)[^/]*$', r'\1', module_file)  # Remove .min.js extension for default import
         if module_file:
             load_sources += f'''<script type="module">
-            import {module_import_string} from "{RouteHandler.STATIC}/{module_file}?token={token}"
+            import {module_import_string} from "{RouteHandler.get_static_url(module_file)}?token={token}"
             {'; '.join(f"window.{import_name} = {import_name}" for import_name in module_imports)}
         </script>'''
         else:
-            load_sources += f'<script type="module" src="{RouteHandler.STATIC}/{module_file}?token={token}"></script>' if module_file else ''
+            load_sources += f'<script type="module" src="{RouteHandler.get_static_url(module_file)}?token={token}"></script>' if module_file else ''
     for js_file in js:
-        load_sources += f'<script src="{RouteHandler.STATIC}/{js_file}?token={token}"></script>' if js_file else ''
+        load_sources += f'<script src="{RouteHandler.get_static_url(js_file)}?token={token}"></script>' if js_file else ''
 
     return f'''<!DOCTYPE html>
 <html>
     <head>
         <title>{TITLE} {title}</title>
-        <script src="{RouteHandler.STATIC}/js/theme.js?token={token}"></script>
-        <link rel="preload" href="{RouteHandler.STATIC}/css/web.css?token={token}" as="style">
-        <link rel="stylesheet" href="{RouteHandler.STATIC}/css/web.css?token={token}">
-        <script src="{RouteHandler.STATIC}/js/web.js?token={token}"></script>
+        <script src="{RouteHandler.get_static_url('js/theme.js')}?token={token}"></script>
+        <link rel="preload" href="{RouteHandler.get_static_url('css/web.css')}?token={token}" as="style">
+        <link rel="stylesheet" href="{RouteHandler.get_static_url('css/web.css')}?token={token}">
+        <script src="{RouteHandler.get_static_url('js/web.js')}?token={token}"></script>
         {load_sources}
         <meta name="cache-control" content="no-cache, no-store, must-revalidate">
         <meta charset="UTF-8">

@@ -36,12 +36,9 @@ class JSONEditor:
         "favorite_sites": "Favorite sites",
         "required_mbps": "Minimum required Mbps per quality level",
         "best_mbps": "Best Mbps values per quality level",
-        "file": "Optional: Path to the feed source file",
         "tags": "Tag filtering and processing configuration",
         "Movies": "Movie-specific filtering configuration",
         "TV": "TV-specific filtering configuration",
-        "lower": "Lower bound value",
-        "upper": "Upper bound value",
     }
 
     UNION_TYPES = (Union, types.UnionType)

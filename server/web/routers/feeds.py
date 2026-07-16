@@ -1,7 +1,7 @@
 from dataclasses import asdict
 import json
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Body, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
 import yaml
 
@@ -9,12 +9,13 @@ import yaml
 from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
-from server.utils.feedconfig import FeedConfig
+from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JSONEditor
 from server.utils.keystore import KeyStore
 from server.utils.timezoneaware import TimezoneAware
 from server.web.common import TITLE, get_csrf_token, navigation, page_template
 from server.web.routers.auth import authenticate
+from server.web.routers.cache import download_and_cache
 
 LOGGER = CustomLogger(name="feeds")
 
@@ -29,7 +30,7 @@ async def feeds(request: Request):
     
     # Get the current server time
     next_run = CronRunner().next_run
-    base_time = TimezoneAware.get_now()
+    base_time = TimezoneAware.now()
     server_time_str = base_time.strftime('%Y-%m-%d %H:%M:%S')
 
     # Calculate seconds until next refresh
@@ -47,37 +48,23 @@ async def feeds(request: Request):
 
     # Get timestamp for countdown
     target_timestamp = int(next_run.timestamp() * 1000)
-    #json_editor_js = download_and_cache("https://cdn.jsdelivr.net/npm/@json-editor/json-editor@latest/dist/jsoneditor.js", "cache/JsonEditor.js")
-    # ace_js=[download_and_cache("https://cdn.jsdelivr.net/npm/ace-builds@latest/src-min-noconflict/ace.js", "cache/ace/ace.js"),
-    #         download_and_cache("https://cdn.jsdelivr.net/npm/ace-builds@latest/src-min-noconflict/mode-yaml.js", "cache/ace/mode-yaml.js"),
-    #         download_and_cache("https://cdn.jsdelivr.net/npm/ace-builds@latest/src-min-noconflict/worker-yaml.js", "cache/ace/worker-yaml.js"),
-    #         download_and_cache("https://cdn.jsdelivr.net/npm/ace-builds@latest/src-min-noconflict/theme-github_dark.js", "cache/ace/theme-github_dark.js"),
-    #         download_and_cache("https://cdn.jsdelivr.net/npm/ace-builds@latest/src-min-noconflict/theme-github_light_default.js", "cache/ace/theme-github_light_default.js"),]
-    # ace_theme_css = [download_and_cache("https://raw.githubusercontent.com/ajaxorg/ace-builds/refs/heads/master/css/theme/github_dark.css", "cache/ace/theme-github_dark.css")]
-
-    # Get template file
-    feed_template = FeedConfig('myfeed')
-    template_config_editor = JSONEditor(feed_template.config).config_json()
-    template_config_json = json.dumps(asdict(feed_template.config), indent=2)
+    ace_css = "cache/css/ace.min.css"
+    download_and_cache("https://unpkg.com/ace-css/css/ace.min.css", ace_css)
 
     # Load each feeds config
     api_key = KeyStore.get_key('API_KEY')
     feed_configs = CronRunner().feed_configs
     feed_info = ""
     for feed_config in feed_configs:
-        feed_editor = feed_config.config
-        feed_config_editor = JSONEditor(feed_editor).config_json()
-        feed_config_json = json.dumps(asdict(feed_editor), indent=2)
         feed_info += f'''
             <div class="info-item">
-                <button type="button" class="feed-button" name="{feed_config.feed_name}">✏️{feed_config.feed_name}</button>
+                <button type="button" class="feed-button" name="{feed_config.feed_name}" onclick="loadFeed(this.name)">✏️{feed_config.feed_name}</button>
                 <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=movie" target="_blank">
                     <span class="info-value" title="Movie Search">🎬</span>
                 </a>
                 <a href="{RouteHandler.API}/{feed_config.file}?apikey={api_key}&t=tvsearch" target="_blank">
                     <span class="info-value" title="TV Search">📺</span>
                 </a>
-                <textarea name="{feed_config.feed_name}" class="json-data" style="display: none;">{feed_config_editor}</textarea>
             </div>'''
 
     content = f'''
@@ -113,45 +100,30 @@ async def feeds(request: Request):
                 <h2>API Links</h2>
                 {feed_info}
             </div>
-            <button type="button" id="save-feed-button">💾 Save</button>
-            <button type="button" id="new-feed-button" onclick="loadFeed('myfeed')">➕ New</button>
-            <button type="button" id="template-feed-button" onclick="loadFeed('myfeed')">📝 Template</button>
-            <textarea name="myfeed" class="yaml-schema" style="width: 100%; height: 200px; display: block;">{template_config_editor}</textarea>
-            
+
             <!-- Ace Editor container -->
-            <div class="yaml-editor-wrapper" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
+            <div id="editor-container" class="yaml-editor-wrapper" data-schema="{RouteHandler.LOGIN}/feeds/schema" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
                 <!-- Toolbar -->
                 <div class="yaml-toolbar">
                     <div class="group">
+                        <button onclick="newYAML()">➕ New</button>
                         <button onclick="saveYAML()">💾 Save</button>
-                        <button onclick="loadYAML()">📂 Load</button>
-                    </div>
-                    <div class="group">
-                        <button onclick="undo()">↩</button>
-                        <button onclick="redo()">↪</button>
-                    </div>
-                    <div class="group">
-                        <button onclick="showSuggestions()">💡 Suggest</button>
-                        <button onclick="toggleWrap()" id="wrapBtn">📝 Wrap</button>
-                        <button onclick="toggleReadOnly()" id="readonlyBtn">🔒</button>
-                    </div>
-                    <div class="group">
-                        <label>File:</label>
+                        <button onclick="loadYAML()">📝 Template</button>
+                        <label for="fileSelector">📂 File:</label>
                         <select id="fileSelector" onchange="selectFile()">
-                            <!-- Populated from textarea name attributes -->
+                            <!-- Populated from list endpoint -->
                         </select>
                     </div>
                     <div class="group">
-                        <label>Theme:</label>
-                        <select id="themeSelector" onchange="changeTheme(this.value)">
-                            <option value="github_dark">GitHub Dark</option>
-                            <option value="github_light_default">GitHub Light</option>
-                        </select>
-                    </div>
-                    <div class="group">
-                        <label>Size:</label>
+                        <label for="fontSize">Size:</label>
                         <input type="number" id="fontSize" value="13" min="8" max="30" 
                             onchange="changeFontSize(this.value)">
+                        <button onclick="undo()">↩</button>
+                        <button onclick="redo()">↪</button>
+                        <button onclick="editor.execCommand('find')">🔍</button>
+                        <button onclick="editor.execCommand('replace')">🔃</button>
+                        <button onclick="showSuggestions()">💡 Suggest</button>
+                        <button onclick="toggleWrap()" id="wrapBtn">🔠 Wrap</button>
                     </div>
                 </div>
                 
@@ -167,6 +139,9 @@ async def feeds(request: Request):
                         <span>Col: <span class="value" id="cursorCol">1</span></span>
                         <span>Sel: <span class="value" id="selectedChars">0</span></span>
                     </div>
+                    <div class="center">
+                        <span id="propertyLegend"></span>
+                    </div>
                     <div class="right">
                         <span>Lines: <span class="value" id="totalLines">1</span></span>
                         <span id="currentFileDisplay"></span>
@@ -178,13 +153,13 @@ async def feeds(request: Request):
             <div id="toast" class="yaml-toast"></div>
         </div>'''
     
-    return Response(content=page_template(title="Feeds", content=content, token=token, css=["css/feeds.css"], js=["js/feeds.js", "js/feeds-gui.js", 'cache/ace/ace.js']), media_type="text/html")
+    return Response(content=page_template(title="Feeds", content=content, token=token, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")
 
 
 # ===== YAML FILES ENDPOINT =====
 
 @router.post("/feeds/save/{feedname:str}")
-async def save_yaml(feedname: str, request: str):
+async def save_yaml(feedname: str, request: Request):
     """
     Save YAML content to a file - returns plain text response
     """
@@ -192,9 +167,16 @@ async def save_yaml(feedname: str, request: str):
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
     try:
         # Save yaml
+        body_content = await request.body()
+
+        # Try to load the feed config
         feed_config = FeedConfig(feedname)
-        feed_config.load(asdict(request.body())) # FeedFilter object
-        feed_config.save()
+        try:
+            yaml_content = yaml.safe_load(body_content)  # Validate YAML
+            feed_config.load(yaml_content)  # Load into config object
+        except yaml.YAMLError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid YAML content: {str(e)}")
+        feed_config.save(body_content.decode('utf-8'))
         
         # Return success message
         return Response(
@@ -205,7 +187,22 @@ async def save_yaml(feedname: str, request: str):
         
     except Exception as e:
         LOGGER.error(f"Error saving file: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error saving file: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save yaml for feed: {feedname}")
+
+@router.get("/feeds/schema")
+async def load_schema(request: Request):
+    """
+    Load the JSON schema for the feed configuration editor - returns JSON
+    """
+    if not authenticate(request):
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+    # Get blank config schema
+    json_editor = JSONEditor(FeedFilter())
+    json_schema = json.dumps(json_editor.to_schema())
+    return Response(
+        content=json_schema,
+        media_type="application/json"
+    )
 
 @router.get("/feeds/load/{feedname:str}")
 async def load_yaml(request: Request, feedname: str):

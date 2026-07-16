@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 import datetime
+from glob import glob
 import os
 from dataclasses import asdict, dataclass, field
 from dacite import from_dict
@@ -17,6 +18,7 @@ import yaml
 from server.utils.config import ConfigFile
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
+from server.utils.timezoneaware import TimezoneAware
 
 # Global logger instance
 LOGGER = CustomLogger(name="feed")
@@ -31,14 +33,19 @@ class FilterWeights:
     quality: Optional[float] = None
 
 @dataclass
+class FilterRange:
+    lower: Optional[float] = None
+    upper: Optional[float] = None
+
+@dataclass
 class FilterApp:
     category: Optional[list[dict[str, Optional[float]]]] = field(default_factory=list)
     weights: Optional[FilterWeights] = field(default_factory=FilterWeights)
     unknown_runtime: Optional[int] = None
     quality_search: Optional[list[str]] = field(default_factory=list)
     favorite_sites: Optional[list[str]] = field(default_factory=list)
-    required_mbps: Optional[dict[str, float]] = field(default_factory=dict)
-    best_mbps: Optional[dict[str, float]] = field(default_factory=dict)
+    required_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
+    best_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
 
 @dataclass
 class FilterTags:
@@ -49,7 +56,6 @@ class FilterTags:
 
 @dataclass
 class FeedFilter:
-    file: Optional[str] = None
     tags: Optional[FilterTags] = field(default_factory=FilterTags)
     Movies: Optional[FilterApp] = field(default_factory=FilterApp)
     TV: Optional[FilterApp] = field(default_factory=FilterApp)
@@ -100,23 +106,30 @@ class FeedConfig:
         self._config = feed_filter
         return feed_filter
 
-    def save(self) -> None:
-        """Save the feed configuration to a file"""
+    def save(self, yaml_content: str) -> None:
+        """Save raw YAML content to a file"""
         config_path = self.config_path # /app/config/feeds/feed.yaml
         if not self.exists:
             os.makedirs(os.path.dirname(config_path), exist_ok=True)
             LOGGER.debug(f"✅ Created new feed configuration: {config_path}")
         else:
             LOGGER.warning(f"⚠️ Feed configuration '{self.feed_name}' already exists: {config_path}")
-            new_config_path = os.path.join(config_path, f"-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.bak")
+            new_config_path = os.path.join(f"{config_path}-{TimezoneAware('%Y-%m-%d_%H-%M-%S')}.bak")
             os.rename(config_path, new_config_path)
             LOGGER.warning(f"⚠️ Moved existing configuration '{self.feed_name}' to: {new_config_path}")
         with open(config_path, "w", encoding="utf-8") as f:
-            yaml.safe_dump(asdict(self._config), f, ensure_ascii=False, indent=2)
+            f.write(yaml_content)
 
     @classmethod
     def feeds(cls, values: str=None) -> List[FeedConfig]:
         if values is None:
+            feed_config_pattern = ConfigFile(os.path.join(cls._feed_config_folder, "*.yaml"))
+            print(f"Searching for feed configuration files in: {feed_config_pattern.path}")
+            feed_files = glob(str(feed_config_pattern.path.as_posix()))
+            print(f"Found feed configuration files: {feed_files}")
+            for feed_file in feed_files:
+                feed_name = Path(feed_file).stem
+                cls(feed_name)
             return list(cls._instances.values())
         feed_arr = (values).split(',')
         feed_cleaned = [feed_name.strip() for feed_name in feed_arr]

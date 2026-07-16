@@ -56,7 +56,7 @@ async def setup(request: Request):
 
     # Build app items html
     def build_apps_html(name: str, url: str, status: str, icon_url: str) -> str:
-        placeholder_image = f'style="background-image: url(\'{RouteHandler.STATIC}/favicon.ico\')"' if url else ''
+        placeholder_image = f'style="background-image: url(\'{RouteHandler.get_static_url("favicon.ico")}\')"' if url else ''
         return f'''<!-- {name} -->
                     <div class="app-item">
                         <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }"{placeholder_image}>
@@ -118,8 +118,9 @@ async def setup(request: Request):
                 </div>
                 <div class="terminal-output" id="terminalOutput">
                     <div class="terminal-line system">⏳ Initializing setup environment...</div>
-                    <div class="terminal-line system">📌 Running:<br>{'<br>'.join(WebSetup.commands())}</div>
-                    <div class="terminal-line system">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                    <div class="terminal-line system">📌 Running:</div>
+                    <div class="terminal-line system">{'</div><div class="terminal-line system">'.join(WebSetup.commands())}</div>
+                    <div class="terminal-line system">{"━"*80}</div>
                 </div>
                 <div class="terminal-input-container">
                     <span class="prompt-symbol">{WebSetup.prompt()}</span>
