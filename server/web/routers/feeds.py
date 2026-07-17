@@ -111,8 +111,8 @@ async def feeds(request: Request):
                 <div class="text-container">
                     <h2>API Links</h2>
                     {feed_info}
-                    <div class="info-item" id="info-item-{feed_config.feed_name}">
-                        <span class="info-value clickable" name="NewFeed" title="New Feed" onclick="newYAML(); showEditor('new_feed');">🆕
+                    <div class="info-item" id="info-item-new_feed">
+                        <span class="info-value clickable" name="new_feed" title="New Feed" onclick="newYAML(); showEditor('new_feed');">🆕
                             <span class="info-label">New Feed</span>
                         </span>
                     </div>
