@@ -202,7 +202,7 @@ The Yorznab dashboard features a configuration page that provides a status of co
 </div>
 
 # Feeds
-The default qBittorrent search engine is built for manual operation. Implement feeds to allow for more automation-friendly search results. By default, the sample is applied when you setup Yorznab. Explore the sample feed and read instructions in [`feed.yaml.sample`](config/feed.yaml.sample).
+Access the Feeds page on the Yorznab dashboard to edit and control your feeds. Implement filters in your feeds to allow for curated search results from qBittorrent. By default, the sample feed is loaded when you setup Yorznab. Try using the YAML Editor to read the configuration hints and customize your feed.
 
 <div align="center">
   <picture>
@@ -212,10 +212,10 @@ The default qBittorrent search engine is built for manual operation. Implement f
   </picture>
 </div>
 
-Note: Turn off the feed filters by removing the folder `config/feeds/`. Torrents will not be filtered for tags or quality.
+To turn off the feed filters: delete the samples from the Feeds page on the Yorznab dashboard, click the New Feed button, and save the blank template.
 
 ## Tags
-Private trackers often have seeding requirements. You can use tags in qBittorrent to separate these from public trackers. Simply setup your TrackerTags section in `config/feed.yaml` for your private trackers.
+The tags section of feed files allow creating multiple Indexers for Radarr and Sonarr to fulfill your seeding requirements on certain trackers. The tags are also helpful for monitoring progress of torrents in qBittorrent from specific trackers, e.g., private trackers and public trackers.
 
 <div align="center">
   <picture>
@@ -225,17 +225,25 @@ Private trackers often have seeding requirements. You can use tags in qBittorren
   </picture>
 </div>
 
+1. Navigate to the Feeds page of the Torznab dashboard.
+2. To open the YAML Editor, click New Feed or Edit one of your existing feeds.
+3. Add the tags settings for the feed. The Indexer will use this feed to find viable torrents, so use each feed like a set of preferences for specific trackers.
+4. Create a new Indexer in Radarr and Sonarr using the feed address, see [Indexer](#indexer).
+
+Here is an example feed for outputting only torrents matching your private trackers. Locate the tracker names in the qBittorrent search or Jackett dashboard.
 ```
 tags:
-  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett"
+  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett".
   remove_jackett_tags: true
-  # Only output torrents matching TrackerTags entries below
-  tracker_tags_only: false
-  # Add tags in qBittorrent to downloads from these trackers
+  # Only save torrents that match any tracker_tags entries.
+  tracker_tags_only: true
+  # Skip saving torrents that match any tracker_tags entries. This setting is inactive when tracker_tags_only is active.
+  tracker_tags_skip: false
+  # Add tags in qBittorrent to downloads from these trackers. Leave blank to apply rules (only or skip) without tagging in qBittorrent.
   tracker_tags:
-    Private Tracker Name 1: privatetracker1.com
-    Private Tracker Name 2: privatetracker2.com
-    Private Tracker Name 3: privatetracker3.com
+    Private Tracker Name 1: qbit-tag1
+    Private Tracker Name 2: qbit-tag2
+    Private Tracker Name 3: 
 ```
 
 ## Multiple Indexers
