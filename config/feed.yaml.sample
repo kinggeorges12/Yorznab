@@ -40,11 +40,7 @@ tags:
 #   best_mbps: Preferred quality (in MB/s).
 
 Movies:
-  category:
-    - "WEB-DL": 
-    - "SD": 3.33
-    - "HD": 5.33
-    - "UHD": 8
+  category: [{WEB-DL: null}, {SD: 3.33}, {HD: 5.33}, {UHD: 8}]
   weights:
     min_score: 5
     seeders_10pct: 7
@@ -53,21 +49,12 @@ Movies:
     seeders_50pct: 2
     quality: 1.17
   unknown_runtime: 100
-  quality_search:
-    - YTS
-    - 1080p
-    - 2160p
-  favorite_sites:
-    - "https://archive.org"
-    - "https://www.publicdomaintorrents.info"
-  required_mbps:
-    # For 90 minute movie, 1.33 to 16 mbps ~ 900MB to 10.8GB
-    lower: 1.33
-    upper: 16
-  best_mbps:
-    # For 90 minute movie, 3.33 to 10 mbps ~ 2.25GB to 6.75GB
-    lower: 3.33
-    upper: 10
+  quality_search: [YTS, 1080p, 2160p]
+  favorite_sites: ["https://archive.org", "https://www.publicdomaintorrents.info"]
+  # For 90 minute movie, 1.33 to 16 mbps ~ 900MB to 10.8GB
+  required_mbps: {lower: 1.33, upper: 16}
+  # For 90 minute movie, 3.33 to 10 mbps ~ 2.25GB to 6.75GB
+  best_mbps: {lower: 3.33, upper: 10}
 
 TV:
   category:

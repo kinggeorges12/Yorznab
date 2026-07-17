@@ -9,7 +9,7 @@ from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig, FeedFilter
-from server.utils.json_editor import JSONEditor
+from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
 from server.utils.timezoneaware import TimezoneAware
 from server.web.common import TITLE, get_csrf_token, navigation, page_template
@@ -28,7 +28,7 @@ async def feeds(request: Request):
     token = get_csrf_token()
     
     # Get the current server time
-    next_run = CronRunner().next_run
+    next_run = CronRunner.next_run()
     base_time = TimezoneAware.now()
     server_time_str = base_time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -53,12 +53,12 @@ async def feeds(request: Request):
     # Load each feeds config
     api_key = KeyStore.get_key('API_KEY')
     webhook_key = KeyStore.get_key('WEBHOOK_KEY')
-    feed_configs = CronRunner().feed_configs
+    feed_configs = FeedConfig.feeds()
     feed_info = ""
     for feed_config in feed_configs:
         feed_info += f'''
-            <div class="info-item">
-                <span class="info-value edit-feed" name="{feed_config.feed_name}" title="Edit Feed" onclick="showEditor('{feed_config.feed_name}')">✏️
+            <div class="info-item" id="info-item-{feed_config.feed_name}">
+                <span class="info-value edit-feed clickable" name="{feed_config.feed_name}" title="Edit Feed" onclick="showEditor('{feed_config.feed_name}')">✏️
                     <span class="info-label">{feed_config.feed_name}</span>
                 </span>
                 <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=caps" target="_blank">
@@ -70,8 +70,11 @@ async def feeds(request: Request):
                 <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=tvsearch" target="_blank">
                     <span class="info-value" title="TV Search">📺</span>
                 </a>
-                <a href="#" onclick="refreshFeed(event, '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
+                <a href="#" onclick="refreshFeed(event, '{feed_config.feed_name}', '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
                     <span class="info-value" id="refresh-icon-{feed_config.feed_name}" title="Refresh Feed">🔄</span>
+                </a>
+                <a href="#" onclick="deleteFeed(event, '{feed_config.feed_name}', '{RouteHandler.LOGIN}/feeds/{feed_config.feed_name}', 'info-item-{feed_config.feed_name}')">
+                    <span class="info-value" title="Delete Feed">🗑️</span>
                 </a>
             </div>'''
 
@@ -108,13 +111,23 @@ async def feeds(request: Request):
                 <div class="text-container">
                     <h2>API Links</h2>
                     {feed_info}
+                    <div class="info-item" id="info-item-{feed_config.feed_name}">
+                        <span class="info-value clickable" name="NewFeed" title="New Feed" onclick="newYAML(); showEditor('new_feed');">🆕
+                            <span class="info-label">New Feed</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
             <!-- Ace Editor container -->
             <div id="editor-container" style="display: none;" class="yaml-editor-wrapper" data-schema="{RouteHandler.LOGIN}/feeds/schema" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
+                <textarea id="feed-yaml-new" style="display: none;">{JsonEditor.get_blank()}</textarea>
+                <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_template()}</textarea>
                 <div id="editor-header">
-                    <h2>☁️ YAML Editor: <span id="editor-title"></span></h2>
+                    <h2>☁️ YAML Editor:
+                        <span id="editor-title" contenteditable="true" spellcheck="false" title="Click to edit filename">feed</span>
+                        <span id="dirty-indicator">*</span>
+                    </h2>
                     <button id="close-editor" class="editor-btn-back" type="button" onclick="hideEditor()">❌ Close</button>
                 </div>
                 <!-- Toolbar -->
@@ -123,7 +136,7 @@ async def feeds(request: Request):
                         <button onclick="newYAML()">➕ New</button>
                         <button onclick="saveYAML()">💾 Save</button>
                         <button onclick="loadYAML()">📝 Template</button>
-                        <label for="fileSelector">📂 File:</label>
+                        <button onclick="reloadYAML()">💫 Reload</button>
                         <select id="fileSelector" onchange="selectFile()">
                             <!-- Populated from list endpoint -->
                         </select>
@@ -182,14 +195,19 @@ async def save_yaml(feedname: str, request: Request):
         # Save yaml
         body_content = await request.body()
 
-        # Try to load the feed config
-        feed_config = FeedConfig(feedname)
+        # Try to save the feed config
         try:
-            yaml_content = yaml.safe_load(body_content)  # Validate YAML
-            feed_config.load(yaml_content)  # Load into config object
+            feed_config = FeedConfig.save(feed_name=feedname, yaml_data=body_content.decode('utf-8'))
+            LOGGER.info(f"💾 Saved feed '{feedname}': {feed_config}")
         except yaml.YAMLError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid YAML content: {str(e)}")
-        feed_config.save(body_content.decode('utf-8'))
+            LOGGER.error(f"❌ Invalid YAML content: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to save invalid YAML content: {str(e)}")
+        except OSError as e:
+            LOGGER.error(f"❌ Cannot save feed config: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"❌ Failed to save feed config: {str(e)}")
+        except Exception as e:
+            LOGGER.error(f"❌ Cannot parse feed config: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse feed config: {str(e)}")
         
         # Return success message
         return Response(
@@ -202,6 +220,37 @@ async def save_yaml(feedname: str, request: Request):
         LOGGER.error(f"Error saving file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save yaml for feed: {feedname}")
 
+@router.delete("/feeds/{feedname}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_feed(feedname: str, request: Request):
+    """
+    Delete a feed by name
+    """
+    # Authentication - return 401 for APIs
+    if not authenticate(request):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    try:
+        LOGGER.info(f"🗑️ Deleting feed '{feedname}': {FeedConfig(feed_name=feedname)}")
+        exists = FeedConfig.delete(feed_name=feedname)
+        if not exists:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Feed '{feedname}' not found"
+            )
+
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        LOGGER.error(f"Error deleting feed {feedname}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete feed: {feedname}"
+        )
+
 @router.get("/feeds/schema")
 async def load_schema(request: Request):
     """
@@ -210,7 +259,7 @@ async def load_schema(request: Request):
     if not authenticate(request):
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
     # Get blank config schema
-    json_editor = JSONEditor(FeedFilter())
+    json_editor = JsonEditor(FeedFilter())
     json_schema = json.dumps(json_editor.to_schema())
     return Response(
         content=json_schema,

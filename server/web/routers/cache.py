@@ -57,7 +57,7 @@ async def get_font_file(file_path: str):
             local_path,
         )
     fonts_css = re.sub(r"(src: url\(')/assets/fonts/([^']+'\))", f"\\1{RouteHandler.get_static_url('cache/fonts')}/\\2", fonts_css)
-    with open(RouteHandler.get_static_dir(local_path), 'w') as f:
+    with open(RouteHandler.get_static_dir(local_path), "w", encoding="utf-8", newline='\n') as f:
         f.write(fonts_css)
 
     return Response(
@@ -103,7 +103,7 @@ def fetch_external_file(external_url: str) -> bytes:
         except httpx.RequestError as e:
             raise HTTPException(status_code=502, detail=f"Error connecting to external server: {e}")
 
-def download_and_cache(url, file, read_mode='r', cache_duration_hours=None) -> bytes:
+def download_and_cache(url, file, read_mode="r", cache_duration_hours=None) -> bytes:
     """
     Download a file and cache it locally
     """
@@ -130,11 +130,11 @@ def download_and_cache(url, file, read_mode='r', cache_duration_hours=None) -> b
         try:
             # Try to parse as JSON
             data = json.loads(content_bytes)
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w", encoding="utf-8", newline='\n') as f:
                 json.dump(data, f, indent=2)
         except (json.JSONDecodeError, UnicodeDecodeError):
             # Save as binary
-            with open(cache_file, 'wb') as f:
+            with open(cache_file, "wb") as f:
                 f.write(content_bytes)
     with open(cache_file, read_mode) as f:
         LOGGER.debug(f"Loading from cache: {cache_file}")

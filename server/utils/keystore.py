@@ -65,7 +65,7 @@ class KeyStore:
         
             # Write to file
             instance._config_file.path.parent.mkdir(parents=True, exist_ok=True)
-            with open(instance._config_file.path, "w", encoding="utf-8") as f:
+            with open(instance._config_file.path, "w", encoding="utf-8", newline='\n') as f:
                 yaml.safe_dump(instance._keys, f, sort_keys=False)
             
             # Mark as initialized since we now have all keys written

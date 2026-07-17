@@ -212,10 +212,19 @@ The default qBittorrent search engine is built for manual operation. Implement f
   </picture>
 </div>
 
-Note: Turn off the feed filters by removing the file in `config/feed.yaml`. Torrents will not be filtered for tags or quality.
+Note: Turn off the feed filters by removing the folder `config/feeds/`. Torrents will not be filtered for tags or quality.
 
 ## Tags
 Private trackers often have seeding requirements. You can use tags in qBittorrent to separate these from public trackers. Simply setup your TrackerTags section in `config/feed.yaml` for your private trackers.
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/YAML_Editor.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/YAML_Editor-2.png">
+    <img src="Screenshots/YAML_Editor-2.png" alt="Yorznab Feed Editor" style="max-width: 600px; height:auto;">
+  </picture>
+</div>
+
 ```
 tags:
   # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett"
@@ -231,6 +240,7 @@ tags:
 
 ## Multiple Indexers
 The Radarr and Sonarr apps allow you to configure specific rules for seeding based on the Indexer. This setup allows for special seeding requirements for private trackers.
+
 1. Create a copy of an existing feed YAML file \(or the [`feed.yaml.sample`](config/feed.yaml.sample) file\) for each tracker seed requirements, e.g., config/PrivateYorznab.yaml.
 2. Open your feed YAML file and add the flag indicating the type of Yorznab feed:
     - Private trackers: `tracker_tags_only: true`

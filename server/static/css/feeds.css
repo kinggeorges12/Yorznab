@@ -1,4 +1,8 @@
 /* ===== FEEDS.CSS ===== */
+.clickable {
+    cursor: pointer;
+}
+
 #editor-header {
     position: relative;
     display: flex;
@@ -7,6 +11,12 @@
     padding: 12px 20px;
     border-bottom: 2px solid #e9ecef;
     min-height: 60px;
+}
+
+#editor-header .dirty-indicator {
+    display: none;
+    color: #ff6b6b;
+    margin-left: 4px;
 }
 
 #editor-header h2 {

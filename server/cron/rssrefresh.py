@@ -43,7 +43,6 @@ LOGGER = CustomLogger(name="cron")
 SETTINGS = AppSettings(filename='yorznab.yaml')
 
 # Load default args
-FEED_CONFIGS:list[FeedConfig] = []
 REFRESH_SCHEDULE:str = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
 DOWNLOAD:bool = os.environ.get('DOWNLOAD','false').lower() not in ['false', 'no'] and bool(os.environ.get('DOWNLOAD'))
 NEXT_RUN:Optional[datetime] = datetime.now(tz=TimezoneAware.TIMEZONE)
@@ -58,52 +57,51 @@ class CronRunner:
     _initialized = False
     _status:str = "Initializing"
 
-    def __new__(cls):
+    def __new__(cls, feed_configs: str, refresh_schedule: str, download: bool, next_run: Optional[datetime]):
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
-        global FEED_CONFIGS, REFRESH_SCHEDULE, DOWNLOAD, NEXT_RUN
+    def __init__(self, feed_configs: str, refresh_schedule: str, download: bool, next_run: Optional[datetime]):
         if not self.__class__._initialized:
-            self._feed_configs:list[FeedConfig] = FEED_CONFIGS
-            self.refresh_schedule:str = REFRESH_SCHEDULE
-            self.download:bool = DOWNLOAD
-            self._next_run:Optional[datetime] = NEXT_RUN
+            self._feed_configs:str = feed_configs
+            self.refresh_schedule:str = refresh_schedule
+            self.download:bool = download
+            self._next_run:Optional[datetime] = next_run
             self.__class__._status = "Started"
             self.__class__._initialized = True
 
     @classmethod
     def status(cls) -> str:
         """Get the current status."""
-        return cls._status
+        return cls._instance._status
 
-    @property
-    def next_run(self) -> Optional[datetime]:
+    @classmethod
+    def next_run(cls) -> Optional[datetime]:
         """Get the next scheduled run time."""
-        return self._next_run
+        return cls._instance._next_run
 
-    @property
-    def feed_configs(self) -> list[FeedConfig]:
+    @classmethod
+    def feed_configs(cls) -> list[FeedConfig]:
         """Get the list of feed configurations."""
-        return self._feed_configs
+        return FeedConfig.feeds(values=cls._instance._feed_configs)
 
-    async def refresh_rss(self, feed_configs: list[FeedConfig] | None = None) -> bool:
+    @classmethod
+    async def refresh_rss(cls, feed_configs: list[FeedConfig] | None = None) -> bool:
         """
         Refresh the RSS feed by calling the webhook run_requests function.
         
         Returns:
             True if refresh was successful, False otherwise
         """
-        global FEED_CONFIGS, REFRESH_SCHEDULE, DOWNLOAD
-        with self.__class__._lock: self.__class__._status = "Running"
+        with cls._instance._lock: cls._instance._status = "Running"
         try:
             # Import the webhook module and call run_requests
             from routers import webhook
             
             # Call run_requests with no server_type to process both Movies and TV
-            run_configs = feed_configs or FeedConfig.feeds()  # Use all feeds if none specified
+            run_configs = feed_configs or cls.feed_configs()  # Use all feeds if none specified
             LOGGER.info(f"🔄 Starting RSS refresh: {', '.join([rc.feed_name for rc in run_configs])}")
             
             result = await webhook.run_requests(feed_configs=run_configs)
@@ -117,7 +115,7 @@ class CronRunner:
         except Exception as e:
             LOGGER.error(f"❌ RSS refresh failed with exception: {e}", exc_info=True)
 
-        with self.__class__._lock: self.__class__._status = "Failure"
+        with cls._instance._lock: cls._instance._status = "Failure"
         return False
 
 
@@ -154,25 +152,25 @@ class CronRunner:
         
         return next_run
 
-
-    async def rss_refresh_cron(self):
+    @classmethod
+    async def rss_refresh_cron(cls):
         """
         Background cron job that runs RSS refresh based on cron-like schedule.
         Gets configuration from settings file.
         """
 
         # Default: every day at random minute/hour
-        schedule = self.refresh_schedule
+        schedule = cls._instance.refresh_schedule
 
         LOGGER.info(f"🚀 RSS Refresh Cron Job started (schedule: {schedule})")
         LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
         
         while True:
             try:
-                LOGGER.info(f"📁 Database file(s): {', '.join(str(f.file) for f in self.feed_configs)}")
+                LOGGER.info(f"📁 Database file(s): {', '.join(str(f.file) for f in cls.feed_configs())}")
                 need_refresh = []
                 max_file_age = 0
-                for feed_config in self.feed_configs:
+                for feed_config in cls.feed_configs():
                     # Check file age in case the cron shut down since last run
                     feed_file_age = feed_config.file_age
                     max_file_age = feed_file_age if feed_file_age > max_file_age else max_file_age
@@ -182,7 +180,7 @@ class CronRunner:
                         LOGGER.warning("⚠️ Database file doesn't exist - running immediate refresh")
                         need_refresh.append(feed_config)
                 if need_refresh:
-                    await self.refresh_rss(feed_configs=need_refresh)
+                    await cls.refresh_rss(feed_configs=need_refresh)
                     # Recheck oldest feed file and continue
                     continue
                 
@@ -191,24 +189,24 @@ class CronRunner:
                 file_mtime = now - timedelta(seconds=max_file_age)
 
                 # Calculate next run time based on when the file was last modified
-                next_run = self.get_next_run_time(schedule, file_mtime)
+                next_run = cls._instance.get_next_run_time(schedule, file_mtime)
                 
                 # Calculate seconds until next run from current time
                 seconds_until_next = (next_run - now).total_seconds()
 
                 # Save next run for front-end
-                self._next_run = next_run
+                cls._instance._next_run = next_run
                 
                 if seconds_until_next > 0:
                     log_time = next_run.strftime('%Y-%m-%d %H:%M:%S %Z')
                     LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {log_time}")
-                    with self.__class__._lock: self.__class__._status =  "Sleeping"
+                    with cls._instance._lock: cls._instance._status =  "Sleeping"
                     await asyncio.sleep(seconds_until_next)
                 else:
                     LOGGER.warning("🔔 Missed an RSS refresh on the schedule - running immediate refresh")
 
                 # Wait for refresh to finish before starting cron timer again
-                await self.refresh_rss()
+                await cls.refresh_rss()
                     
             except Exception as e:
                 LOGGER.error(f"❌ RSS refresh cron job error: {e}", exc_info=True)
@@ -226,18 +224,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 async def main(argv: list[str] | None = None) -> int:
     """Main function for the cron job."""
-    global FEED_CONFIGS, REFRESH_SCHEDULE, DOWNLOAD, NEXT_RUN
+    global REFRESH_SCHEDULE, DOWNLOAD, NEXT_RUN
     args = parse_args(argv)
 
-    # Get feed file from config
-
     # Set defaults from args, or fetches all feeds
-    FEED_CONFIGS = FeedConfig.feeds(args.feeds or os.environ.get('FEEDS') or None)
-    REFRESH_SCHEDULE = args.schedule or REFRESH_SCHEDULE
-    NEXT_RUN = TimezoneAware.now()  # Current time for first run
+    feed_configs = args.feeds or os.environ.get('FEEDS') or None
+    refresh_schedule = args.schedule or REFRESH_SCHEDULE
+    next_run = NEXT_RUN or TimezoneAware.now()  # Current time for first run
+
+    # Initialize the cron runner
+    CronRunner(feed_configs=feed_configs, refresh_schedule=refresh_schedule, download=DOWNLOAD, next_run=next_run)
 
     # Find feeds that have no database
-    feed_missing = [f for f in FEED_CONFIGS if not f.exists]
+    feed_missing = [f for f in CronRunner.feed_configs() if not f.exists]
 
     # Determine whether we need to refresh the feed
     force_msg = HELLO_WORLD
@@ -245,28 +244,25 @@ async def main(argv: list[str] | None = None) -> int:
     force_msg = f"RSS Feed(s) missing: {', '.join(str(f.path) for f in feed_missing)}" if not force_msg and feed_missing else force_msg
     
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
-    if (FEED_CONFIGS):
-        LOGGER.info(f"🔎 Feed config(s): {', '.join(str(f.feed_name) for f in FEED_CONFIGS)}")
+    if (feed_configs):
+        LOGGER.info(f"🔎 Feed config(s): {', '.join(str(f.feed_name) for f in feed_configs)}")
     LOGGER.info(f"⚡ Run now: {force_msg or 'Nope'}")
     if (DOWNLOAD):
         LOGGER.info(f"📥 Download top result: {DOWNLOAD}")
     LOGGER.info(f"🕐 Schedule: {REFRESH_SCHEDULE}")
     LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
-    
-    # Initialize the cron runner
-    cron_runner = CronRunner()
 
     # Force refresh on first run
     if args.force or HELLO_WORLD:
-        success = await cron_runner.refresh_rss()
+        success = await CronRunner.refresh_rss()
     elif feed_missing:
-        success = await cron_runner.refresh_rss(feed_missing)
+        success = await CronRunner.refresh_rss(feed_missing)
 
     if args.daemon:
         # Run as a daemon (continuous background process)
         LOGGER.info("🔄 Running as daemon...")
         try:
-            await cron_runner.rss_refresh_cron()
+            await CronRunner.rss_refresh_cron()
         except KeyboardInterrupt:
             LOGGER.info("🛑 Daemon stopped by user")
             return 0

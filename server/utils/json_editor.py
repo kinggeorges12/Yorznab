@@ -13,33 +13,51 @@ from typing import (
 )
 
 from dacite import from_dict
+import yaml
+
+from server.utils.config import ConfigFile
+from server.utils.feedconfig import FeedFilter
 
 
-class JSONEditor:
+class JsonEditor:
     """Convert dataclasses to JSON Editor compatible format."""
 
     DEFAULT_DESCRIPTIONS = {
-        "remove_jackett_tags": "Remove Jackett-specific tags from results",
-        "tracker_tags_only": "Only use tracker tags, ignore other tags",
-        "tracker_tags_skip": "Skip results that have tracker tags",
-        "tracker_tags": "Custom tracker tag mappings (key: tracker, value: tag)",
-        "min_score": "Minimum score threshold (0-10). Higher = better quality",
-        "seeders_10pct": "Weight multiplier for content with 10% seeders ratio",
-        "seeders_50pct": "Weight multiplier for content with 50% seeders ratio",
-        "size_preferred": "Preferred file size in GB (higher weight = prefer this size)",
-        "favorite": "Weight multiplier for favorite content",
-        "quality": "Quality preference weight (higher = prefer better quality)",
-        "category": "Category filters",
-        "weights": "Weight multipliers for scoring",
-        "unknown_runtime": "Default runtime when unknown (in minutes)",
-        "quality_search": "Quality search terms",
-        "favorite_sites": "Favorite sites",
-        "required_mbps": "Minimum required Mbps per quality level",
-        "best_mbps": "Best Mbps values per quality level",
-        "tags": "Tag filtering and processing configuration",
-        "Movies": "Movie-specific filtering configuration",
-        "TV": "TV-specific filtering configuration",
+        "remove_jackett_tags": "Remove Jackett tags from titles, move to custom field",
+        "tracker_tags_only": "Only save torrents matching tracker_tags entries",
+        "tracker_tags_skip": "Skip torrents matching tracker_tags entries (ignored if tracker_tags_only is active)",
+        "tracker_tags": "Add qBittorrent tags per tracker. Leave blank for rules-only",
+        "min_score": "Minimum score threshold - lower scores are dropped",
+        "seeders_10pct": "Weight bonus when seeders are in top 10%",
+        "seeders_50pct": "Weight bonus when seeders are in top 50%",
+        "size_preferred": "Weight bonus when size is near the average",
+        "favorite": "Weight bonus for favorite content",
+        "quality": "Weight bonus for quality content",
+        "category": "Category filters with mbps per quality level",
+        "weights": "Scoring weight multipliers",
+        "unknown_runtime": "Default runtime (minutes) when unknown in Jellyseerr",
+        "quality_search": "Search terms that trigger quality score",
+        "favorite_sites": "List of favorite sites",
+        "required_mbps": "Mbps range - drops torrents outside this",
+        "best_mbps": "Preferred Mbps range",
+        "tags": "Tag filtering and processing",
+        "Movies": "Movie-specific filter settings",
+        "TV": "TV-specific filter settings",
     }
+
+    @classmethod
+    def get_blank(cls) -> str:
+        blank_filter = FeedFilter()
+        blank_dict = asdict(blank_filter)
+        return yaml.safe_dump(blank_dict, sort_keys=False)
+
+    @classmethod
+    def get_template(cls) -> str:
+        template_content = ''
+        template_file = ConfigFile('feed.yaml.sample')
+        with open(template_file.path, "r") as file:
+            template_content = file.read()
+        return template_content
 
     UNION_TYPES = (Union, types.UnionType)
 

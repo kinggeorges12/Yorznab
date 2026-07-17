@@ -68,7 +68,7 @@ class FeedConfig:
     _default_feed_name = "myfeed"
     _default_feed_folder: Path = Path(os.environ.get("DB_DIR", "database")) # /app/database
     
-    def __new__(cls, feed_name: str=_default_feed_name):  # pylint: disable=unused-argument
+    def __new__(cls, feed_name: str=None):  # pylint: disable=unused-argument
         with cls._lock:
             if feed_name not in cls._instances:
                 instance = super().__new__(cls)
@@ -80,21 +80,22 @@ class FeedConfig:
         if getattr(self, "_initialized", False):
             return
 
-        self._feed_name = feed_name or self._default_feed_name
-        self._config_file = f"{self._feed_name}.yaml" # myfeed.yaml
-        self._config_path = os.path.join(self._feed_config_folder, self._config_file) # feeds/myfeed.yaml
         self._config_settings = None
-        try:
-            # Check if config file exists
-            self._config_settings = AppSettings(self._config_path)
-            self._config_settings.exists('FeedConfig')
-        except AppSettingsUndefined as e:
-            LOGGER.warning(f"⚠️ {e}")
-            LOGGER.warning(f"⚠️ Using default settings for feed.")
+        if feed_name is not None:
+            self._feed_name = feed_name or self._default_feed_name
+            self._config_file = f"{self._feed_name}.yaml" # myfeed.yaml
+            self._config_path = os.path.join(self._feed_config_folder, self._config_file) # feeds/myfeed.yaml
+            try:
+                # Check if config file exists
+                self._config_settings = AppSettings(self._config_path)
+                self._config_settings.exists('FeedConfig')
+            except AppSettingsUndefined as e:
+                LOGGER.warning(f"⚠️ {e}")
+                LOGGER.warning(f"⚠️ Using default settings for feed.")
+            self._feed_file = f"{self._feed_name}.json"
+            self._feed_folder = self.__class__._default_feed_folder
+            self._feed_path = Path(os.path.join(self._feed_folder, self._feed_file))
         self._config = self.load(self._config_settings.get() if self._config_settings else None)
-        self._feed_file = f"{self._feed_name}.json"
-        self._feed_folder = self.__class__._default_feed_folder
-        self._feed_path = Path(os.path.join(self._feed_folder, self._feed_file))
         self._cached_json = None
         self._initialized = True
 
@@ -106,32 +107,73 @@ class FeedConfig:
         self._config = feed_filter
         return feed_filter
 
-    def save(self, yaml_content: str) -> None:
-        """Save raw YAML content to a file"""
-        config_path = self.config_path # /app/config/feeds/feed.yaml
-        if not self.exists:
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            LOGGER.debug(f"✅ Created new feed configuration: {config_path}")
-        else:
-            LOGGER.warning(f"📦 Feed configuration '{self.feed_name}' already exists: {config_path}")
+    @classmethod
+    def delete(cls, feed_name: str) -> bool:
+        """Delete the YAML configuration file"""
+        feed_config = cls._instances.get(feed_name)
+        if feed_config is not None:
+            config_path = feed_config.config_path # /app/config/feeds/feed.yaml
+            exists = config_path.exists()
+        if config_path.exists():
             new_config_path = os.path.join(f"{config_path}-{TimezoneAware('%Y-%m-%d_%H-%M-%S')}.bak")
             os.rename(config_path, new_config_path)
-            LOGGER.warning(f"📦 Moved existing configuration '{self.feed_name}' to: {new_config_path}")
-        with open(config_path, "w", encoding="utf-8") as f:
-            f.write(yaml_content)
+            LOGGER.info(f"📦 Moved existing configuration '{feed_config.feed_name}' to: {new_config_path}")
+        else:
+            LOGGER.warning(f"⚠️ Feed configuration '{feed_config.feed_name}' does not exist: {config_path}")
+        cls._instances.pop(feed_name, None)
+        return exists
+
+    @classmethod
+    def save(cls, feed_name: str, yaml_data: str) -> FeedConfig:
+        """
+            Save raw YAML content to a file.
+            Args:
+                feed_name: The name of the feed
+                yaml_data: Raw YAML string content
+            Raises:
+                YAMLError: If the YAML content is malformed or cannot be parsed
+        """
+        # Validate YAML and FeedFilter structure
+        yaml_content = yaml.safe_load(yaml_data)
+        feed_config = cls(feed_name=feed_name)
+        feed_config.load(yaml_content)
+
+        config_path = feed_config.config_path # /app/config/feeds/feed.yaml
+        if not feed_config.exists:
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        else:
+            LOGGER.warning(f"📑 Feed configuration '{feed_config.feed_name}' already exists: {config_path}")
+            cls.delete(feed_name=feed_name)
+        with open(config_path, "w", encoding="utf-8", newline='\n') as f:
+            f.write(yaml_data)
+        LOGGER.debug(f"✅ Created new feed configuration: {config_path}")
+        return feed_config
 
     @classmethod
     def feeds(cls, values: str=None) -> List[FeedConfig]:
+        feeds_arr = []
         if values is None:
             feed_config_pattern = ConfigFile(os.path.join(cls._feed_config_folder, "*.yaml"))
             feed_files = glob(str(feed_config_pattern.path.as_posix()))
             for feed_file in feed_files:
                 feed_name = Path(feed_file).stem
-                cls(feed_name)
-            return list(cls._instances.values())
-        feed_arr = (values).split(',')
-        feed_cleaned = [feed_name.strip() for feed_name in feed_arr]
-        return list([cls(feed_name) for feed_name in feed_cleaned])
+                cls(feed_name=feed_name)
+            LOGGER.debug(f"✅ Found {len(cls._instances)} feed configuration(s): {', '.join(cls._instances.keys())}")
+            feeds_arr = list(cls._instances.values())
+        else:
+            feed_args = (values).split(',')
+            for feed_name in feed_args:
+                feed_config = cls(feed_name=feed_name.strip())
+                try:
+                    if feed_config and feed_config._config_settings:
+                        # Check if the feed configuration file exists: config/feeds/feed.yaml
+                        feed_config._config_settings.exists(name='FeedConfig')
+                        feeds_arr.append(feed_config)
+                except:
+                    LOGGER.warning(f"⚠️ Feed configuration '{feed_name}' does not exist or is misconfigured.")
+                    pass
+            LOGGER.debug(f"✅ Parsed {len(feeds_arr)} feed configuration(s): {', '.join([feed.feed_name for feed in feeds_arr])}")
+        return feeds_arr
 
     @classmethod
     def feed(cls, name = None) -> FeedConfig:
@@ -201,7 +243,7 @@ class FeedConfig:
     def write(self, data: Any) -> None:
         if not self.exists:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as f:
+        with open(self.path, "w", encoding="utf-8", newline='\n') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     @property
@@ -231,4 +273,4 @@ _feed_file={self._feed_file},
 _feed_path={self._feed_path})"""
 
     def __str__(self):
-        return f"FeedConfig(config={self._feed_name}, feed={self._config_file})"
+        return f"FeedConfig(name={self._feed_name}, feed={self._config_file}, database={self._feed_file})"

@@ -14,7 +14,7 @@ class FeedGenerator:
     _default_remove_jackett_tags: bool = True
 
     def __init__(self, feed_config: Optional[FeedConfig] = None):
-        self._feed_config = feed_config if feed_config else FeedConfig()
+        self._feed_config = feed_config if feed_config else FeedConfig(None)
 
     @property
     def Config(self) -> FeedFilter:

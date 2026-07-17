@@ -10,7 +10,7 @@ router = APIRouter()
 # Docker status check
 @router.get(RouteHandler.STATUS)
 async def cron_status():
-    cron_status = CronRunner().status()
+    cron_status = CronRunner.status()
     match cron_status:
         case "Initializing":
             return JSONResponse(content={"status": "healthy", "active": True, "label": "⏳ Initializing"}, status_code=status.HTTP_200_OK)

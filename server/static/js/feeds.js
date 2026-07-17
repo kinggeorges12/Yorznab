@@ -44,7 +44,8 @@ function updateCountdown(countdownElement, targetTime) {
     
     // Check if timer has reached 0 and active is false (not null)
     if (diff <= 0 && isActive === false) {
-        location.reload();
+        // Can't refresh from the same page as the editor.
+        // location.reload();
         return;
     }
     
@@ -71,13 +72,14 @@ function updateCountdown(countdownElement, targetTime) {
         }
     }
 }
-    
+
 function hideEditor() {
     const editorContainer = document.getElementById('editor-container');
     const mainPage = document.getElementById('main-page');
     editorContainer.style.display = 'none';
     mainPage.style.display = 'block';
 };
+
 function showEditor(name) {
     const editorContainer = document.getElementById('editor-container');
     const mainPage = document.getElementById('main-page');
@@ -88,12 +90,12 @@ function showEditor(name) {
     window.editorHelper.editor.focus();
 };
 
-async function refreshFeed(event, url, iconId) {
+async function refreshFeed(event, feedName, url, iconId) {
     event.preventDefault();
     
     const icon = document.getElementById(iconId);
     if (!icon) {
-        console.error('Icon element not found:', iconId);
+        console.error('Feed item not found:', feedName);
         return;
     }
     
@@ -121,7 +123,7 @@ async function refreshFeed(event, url, iconId) {
         
         setTimeout(() => {
             icon.textContent = originalText;
-        }, 2000);
+        }, 10000);
         
     } catch (error) {
         clearInterval(loadingInterval);
@@ -129,7 +131,52 @@ async function refreshFeed(event, url, iconId) {
         
         setTimeout(() => {
             icon.textContent = originalText;
-        }, 10000);
+        }, 3000);
+    }
+}
+
+async function deleteFeed(event, feedName, url, itemId) {
+    event.preventDefault();
+    
+    const item = document.getElementById(itemId);
+    if (!item) {
+        console.error('Feed item not found:', feedName);
+        return;
+    }
+
+    const confirmed = confirm("Are you sure you want to delete the '" + feedName + "' feed? (You can restore the backup from the config directory)");
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                // Include any auth tokens if needed
+                // 'Authorization': `Bearer ${token}`,
+            },
+            // Include credentials if using cookies for auth
+            credentials: 'same-origin'  // or 'include' for cross-domain
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // fade to 100% transparent over 1 second
+        for (i = 0; i < 10; i++) {
+            setTimeout(() => {
+                item.style.opacity = 1 - (i / 10);
+            }, i * 100);
+        }
+        setTimeout(() => {
+            item.remove(); // Remove the feed item
+        }, 1000);
+        
+    } catch (error) {
+        alert("Failed to delete the feed: " + error.message);
+        console.error('Error deleting feed: ', error);
     }
 }
 

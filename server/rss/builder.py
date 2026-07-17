@@ -278,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
 
         --feed: YAML files in the configuration directory containing feed settings
             - Path to the YAML file that defines the RSS feed structure and content
-            - Default: myfeed
+            - Default: Run all feeds in the configuration directory if not specified
             - Usage: --feed private_trackers --feed public_trackers --feed feed3
 
         --external: External ID for the wanted video (TMDB/TVDB ID), suffixed with a colon and comma-separated season numbers if applicable
