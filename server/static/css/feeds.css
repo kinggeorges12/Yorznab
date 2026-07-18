@@ -1,4 +1,23 @@
 /* ===== FEEDS.CSS ===== */
+
+.countdown-display span {
+    display: inline-block;
+    background: var(--input-bg);
+    transition: all .3s ease;
+}
+
+.countdown-display span.short {
+    color: #ef4444;
+}
+
+.countdown-display span.mid {
+    color: #f59e0b;
+}
+
+.countdown-display span.long {
+    color: #4CAF50;
+}
+
 .clickable {
     cursor: pointer;
 }
@@ -199,34 +218,41 @@
     color: var(--text-primary);
 }
 
-.yaml-toast {
+#toast {
     position: fixed;
     bottom: 20px;
     right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.yaml-toast-item {
     padding: 10px 20px;
     background: var(--container-bg);
     border-radius: 8px;
     border: 1px solid var(--container-border);
     font-size: 13px;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all .3s ease;
-    pointer-events: none;
-    z-index: 9999;
+    pointer-events: auto;
     color: var(--text-primary);
     box-shadow: 0 20px 60px var(--container-shadow);
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 1.0s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-.yaml-toast.show {
+.yaml-toast-item.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
 }
 
-.yaml-toast.success {
+.yaml-toast-item.success {
     border-left: 3px solid var(--border-success);
 }
 
-.yaml-toast.error {
+.yaml-toast-item.error {
     border-left: 3px solid var(--border-error);
 }
 

@@ -33,7 +33,7 @@ HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings
 from server.utils.feedconfig import FeedConfig
-from server.utils.timezoneaware import TimezoneAware
+from server.utils.timeformatter import TimezoneAware
 import asyncio
 
 # Global logger instance
@@ -45,7 +45,7 @@ SETTINGS = AppSettings(filename='yorznab.yaml')
 # Load default args
 REFRESH_SCHEDULE:str = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
 DOWNLOAD:bool = os.environ.get('DOWNLOAD','false').lower() not in ['false', 'no'] and bool(os.environ.get('DOWNLOAD'))
-NEXT_RUN:Optional[datetime] = datetime.now(tz=TimezoneAware.TIMEZONE)
+NEXT_RUN:Optional[datetime] = TimezoneAware.now()
 
 class CronRunner:
 
@@ -167,10 +167,15 @@ class CronRunner:
         
         while True:
             try:
-                LOGGER.info(f"📁 Database file(s): {', '.join(str(f.file) for f in cls.feed_configs())}")
+                feed_configs = cls.feed_configs()
+                if feed_configs:
+                    LOGGER.info(f"📁 Database file(s): {', '.join(str(f.file) for f in feed_configs)}")
+                else:
+                    LOGGER.warning("⚠️ No feed configurations found: using default settings")
+                    feed_configs = [FeedConfig()]
                 need_refresh = []
                 max_file_age = 0
-                for feed_config in cls.feed_configs():
+                for feed_config in feed_configs:
                     # Check file age in case the cron shut down since last run
                     feed_file_age = feed_config.file_age
                     max_file_age = feed_file_age if feed_file_age > max_file_age else max_file_age

@@ -11,7 +11,7 @@ from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
-from server.utils.timezoneaware import TimezoneAware
+from server.utils.timeformatter import TimezoneAware
 from server.web.common import TITLE, get_csrf_token, navigation, page_template
 from server.web.routers.auth import authenticate
 from server.web.routers.cache import download_and_cache
@@ -26,27 +26,8 @@ async def feeds(request: Request):
         return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
     
     token = get_csrf_token()
-    
-    # Get the current server time
-    next_run = CronRunner.next_run()
-    base_time = TimezoneAware.now()
-    server_time_str = base_time.strftime('%Y-%m-%d %H:%M:%S')
-
-    # Calculate seconds until next refresh
-    seconds_until_next = (next_run - base_time).total_seconds()
-    # Ensure we don't show negative time
-    if seconds_until_next < 0:
-        seconds_until_next = 0
-
-    hours = int(seconds_until_next // 3600)
-    minutes = int((seconds_until_next % 3600) // 60)
-    seconds = int(seconds_until_next % 60)
-
-    # Format the refresh time
-    refresh_time_str = next_run.strftime('%Y-%m-%d %H:%M:%S')
 
     # Get timestamp for countdown
-    target_timestamp = int(next_run.timestamp() * 1000)
     ace_css = "cache/css/ace.min.css"
     download_and_cache("https://unpkg.com/ace-css/css/ace.min.css", ace_css)
 
@@ -57,25 +38,35 @@ async def feeds(request: Request):
     feed_info = ""
     for feed_config in feed_configs:
         feed_info += f'''
-            <div class="info-item" id="info-item-{feed_config.feed_name}">
-                <span class="info-value edit-feed clickable" name="{feed_config.feed_name}" title="Edit Feed" onclick="showEditor('{feed_config.feed_name}')">✏️
-                    <span class="info-label">{feed_config.feed_name}</span>
-                </span>
-                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=caps" target="_blank">
-                    <span class="info-value" title="Capabilities">⚙️</span>
-                </a>
-                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=movie" target="_blank">
-                    <span class="info-value" title="Movie Search">🎬</span>
-                </a>
-                <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=tvsearch" target="_blank">
-                    <span class="info-value" title="TV Search">📺</span>
-                </a>
-                <a href="#" onclick="refreshFeed(event, '{feed_config.feed_name}', '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
-                    <span class="info-value" id="refresh-icon-{feed_config.feed_name}" title="Refresh Feed">🔄</span>
-                </a>
-                <a href="#" onclick="deleteFeed(event, '{feed_config.feed_name}', '{RouteHandler.LOGIN}/feeds/{feed_config.feed_name}', 'info-item-{feed_config.feed_name}')">
-                    <span class="info-value" title="Delete Feed">🗑️</span>
-                </a>
+            <div class="info-container" id="info-container-{feed_config.feed_name}">
+                <div class="info-item">
+                    <span class="info-value edit-feed clickable" name="{feed_config.feed_name}" title="Edit Feed"
+                      onclick="showEditor('{feed_config.feed_name}')">✏️
+                        <span class="info-label">{feed_config.feed_name}</span>
+                    </span>
+                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=caps" target="_blank">
+                        <span class="info-value" title="Capabilities">ℹ️</span>
+                    </a>
+                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=movie" target="_blank">
+                        <span class="info-value" title="Movie Search">🎬</span>
+                    </a>
+                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=tvsearch" target="_blank">
+                        <span class="info-value" title="TV Search">📺</span>
+                    </a>
+                    <span class="clickable" name="{feed_config.feed_name}" title="Refresh Feed"
+                      onclick="refreshFeed(event, '{feed_config.feed_name}', '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
+                        <span class="info-value" id="refresh-icon-{feed_config.feed_name}">🔄</span>
+                    </span>
+                    </a>
+                    <span class="clickable" name="{feed_config.feed_name}" title="Delete Feed"
+                      onclick="deleteFeed(event, '{feed_config.feed_name}', '{RouteHandler.LOGIN}/feeds/{feed_config.feed_name}', 'info-container-{feed_config.feed_name}')">
+                        <span class="info-value" id="delete-icon-{feed_config.feed_name}">🗑️</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <div class="info-btn")" onclick="copyKey('apiPath-{feed_config.feed_name}')">📋 API Path</div>
+                    <div class="key-value" id="apiPath-{feed_config.feed_name}">{f"{RouteHandler.API}/{feed_config.feed_name}"}</div>
+                </div>
             </div>'''
 
     content = f'''
@@ -91,31 +82,34 @@ async def feeds(request: Request):
                     </h2>
                     <div class="info-item">
                         <span class="info-label">Refresh starts in:</span>
-                        <span class="info-value" id="countdown" data-status="{RouteHandler.STATUS}" data-target="{target_timestamp}" title="Refresh starts in">
-                            <span class="hours">{hours:02d}</span>
+                        <span class="info-value countdown-display" id="countdown" data-status="{RouteHandler.STATUS}" title="Refresh starts in">
+                            <span class="hours"></span>
                             <span class="separator">:</span>
-                            <span class="minutes">{minutes:02d}</span>
+                            <span class="minutes"></span>
                             <span class="separator">:</span>
-                            <span class="seconds">{seconds:02d}</span>
+                            <span class="seconds"></span>
                         </span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Scheduled:</span>
-                        <span class="info-value" title="Scheduled">{refresh_time_str}</span>
+                        <span class="info-value" id="scheduled" title="Scheduled"></span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Server time:</span>
-                        <span class="info-value" title="Server time">{server_time_str}</span>
+                        <span class="info-value" id="server-time" title="Server time"></span>
                     </div>
                 </div>
                 <div class="text-container">
-                    <h2>API Links</h2>
-                    {feed_info}
-                    <div class="info-item" id="info-item-new_feed">
-                        <span class="info-value clickable" name="new_feed" title="New Feed" onclick="newYAML(); showEditor('new_feed');">🆕
-                            <span class="info-label">New Feed</span>
-                        </span>
+                    <div class="header-container">
+                        <h2>🗃️ Indexers</h2>
+                        <a title="Help"href="https://github.com/kinggeorges12/Yorznab#feeds" target="_blank" rel="noopener noreferrer">📖❓</a>
+                        <button type="button" class="create-btn" onclick="newYAML('feed-yaml-new'); showEditor();">
+                            <span class="" name="new_feed" title="Create New Feed">
+                                🆕 Feed
+                            </span>
+                        </button>
                     </div>
+                    {feed_info}
                 </div>
             </div>
 
@@ -133,9 +127,9 @@ async def feeds(request: Request):
                 <!-- Toolbar -->
                 <div class="yaml-toolbar">
                     <div class="group">
-                        <button onclick="newYAML()">➕ New</button>
+                        <button onclick="newYAML('feed-yaml-new')">➕ New</button>
                         <button onclick="saveYAML()">💾 Save</button>
-                        <button onclick="loadYAML()">📝 Template</button>
+                        <button onclick="newYAML('feed-yaml-template', 'template')">📝 Template</button>
                         <button onclick="reloadYAML()">💫 Reload</button>
                         <select id="fileSelector" onchange="selectFile()">
                             <!-- Populated from list endpoint -->

@@ -13,8 +13,8 @@ import tempfile
 from threading import Lock
 
 # Import classes
-from utils.keystore import KeyStore
-from utils.timezoneaware import TimezoneAware
+from server.utils.keystore import KeyStore
+from server.utils.timeformatter import TimezoneAware
 
 
 class TimezoneAwareFormatter(logging.Formatter):
@@ -146,7 +146,7 @@ class CustomLogger:
                 
                 self.__class__._log_file = os.path.join(
                     LOG_DIR, 
-                    f"{log_id}-{datetime.now(TimezoneAware.TIMEZONE).strftime('%Y-%m-%d_%H-%M-%S')}.log"
+                    f"{log_id}-{TimezoneAware.filename()}.log"
                 )
                 
                 file_handler = logging.FileHandler(

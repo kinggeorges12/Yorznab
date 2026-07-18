@@ -16,6 +16,7 @@
     --input-border: #2E8B57;
     --input-focus: #66BB6A;
     --input-placeholder: #666;
+    --btn-primary-color: #fff;
     --btn-primary-bg: linear-gradient(135deg,#4CAF50 0,#2E8B57 100%);
     --btn-primary-hover: linear-gradient(135deg,#66BB6A 0,#2E7D32 100%);
     --btn-primary-shadow: rgba(102,187,106,.3);
@@ -60,9 +61,9 @@
     --link-underline: #66BB6A;
     --toggle-btn-color: #66BB6A;
     --toggle-btn-hover: rgba(102,187,106,.1);
-    --copy-btn-bg: #4CAF50;
-    --copy-btn-hover: #66BB6A;
-    --copy-btn-shadow: rgba(102,187,106,.3)
+    --copy-btn-bg: #6366f1;
+    --copy-btn-hover: #4f46e5;
+    --copy-btn-shadow: rgba(99, 102, 241, 0.3);
 }
 
 [data-theme=light] {
@@ -127,23 +128,33 @@
     --link-underline: #4CAF50;
     --toggle-btn-color: #166534;
     --toggle-btn-hover: rgba(34,197,94,.1);
-    --copy-btn-bg: #22c55e;
-    --copy-btn-hover: #16a34a;
-    --copy-btn-shadow: rgba(34,197,94,.3)
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg-gradient);color:var(--text-primary);display:flex;justify-content:center;align-items:flex-start;padding:20px;min-height:75vh;margin:0;transition:background .3s ease,color .3s ease}
+html{
+    height:100%;
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    transition:background .3s ease,color .3s ease;
+}
+body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;
+    color:var(--text-primary);
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:75vh;
+    padding: clamp(5px, 2vw, 20px);
+}
 
 .login-container,.app-container{
+    width: 100%;
     max-width: 710px;
     background: var(--container-bg);
     padding: clamp(20px, 5vw, 30px) clamp(20px, 5vw, 40px);
     border-radius: 16px;
     border: 2px solid var(--container-border);
     box-shadow: 0 20px 60px var(--container-shadow);
-    width: 100%;
     transition: all .3s ease;
 }
 .login-container:hover,.app-container:hover{box-shadow:0 20px 60px var(--container-shadow-hover);border-color:var(--border-success)}
@@ -163,7 +174,7 @@ label{color:var(--text-secondary);font-size:14px;font-weight:600;letter-spacing:
 .password-wrapper .toggle-btn.visible .eye-icon{transform:scale(1.1)}
 
 button{border:none;border-radius:8px;font-weight:700;cursor:pointer;transition:all .3s ease}
-button[type=submit]{width:100%;padding:14px;background:var(--btn-primary-bg);color:#fff;font-size:16px;letter-spacing:.5px}
+button[type=submit]{width:100%;padding:14px;background:var(--btn-primary-bg);color:var(--btn-primary-color);font-size:16px;letter-spacing:.5px}
 button[type=submit]:hover{transform:translateY(-2px);box-shadow:0 10px 25px var(--btn-primary-shadow);background:var(--btn-primary-hover)}
 button[type=submit]:active{transform:translateY(0)}
 
@@ -171,8 +182,8 @@ button[type=submit]:active{transform:translateY(0)}
 .error-message{color:var(--error-text);background:var(--error-bg);border-left:4px solid var(--error-border);padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;animation:shake .5s ease;border:1px solid var(--error-border);transition:all .3s ease}
 .hint-message{color:var(--hint-text);background:var(--hint-bg);font-size:13px;padding:10px 16px;border-radius:8px;border-left:4px solid var(--hint-border);font-style:italic;font-weight:500;border:1px solid var(--hint-border);transition:all .3s ease}
 
-.key-label{color:var(--text-secondary);font-weight:600;font-size:14px;margin-bottom:5px;transition:color .3s ease}
-.key-value{color:var(--key-text);font-family: 'DejaVuSansMonoBook', monospace;font-size:15px;word-break:break-all;background:var(--key-bg);padding:8px 12px;border-radius:4px;border:1px solid var(--key-border);margin-top:5px;user-select:all;cursor:text;font-weight:600;transition:all .3s ease}
+.key-label{color:var(--text-secondary);font-weight:600;font-size:14px;transition:color .3s ease;margin-bottom:5px;}
+.key-value{color:var(--key-text);font-family: 'DejaVuSansMonoBook', monospace;font-size:15px;word-break:break-all;background:var(--key-bg);padding:8px 12px;border-radius:4px;border:1px solid var(--key-border);user-select:all;cursor:text;font-weight:600;transition:all .3s ease}
 .key-value:hover{background:var(--key-hover)}
 
 .nav-actions{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap}
@@ -226,14 +237,38 @@ button.logout-btn.active {
 .copy-btn:hover{background:var(--copy-btn-hover);transform:translateY(-2px);box-shadow:0 10px 25px var(--copy-btn-shadow)}
 .copy-btn:active{transform:translateY(0)}
 
+
+.header-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.create-btn {
+    flex: 0 1 auto;
+    padding: 4px 4px;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-color);
+    font-size: inherit;
+    font-weight: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .3s ease;
+    margin-left: auto;
+}
+.create-btn:hover {
+    background: var(--btn-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px var(--btn-primary-shadow);
+}
+
 @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
 @keyframes fadeIn{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
 
 .text-container {
   background: var(--text-container-bg);
-  padding: 10px 20px;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px var(--text-container-shadow);
   border: 1px solid var(--text-container-border);
@@ -270,18 +305,34 @@ button.logout-btn.active {
 .status-dot.healthy{background:var(--border-success)}
 .status-dot.unhealthy{background:var(--border-error)}
 
+/* a href */
 a {
-  color: var(--link-color);
-  text-decoration: none;
-  font-weight: 500;
-  transition: all .3s ease;
-  position: relative;
-  word-break: break-all;
-  line-break: anywhere;
-  overflow-wrap: break-word;
-  white-space: normal;
-  display: inline-block;
-  max-width: 100%;
+    color: var(--link-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all .3s ease;
+    position: relative;
+    word-break: break-all;
+    line-break: anywhere;
+    overflow-wrap: break-word;
+    white-space: normal;
+    display: inline-block;
+    max-width: 100%;
+}
+a > span {
+    margin-left: 16px;
+}
+a::before {
+    content: "🔗";
+    position: absolute;
+    top: 0px;
+    left: -4px;
+    font-size: 12px;
+    opacity: 0.8;
+    background: var(--bg-primary);
+    border-radius: 50%;
+    padding: 2px;
+    line-height: 1;
 }
 a:hover{color:var(--link-hover)}
 a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--link-underline);transition:width .3s ease}
@@ -290,29 +341,47 @@ a:hover::after{width:100%}
 .icon-wrapper a:hover::after{width:100%;background:blue}
 
 .ascii-line{
-  font-size:clamp(0rem, 1.50vw, 0.75rem);
-  text-align: center;
-  opacity:0;
-  animation:fadeIn .5s ease forwards;
-  margin:0;
-  font-family:'DejaVuSansMonoBook', monospace;
-  letter-spacing: 0;
-  font-feature-settings: "calt" 0;
-  white-space: pre;
-  color:var(--ascii-color);
-  transition:color .3s ease
+    font-size:clamp(0rem, 1.50vw, 0.75rem);
+    text-align: center;
+    opacity:0;
+    animation:fadeIn .5s ease forwards;
+    margin:0;
+    font-family:'DejaVuSansMonoBook', monospace;
+    letter-spacing: 0;
+    font-feature-settings: "calt" 0;
+    white-space: pre;
+    color:var(--ascii-color);
+    transition:color .3s ease
 }
 
-.countdown-display .hours,
-.countdown-display .minutes,
-.countdown-display .seconds {
-    min-width: 80px;
-    display: inline-block;
-    background: var(--input-bg);
-    padding: 5px 15px;
-    border-radius: 8px;
+.info-btn {
+    flex: 0 1 auto;
+    padding: 4px 12px;
+    background: var(--copy-btn-bg);
+    color: #fff;
+    font-size: 0.85em;
+    font-weight: 600;
+    font-family: 'DejaVuSansMonoBook', monospace;
     border: 1px solid var(--border-light);
+    border-radius: 6px;
+    cursor: pointer;
     transition: all .3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1.6;
+    min-width: 0;
+    height: auto;
+    vertical-align: middle;
+}
+
+.info-btn:hover {
+    background: var(--copy-btn-hover);
+    border-color: var(--border-success);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--copy-btn-shadow);
 }
 
 .info-item {
@@ -320,35 +389,20 @@ a:hover::after{width:100%}
     justify-content: space-between;
     align-items: center;
     padding: 6px 0;
-    border-bottom: 1px solid var(--border-light);
+    border-top: 1px solid var(--border-light);
+    margin-top: 6px;
     transition: all .3s ease;
     min-width: 0;
 }
 
-.info-item:last-child {
-    border-bottom: none;
+.info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.info-label {
-    flex: 0 99999 auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: clip;
-    min-width: 0;
-}
-
-.info-linktext {
-    flex: 0 1 auto;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    max-width: 100%;
-    min-width: 0;
-    line-height: 2.0;
-}
-
-.info-linktext.info-value {
-    line-height: 2.0;
+.info-row :last-child {
+    flex: 1;
 }
 
 .info-value {
@@ -367,7 +421,8 @@ a:hover::after{width:100%}
     text-overflow: ellipsis;
     max-width: 100%;
     min-width: 0;
-    line-height: 1.0;
+    line-height: 1.6;
+    margin:0;
 }
 
 .info-value:hover {

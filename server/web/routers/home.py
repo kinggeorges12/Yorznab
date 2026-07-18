@@ -45,12 +45,16 @@ async def home(request: Request):
             <div class="text-container">
                 <h2>Welcome!</h2>
                 <br>
-                <p>Check out the GitHub repository for updates and information:
-                    <a href="https://github.com/kinggeorges12/Yorznab" target="_blank" rel="noopener noreferrer">https://github.com/kinggeorges12/Yorznab</a>
+                <p>🔍 Check out the GitHub repository for updates and information:
+                    <a href="https://github.com/kinggeorges12/Yorznab" target="_blank" rel="noopener noreferrer">
+                        <span>https://github.com/kinggeorges12/Yorznab</span>
+                    </a>
                 </p>
                 <br><br>
-                <p>Stuck? Post an issue:
-                    <a href="https://github.com/kinggeorges12/Yorznab/issues" target="_blank" rel="noopener noreferrer">ARRGH HELP ME!</a>
+                <p>💬 Stuck? Post an issue:
+                    <a href="https://github.com/kinggeorges12/Yorznab/issues" target="_blank" rel="noopener noreferrer">
+                        <span>ARRGH HELP ME!</span>
+                    </a>
                 </p>
             </div>
             <div class="text-container">

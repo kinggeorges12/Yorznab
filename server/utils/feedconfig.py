@@ -18,7 +18,7 @@ import yaml
 from server.utils.config import ConfigFile
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
-from server.utils.timezoneaware import TimezoneAware
+from server.utils.timeformatter import TimezoneAware
 
 # Global logger instance
 LOGGER = CustomLogger(name="feed")
@@ -68,7 +68,7 @@ class FeedConfig:
     _default_feed_name = "myfeed"
     _default_feed_folder: Path = Path(os.environ.get("DB_DIR", "database")) # /app/database
     
-    def __new__(cls, feed_name: str=None):  # pylint: disable=unused-argument
+    def __new__(cls, feed_name: str=_default_feed_name):  # pylint: disable=unused-argument
         with cls._lock:
             if feed_name not in cls._instances:
                 instance = super().__new__(cls)
@@ -115,7 +115,7 @@ class FeedConfig:
             config_path = feed_config.config_path # /app/config/feeds/feed.yaml
             exists = config_path.exists()
         if config_path.exists():
-            new_config_path = os.path.join(f"{config_path}-{TimezoneAware('%Y-%m-%d_%H-%M-%S')}.bak")
+            new_config_path = os.path.join(f"{config_path}-{TimezoneAware.filename()}.bak")
             os.rename(config_path, new_config_path)
             LOGGER.info(f"📦 Moved existing configuration '{feed_config.feed_name}' to: {new_config_path}")
         else:
@@ -182,8 +182,7 @@ class FeedConfig:
         if not name:
             feed_default = cls._instances[cls._default_feed_name] if cls._default_feed_name in cls._instances else None
             feed_first = next(iter(cls._instances.values())) if cls._instances else None
-            feed = feed_default if feed_default else feed_first
-            return feed.file
+            return feed_default if feed_default else feed_first
         # Match full filename or filename without extension
         if name in cls._instances.keys():
             return cls._instances[name]

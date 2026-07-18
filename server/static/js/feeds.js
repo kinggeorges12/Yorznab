@@ -1,44 +1,121 @@
-
-const guifier_selector = '#guifier'
-const guifier_list = {};
 let isActive = true;
 let statusCheckInterval = null;
 let countdownInterval = null;
+let targetTimestamp = null;
 
 // Function to check status
 async function checkStatus(statusEndpoint) {
     try {
-        const data = await fetch(statusEndpoint)
-            .catch(error => {
-                console.error('Connection failed:', error);
-                return null;
-            })
-            .then(async response => {
-                if (response === null) {
-                    return { status: 'unhealthy', active: null, label: '🔌 Disconnected' };
-                }
-                return await response.json();
-            });
+        const response = await fetch(statusEndpoint);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
         
         // Update active state
         isActive = data.active;
         
-        // Update status indicator if it exists
-        const statusDot = document.getElementById('status-dot');
-        const statusLabel = document.getElementById('status-label');
-        if (statusDot && data.status) {
-            statusDot.className = 'status-dot ' + (data.status === 'healthy' ? 'healthy' : 'unhealthy');
-        }
-        if (statusLabel && data.label) {
-            statusLabel.textContent = data.label;
+        // Update status dot and label
+        updateStatusDisplay(data);
+        
+        // Update countdown with new target time
+        if (data.next) {
+            const nextDate = new Date(data.next);
+            targetTimestamp = nextDate.getTime();
+            updateCountdownDisplay(targetTimestamp);
         }
         
+        // Update scheduled time
+        updateScheduledTime(data);
+        
+        // Update server time
+        updateServerTime(data);
+        
+        return data;
     } catch (error) {
         console.error('Error checking status:', error);
+        // Show error state
+        const statusDot = document.getElementById('status-dot');
+        const statusLabel = document.getElementById('status-label');
+        if (statusDot) statusDot.className = 'status-dot error';
+        if (statusLabel) statusLabel.textContent = '🔌 Disconnected';
+        return null;
     }
 }
 
-function updateCountdown(countdownElement, targetTime) {
+function updateStatusDisplay(data) {
+    const statusDot = document.getElementById('status-dot');
+    const statusLabel = document.getElementById('status-label');
+    
+    if (!statusDot || !statusLabel) return;
+    
+    // Update dot color based on status
+    if (data.status === 'healthy') {
+        statusDot.className = 'status-dot healthy';
+    } else if (data.status === 'warning') {
+        statusDot.className = 'status-dot warning';
+    } else {
+        statusDot.className = 'status-dot error';
+    }
+    
+    // Update label with activity status
+    let statusText = data.label || '❓ Unknown';
+    statusLabel.textContent = statusText;
+}
+
+function updateScheduledTime(data) {
+    const scheduledEl = document.querySelector('#scheduled');
+    if (!scheduledEl) return;
+    
+    const nextTime = data.next;
+    if (!nextTime) {
+        scheduledEl.textContent = 'No schedule';
+        return;
+    }
+    
+    const date = new Date(nextTime);
+    scheduledEl.textContent = formatDateTime(date);
+    scheduledEl.title = `Scheduled: ${date.toLocaleString()}`;
+}
+
+function updateServerTime(data) {
+    const serverTimeEl = document.querySelector('#server-time');
+    if (!serverTimeEl) return;
+    
+    const serverTime = data.time;
+    if (!serverTime) {
+        serverTimeEl.textContent = 'No server time';
+        return;
+    }
+    
+    const date = new Date(serverTime);
+    serverTimeEl.textContent = formatDateTime(date);
+    serverTimeEl.title = `Server time: ${date.toLocaleString()}`;
+}
+
+function formatDateTime(date) {
+    if (!(date instanceof Date) || isNaN(date)) {
+        return 'Invalid date';
+    }
+    
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZoneName: 'short'
+    };
+    
+    return date.toLocaleString('en-US', options);
+}
+
+function updateCountdownDisplay(targetTime) {
+    const countdownElement = document.getElementById('countdown');
+    if (!countdownElement) return;
+    
     const now = Date.now();
     const diff = (targetTime - now) / 1000;
     
@@ -55,19 +132,44 @@ function updateCountdown(countdownElement, targetTime) {
         const minutes = Math.floor((diff % 3600) / 60);
         const seconds = Math.floor(diff % 60);
         
-        if (countdownElement) {
-            countdownElement.textContent = 
-                String(hours).padStart(2, '0') + ':' + 
-                String(minutes).padStart(2, '0') + ':' + 
-                String(seconds).padStart(2, '0');
-            
-            // Change color when close to refresh
+        // Update each part of the countdown
+        const hoursSpan = countdownElement.querySelector('.hours');
+        const minutesSpan = countdownElement.querySelector('.minutes');
+        const secondsSpan = countdownElement.querySelector('.seconds');
+        
+        if (hoursSpan) hoursSpan.textContent = String(hours).padStart(2, '0');
+        if (minutesSpan) minutesSpan.textContent = String(minutes).padStart(2, '0');
+        if (secondsSpan) secondsSpan.textContent = String(seconds).padStart(2, '0');
+        
+        // Remove all color classes
+        if (hoursSpan) {
+            hoursSpan.classList.remove('short', 'mid', 'long');
             if (diff < 60) {
-                countdownElement.style.color = '#ef4444';
+                hoursSpan.classList.add('short');
             } else if (diff < 300) {
-                countdownElement.style.color = '#f59e0b';
+                hoursSpan.classList.add('mid');
             } else {
-                countdownElement.style.color = '#4CAF50';
+                hoursSpan.classList.add('long');
+            }
+        }
+        if (minutesSpan) {
+            minutesSpan.classList.remove('short', 'mid', 'long');
+            if (diff < 60) {
+                minutesSpan.classList.add('short');
+            } else if (diff < 300) {
+                minutesSpan.classList.add('mid');
+            } else {
+                minutesSpan.classList.add('long');
+            }
+        }
+        if (secondsSpan) {
+            secondsSpan.classList.remove('short', 'mid', 'long');
+            if (diff < 60) {
+                secondsSpan.classList.add('short');
+            } else if (diff < 300) {
+                secondsSpan.classList.add('mid');
+            } else {
+                secondsSpan.classList.add('long');
             }
         }
     }
@@ -80,14 +182,11 @@ function hideEditor() {
     mainPage.style.display = 'block';
 };
 
-function showEditor(name) {
+function showEditor() {
     const editorContainer = document.getElementById('editor-container');
     const mainPage = document.getElementById('main-page');
-    const editorTitle = document.getElementById('editor-title');
     editorContainer.style.display = 'block';
     mainPage.style.display = 'none';
-    editorTitle.innerHTML = name;
-    window.editorHelper.editor.focus();
 };
 
 async function refreshFeed(event, feedName, url, iconId) {
@@ -125,6 +224,13 @@ async function refreshFeed(event, feedName, url, iconId) {
             icon.textContent = originalText;
         }, 10000);
         
+        // Refresh status after feed refresh
+        const countdownElement = document.getElementById('countdown');
+        if (countdownElement) {
+            const statusEndpoint = countdownElement.dataset.status;
+            checkStatus(statusEndpoint);
+        }
+        
     } catch (error) {
         clearInterval(loadingInterval);
         icon.textContent = '❌';
@@ -154,18 +260,15 @@ async function deleteFeed(event, feedName, url, itemId) {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                // Include any auth tokens if needed
-                // 'Authorization': `Bearer ${token}`,
             },
-            // Include credentials if using cookies for auth
-            credentials: 'same-origin'  // or 'include' for cross-domain
+            credentials: 'same-origin'
         });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         // fade to 100% transparent over 1 second
-        for (i = 0; i < 10; i++) {
+        for (let i = 0; i < 10; i++) {
             setTimeout(() => {
                 item.style.opacity = 1 - (i / 10);
             }, i * 100);
@@ -180,18 +283,45 @@ async function deleteFeed(event, feedName, url, itemId) {
     }
 }
 
+function startCountdownTimer() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+    
+    countdownInterval = setInterval(() => {
+        if (targetTimestamp) {
+            updateCountdownDisplay(targetTimestamp);
+        }
+    }, 1000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const countdownElement = document.getElementById('countdown');
-    const targetTime = parseInt(countdown.getAttribute('data-target'));
-    const statusEndpoint = countdown.getAttribute('data-status');
+    if (!countdownElement) {
+        console.error('Countdown element not found');
+        return;
+    }
+    
+    const statusEndpoint = countdownElement.dataset.status;
+    if (!statusEndpoint) {
+        console.error('Status endpoint not found');
+        return;
+    }
 
+    // Initial status check
+    checkStatus(statusEndpoint).then(data => {
+        // Set initial target timestamp from the response
+        if (data && data.next) {
+            targetTimestamp = new Date(data.next).getTime();
+            updateCountdownDisplay(targetTimestamp);
+        }
+    });
+    
     // Check status every 10 seconds
-    checkStatus(statusEndpoint);
     statusCheckInterval = setInterval(() => checkStatus(statusEndpoint), 10000);
     
-    // Update countdown every second
-    countdownInterval = setInterval(() => updateCountdown(countdownElement, targetTime), 1000);
-    updateCountdown(countdownElement, targetTime);
+    // Start countdown timer
+    startCountdownTimer();
     
     // Cleanup intervals on page unload
     window.addEventListener('beforeunload', function() {

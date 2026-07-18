@@ -11,8 +11,8 @@ import re
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
-from utils.settings import AppSettings
-from utils.keystore import KeyStore
+from server.utils.settings import AppSettings
+from server.utils.keystore import KeyStore
 
 router = APIRouter()
 
@@ -164,11 +164,11 @@ def generate_rss(items, offset=0, limit=0):
     return fg.rss_str(pretty=True)
 
 # Default feed file
-@router.get(RouteHandler.API)
+@router.get(RouteHandler.API + "/")
 async def base_endpoint(request: Request):
-    global SETTINGS
     # Load first or default feed file
-    feed = FeedConfig.feed()
+    feed = FeedConfig.feed().feed_name
+    LOGGER.debug(f"↪️ Redirecting to feed: {feed}")
     # Inject the feed parameter into the path
     redirect_url = f"{RouteHandler.API}/{feed}"
     # Append the original query string back onto the end if it exists
@@ -178,7 +178,7 @@ async def base_endpoint(request: Request):
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 @router.get(RouteHandler.API + "/{feed}")
-def torznab_api(
+async def torznab_api(
     feed: str,
     apikey: str = Query(None, description="API key from config file"),
     t: str = Query(..., description="Torznab function: caps, search, tvsearch, movie, details"),

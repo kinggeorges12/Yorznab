@@ -5,13 +5,13 @@ from fastapi.responses import JSONResponse
 import asyncio
 
 # Import classes
-from utils.settings import AppSettings
+from server.utils.settings import AppSettings
 from server.rss.ArrClient import ArrClient, ArrType
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
-from utils.keystore import KeyStore
-import rss.builder
+from server.utils.keystore import KeyStore
+import server.rss.builder as rssbuilder
 
 router = APIRouter()
 
@@ -48,7 +48,7 @@ async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type
         
         # Run the blocking rssbuilder.main() in a thread pool
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, rss.builder.main, args)
+        result = await loop.run_in_executor(None, rssbuilder.main, args)
         return result
         
     except Exception as e:

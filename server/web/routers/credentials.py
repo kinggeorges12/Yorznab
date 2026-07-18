@@ -28,21 +28,25 @@ async def keys(request: Request):
                 <br>
                 <p class="hint-message">
                     Check out the GitHub page to learn how to setup an Indexer:
-                    <a href="https://github.com/kinggeorges12/Yorznab#indexer" target="_blank" rel="noopener noreferrer">https://github.com/kinggeorges12/Yorznab#indexer</a>
+                    <a href="https://github.com/kinggeorges12/Yorznab#indexer" target="_blank" rel="noopener noreferrer">
+                        <span>https://github.com/kinggeorges12/Yorznab#indexer</span>
+                    </a>
                 </p>
             </div>
             <div class="text-container">
-                <div class="key-label">🔗 Webhook Key for Jellyseerr</div>
+                <div class="key-label">🪝 Webhook Key for Jellyseerr</div>
                 <div class="key-value" id="webhookKey">{webhook_key}</div>
                 <br>
                 <p class="hint-message">
                     Check out the GitHub page to learn how to setup a Webhook:
-                    <a href="https://github.com/kinggeorges12/Yorznab#webhook" target="_blank" rel="noopener noreferrer">https://github.com/kinggeorges12/Yorznab#webhook</a>
+                    <a href="https://github.com/kinggeorges12/Yorznab#webhook" target="_blank" rel="noopener noreferrer">
+                        <span>https://github.com/kinggeorges12/Yorznab#webhook</span>
+                    </a>
                 </p>
             </div>
             <div class="copy-actions">
-                <button class="copy-btn" onclick="copyKey('apiKey')">🔑 Copy API Key</button>
-                <button class="copy-btn" onclick="copyKey('webhookKey')">🔗 Copy Webhook Key</button>
+                <button type="button" class="copy-btn" onclick="copyKey('apiKey')">🔑 Copy API Key</button>
+                <button type="button" class="copy-btn" onclick="copyKey('webhookKey')">🪝 Copy Webhook Key</button>
             </div>
             <div>
                 <button id="resetBtn" class="reset-btn" data-reset="{RouteHandler.LOGIN}/reset" onclick="confirmReset()">

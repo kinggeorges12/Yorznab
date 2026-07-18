@@ -804,32 +804,32 @@ class YAMLEditorHelper {
             
             const response = await fetch(loadUrl);
             
-            if (!response.ok) {
+            if (response.ok) {
+                const content = await response.text();
+                this.editor.setValue(content, -1);
+                this.yamlContent = content;
+            }
+            else {
                 if (response.status === 404) {
                     this.showToast('❌ File not found: ' + filename, 'error');
                 } else {
                     this.showToast('❌ Error loading file: ' + response.status, 'error');
                 }
-                delete this.loadedFeeds[filename];
-                return;
+                await this.newYAML('feed-yaml-new');
             }
             
-            const content = await response.text();
-            
+            this.currentFile = filename;
             // Store in cache
             this.loadedFeeds[filename] = {
-                content: content,
+                content: this.yamlContent,
                 loaded: true,
                 timestamp: Date.now(),
-                dirty: false
+                dirty: !response.ok
             };
-            
-            this.currentFile = filename;
-            this.editor.setValue(content, -1);
-            this.yamlContent = content;
             
             // Update title
             this.updateEditorTitle(filename);
+            !response.ok ?  this.markDirty() : this.markClean();
             
             // Update file selector
             const fileSelect = document.getElementById('fileSelector');
@@ -845,7 +845,6 @@ class YAMLEditorHelper {
             const fileDisplay = document.getElementById('currentFileDisplay');
             if (fileDisplay) fileDisplay.textContent = '📄 ' + filename;
             
-            this.markClean();
             this.showToast('✅ Loaded: ' + filename, 'success');
             
         } catch (e) {
@@ -1096,21 +1095,51 @@ class YAMLEditorHelper {
         }
     }
 
-    // ===== NEW YAML =====
-    async newYAML() {
-        // Save current file before switching ONLY if it's dirty
-        if (this.currentFile && this.isDirty) {
-            this.saveCurrentToCache();
-        }
+    formatDateString(template = 'YYYYMMDD_HHmmss') {
+        const date = new Date();
+        const d = new Date(date.toISOString());
         
-        const newContentEl = document.getElementById('feed-yaml-new');
+        const map = {
+            'YYYY': d.getFullYear(),
+            'YY': String(d.getFullYear()).slice(-2),
+            'MM': String(d.getMonth() + 1).padStart(2, '0'),
+            'M': d.getMonth() + 1,
+            'DD': String(d.getDate()).padStart(2, '0'),
+            'D': d.getDate(),
+            'HH': String(d.getHours()).padStart(2, '0'),
+            'H': d.getHours(),
+            'mm': String(d.getMinutes()).padStart(2, '0'),
+            'm': d.getMinutes(),
+            'ss': String(d.getSeconds()).padStart(2, '0'),
+            's': d.getSeconds()
+        };
+        
+        return template.replace(/YYYY|YY|MM|M|DD|D|HH|H|mm|m|ss|s/g, key => map[key]);
+    }
+
+    // ===== NEW YAML =====
+    async newYAML(id, name) {
+        
+        const newContentEl = document.getElementById(id);
         if (!newContentEl) {
             this.showToast('❌ New YAML template not found', 'error');
             return;
         }
         
+        name = name || 'new';
+        const yamlName = name + '-' + this.formatDateString();
         const content = newContentEl.value;
-        const filename = 'new_feed.yaml';
+        
+        this.loadYAML(yamlName, content);
+    }
+
+    // ===== LOAD YAML =====
+    async loadYAML(name, content) {
+        // Save current file before switching ONLY if it's dirty
+        if (this.currentFile && this.isDirty) {
+            this.saveCurrentToCache();
+        }
+        const filename = name + '.yaml';
         
         // Store in cache
         this.loadedFeeds[filename] = {
@@ -1123,49 +1152,14 @@ class YAMLEditorHelper {
         this.currentFile = filename;
         this.editor.setValue(content, -1);
         this.yamlContent = content;
-        this.updateEditorTitle('new_feed');
+        this.updateEditorTitle(name);
         
         const fileDisplay = document.getElementById('currentFileDisplay');
         if (fileDisplay) fileDisplay.textContent = '📄 ' + filename + ' (new)';
         
         this.markClean();
         this.showToast('📄 New YAML file created', 'success');
-    }
-
-    // ===== LOAD YAML TEMPLATE =====
-    async loadYAML() {
-        // Save current file before switching ONLY if it's dirty
-        if (this.currentFile && this.isDirty) {
-            this.saveCurrentToCache();
-        }
-        
-        const templateEl = document.getElementById('feed-yaml-template');
-        if (!templateEl) {
-            this.showToast('❌ Template not found', 'error');
-            return;
-        }
-        
-        const content = templateEl.value;
-        const filename = 'template.yaml';
-        
-        // Store in cache
-        this.loadedFeeds[filename] = {
-            content: content,
-            loaded: true,
-            timestamp: Date.now(),
-            dirty: false
-        };
-        
-        this.currentFile = filename;
-        this.editor.setValue(content, -1);
-        this.yamlContent = content;
-        this.updateEditorTitle('template');
-        
-        const fileDisplay = document.getElementById('currentFileDisplay');
-        if (fileDisplay) fileDisplay.textContent = '📄 ' + filename + ' (template)';
-        
-        this.markClean();
-        this.showToast('📄 Template loaded', 'success');
+        this.editor.focus();
     }
 
     async loadFileList() {
@@ -1196,11 +1190,6 @@ class YAMLEditorHelper {
                 option.textContent = filename;
                 fileSelect.appendChild(option);
             });
-        }
-        
-        if (files.length > 0) {
-            fileSelect.value = files[0];
-            await this.loadFile(files[0]);
         }
     }
 
@@ -1657,12 +1646,11 @@ class YAMLEditorHelper {
     exposeToWindow() {
         window.saveYAML = () => this.saveYAML();
         window.loadFile = (filename, forceReload = false) => this.loadFile(filename, forceReload);
-        window.loadFeed = (feedName) => this.loadFile(feedName);
         window.refreshFeedFromServer = (feedName) => this.refreshFeedFromServer(feedName);
         window.reloadYAML = () => this.refreshFeedFromServer(this.currentFile);
         window.clearFeedCache = (feedName) => this.clearFeedCache(feedName);
-        window.newYAML = () => this.newYAML();
-        window.loadYAML = () => this.loadYAML();
+        window.newYAML = (id, name) => this.newYAML(id, name);
+        window.showSuggestions = () => this.showSuggestions();
         window.undo = () => this.editor.undo();
         window.redo = () => this.editor.redo();
         window.find = () => this.editor.execCommand('find');
@@ -1741,16 +1729,38 @@ class YAMLEditorHelper {
 
     // ===== TOAST SYSTEM =====
     showToast(message, type) {
-        const toast = document.getElementById('toast');
-        if (!toast) {
+        const toastContainer = document.getElementById('toast');
+        if (!toastContainer) {
             console.warn('Toast element not found:', message);
             return;
         }
+        
+        // Create new toast element
+        const toast = document.createElement('div');
+        toast.className = `yaml-toast-item ${type}`;
         toast.textContent = message;
-        toast.className = 'yaml-toast ' + type + ' show';
-        clearTimeout(toast._timeout);
-        toast._timeout = setTimeout(() => {
+
+        console.log(`Toast: ${message} [${type}]`);
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Trigger slide in (need a small delay for the transition to work)
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+        
+        // Remove after 3 seconds with slide out
+        setTimeout(() => {
+            // Remove 'show' class to trigger slide out
             toast.classList.remove('show');
+            
+            // Remove from DOM after transition completes
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 1000);
         }, 3000);
     }
 }
@@ -1770,6 +1780,24 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ? 'github_dark' 
                 : 'github_light_default';
             editorHelper.changeTheme(newTheme);
+        });
+    }
+    
+    const closeEditorBtn = document.getElementById('close-editor');
+    if (closeEditorBtn) {
+        closeEditorBtn.addEventListener('click', function() {
+            dirtyFiles = Object.keys(editorHelper.loadedFeeds).filter(filename => editorHelper.loadedFeeds[filename].dirty);
+            if (!dirtyFiles.length) {
+                location.reload();
+            } else {
+                const confirmClose = confirm('You have unsaved changes in' + dirtyFiles.join(', '));
+                if (confirmClose) {
+                    dirtyFiles.forEach(filename => {
+                        editorHelper.loadedFeeds[filename].save = false;
+                    });
+                    location.reload();
+                }
+            }
         });
     }
 });
