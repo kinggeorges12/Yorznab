@@ -21,10 +21,6 @@ import asyncio
 import random
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-# Add the parent directory to the path so we can import utils
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # First time message
 from server.utils.keystore import KeyStore
@@ -39,11 +35,8 @@ import asyncio
 # Global logger instance
 LOGGER = CustomLogger(name="cron")
 
-# Load settings from config file
-SETTINGS = AppSettings(filename='yorznab.yaml')
-
 # Load default args
-REFRESH_SCHEDULE:str = SETTINGS.get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
+REFRESH_SCHEDULE:str = AppSettings(filename='yorznab.yaml').get('cron', 'refresh_schedule') or f"{random.randint(0, 59)} {random.randint(0, 23)} * * *"
 DOWNLOAD:bool = os.environ.get('DOWNLOAD','false').lower() not in ['false', 'no'] and bool(os.environ.get('DOWNLOAD'))
 NEXT_RUN:Optional[datetime] = TimezoneAware.now()
 
@@ -98,7 +91,7 @@ class CronRunner:
         with cls._instance._lock: cls._instance._status = "Running"
         try:
             # Import the webhook module and call run_requests
-            from routers import webhook
+            from server.routers import webhook
             
             # Call run_requests with no server_type to process both Movies and TV
             run_configs = feed_configs or cls.feed_configs()  # Use all feeds if none specified

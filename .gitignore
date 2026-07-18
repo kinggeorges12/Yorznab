@@ -5,6 +5,8 @@ config/**/*.yaml
 config/**/*.yaml-*.bak
 .venv
 logs/**
-scripts
+dev
 __pycache__/
 server/static/cache/**
+Yorznab.egg-info/
+.env

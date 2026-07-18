@@ -17,7 +17,7 @@ from server.utils.keystore import KeyStore
 router = APIRouter()
 
 # Export config vars to globals
-SETTINGS = AppSettings(filename='yorznab.yaml')
+YORZNAB = AppSettings(filename='yorznab.yaml')
 NS = {"torznab": "http://torznab.com/schemas/2015/feed"}
 LOGGER = CustomLogger(name="torznab")
 
@@ -120,15 +120,15 @@ def filter_items(torrents, q=None, cat=None, extra_filters=None):
     return results
 
 def generate_rss(items, offset=0, limit=0):
-    global SETTINGS
+    global YORZNAB
     API_KEY = KeyStore.get_key("API_KEY")
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
-    fg.title(SETTINGS.get('feed', 'title'))
-    fg.link(href=SETTINGS.get('feed', 'link'))
-    fg.description(SETTINGS.get('feed', 'description'))
-    fg.language(SETTINGS.get('feed', 'language'))
+    fg.title(YORZNAB.get('feed', 'title'))
+    fg.link(href=YORZNAB.get('feed', 'link'))
+    fg.description(YORZNAB.get('feed', 'description'))
+    fg.language(YORZNAB.get('feed', 'language'))
 
     # Sort items first, then apply pagination
     sorted_items = sorted(items, key=lambda x: (x.get("score"), x.get("pubDate")), reverse=True)
@@ -144,7 +144,7 @@ def generate_rss(items, offset=0, limit=0):
         # The relationship type (rel) must be enclosure for Sonarr to grab torrents.
         fe.link(href=t.get("fileUrl"))
         fe.enclosure(url=t.get("fileUrl"), length=t.get("fileSize", 0), type="application/x-bittorrent")
-        fe.guid(guid=f"{SETTINGS.get('feed', 'link')}/api?apikey={API_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
+        fe.guid(guid=f"{YORZNAB.get('feed', 'link')}/api?apikey={API_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
         pub_date = datetime.fromtimestamp(t.get("pubDate"), tz=timezone.utc)
         fe.pubDate(pub_date)
         # Look for category field and handle strings, then parse as array
@@ -192,7 +192,7 @@ async def torznab_api(
     offset: int = Query(0, description="Number of results to skip"),
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
-    global SETTINGS, CATEGORIES, CAT_LOOKUP
+    global YORZNAB, CATEGORIES, CAT_LOOKUP
     
     API_KEY = KeyStore.get_key("API_KEY")
     # API key check
@@ -200,8 +200,8 @@ async def torznab_api(
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{SETTINGS.get('feed', 'title')}</title>
-    <link>{SETTINGS.get('feed', 'link')}</link>
+    <title>{YORZNAB.get('feed', 'title')}</title>
+    <link>{YORZNAB.get('feed', 'link')}</link>
     <description>Indexer Error</description>
     <error code="1001" description="Missing or invalid API key"/>
   </channel>
@@ -218,8 +218,8 @@ async def torznab_api(
         feed_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{SETTINGS.get('feed', 'title')}</title>
-    <link>{SETTINGS.get('feed', 'link')}</link>
+    <title>{YORZNAB.get('feed', 'title')}</title>
+    <link>{YORZNAB.get('feed', 'link')}</link>
     <description>Feed Error</description>
     <error code="2" description="No feeds found"/>
   </channel>
@@ -230,11 +230,11 @@ async def torznab_api(
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <caps xmlns:torrent="{NS['torznab']}">
-  <server version="1.0" title="{SETTINGS.get('feed', 'title')}" strapline="Yorznab Indexer"
-      email="{SETTINGS.get('feed', 'email')}" url="{SETTINGS.get('feed', 'link')}"
-      image="{SETTINGS.get('feed', 'image')}" />
+  <server version="1.0" title="{YORZNAB.get('feed', 'title')}" strapline="Yorznab Indexer"
+      email="{YORZNAB.get('feed', 'email')}" url="{YORZNAB.get('feed', 'link')}"
+      image="{YORZNAB.get('feed', 'image')}" />
   <limits max="0" default="0" />
-  <retention>{SETTINGS.get('cron', 'retention_days')}</retention>
+  <retention>{YORZNAB.get('cron', 'retention_days')}</retention>
   <registration available="yes" open="yes" />
 
   <searching>

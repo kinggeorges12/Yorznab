@@ -109,7 +109,7 @@ async def setup(request: Request):
             
             <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.LOGIN}/setup/ws">
                 <div class="terminal-header">
-                    <span class="terminal-title">🖥️ Interactive Setup: {WebSetup.shell_name()}</span>
+                    <span class="terminal-title">🖥️ Interactive Console: {WebSetup.shell_name()}</span>
                     <div class="terminal-controls">
                         <span class="terminal-dot red"></span>
                         <span class="terminal-dot yellow"></span>

@@ -1,19 +1,18 @@
 import os
 from pathlib import PurePosixPath
 from threading import Lock
-import psutil
 
 # Import modules
+from server import SERVER_DIR
 from server.utils.settings import AppSettings
 
-SETTINGS = AppSettings(filename='yorznab.yaml')
-
-class RouteHandlerFactory:
+class RouteHandler:
     
     _instance = None
     _lock = Lock()
     
-    API, LOGIN, STATUS, STATIC, WEBHOOK = None, None, None, None, None
+    API, LOGIN, STATUS, STATIC, WEBHOOK, STATIC_DIR = None, None, None, None, None, None
+    SERVER_DIR = SERVER_DIR
     
     def __new__(cls):
         with cls._lock:
@@ -24,14 +23,16 @@ class RouteHandlerFactory:
     def __init__(self):
         if getattr(self, "_initialized", False):
             return
+        cls = self.__class__
         
         with self._lock:
-            self.API = SETTINGS.get('server', 'api_endpoint') or "/api"
-            self.LOGIN = SETTINGS.get('server', 'login_endpoint') or "/login"
-            self.STATIC = SETTINGS.get('server', 'static_endpoint') or "/static"
-            self.STATUS = SETTINGS.get('server', 'status_endpoint') or "/status"
-            self.WEBHOOK = SETTINGS.get('server', 'webhook_endpoint') or "/webhook"
-            self.STATIC_DIR = os.path.join(psutil.Process().cwd(), "static")
+            YORZNAB = AppSettings(filename='yorznab.yaml')
+            cls.API = YORZNAB.get('server', 'api_endpoint') or "/api"
+            cls.LOGIN = YORZNAB.get('server', 'login_endpoint') or "/login"
+            cls.STATIC = YORZNAB.get('server', 'static_endpoint') or "/static"
+            cls.STATUS = YORZNAB.get('server', 'status_endpoint') or "/status"
+            cls.WEBHOOK = YORZNAB.get('server', 'webhook_endpoint') or "/webhook"
+            cls.STATIC_DIR = os.path.join(cls.SERVER_DIR, "static")
             self._initialized = True
 
     def get_static_url(self, file: str = None) -> str:
@@ -43,6 +44,5 @@ class RouteHandlerFactory:
         if file:
             return os.path.join(self.STATIC_DIR, file)
         return self.STATIC_DIR
-
-# Initialize routes
-RouteHandler = RouteHandlerFactory()
+    
+RouteHandler()  # Initialize the singleton instance

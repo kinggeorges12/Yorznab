@@ -9,9 +9,8 @@ from server.utils.settings import AppSettings
 
 
 LOGGER = CustomLogger(name="LoginService")
-SETTINGS = AppSettings(filename='yorznab.yaml')
 ID_NAME = "LOGIN_PASSKEY"
-TITLE = SETTINGS.get('feed', 'title') or "Yorznab"
+TITLE = AppSettings(filename='yorznab.yaml').get('feed', 'title') or "Yorznab"
 
 def get_csrf_token() -> str:
     return secrets.token_hex(16)

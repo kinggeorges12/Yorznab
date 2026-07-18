@@ -4,6 +4,7 @@ from typing import List
 import shutil
 
 # Import modules
+from server import PROJECT_ROOT
 from server.web.websocket.iwebsetup import OSConfig, IWebSetup
 
 class WebSetup(IWebSetup):
@@ -50,18 +51,18 @@ class WebSetup(IWebSetup):
             return
         
         is_windows = os.name == 'nt'
-        server_path = os.getcwd()
-        directory = Path(server_path).resolve().parent
+        directory = PROJECT_ROOT
 
         env = os.environ.copy()
         env['PYTHONIOENCODING'] = 'utf-8'
         env['PYTHONUTF8'] = '1'
+        env['PYTHONPATH'] = directory
         
         preload_script_str = None
         
         if is_windows:
-            file = './setup.ps1'
-            exec_path = shutil.which('powershell.exe') or shutil.which('pwsh.exe')
+            file = './scripts/console.ps1'
+            exec_path = shutil.which('pwsh.exe') or shutil.which('powershell.exe')
             prompt = 'PS>'
             newline = '\r\n'
             args = ['-NoProfile', '-ExecutionPolicy', 'Bypass']
@@ -70,7 +71,7 @@ class WebSetup(IWebSetup):
             terminal_encoding='windows-1252'
             shell_name='PowerShell'
         else:
-            file = './setup.sh'
+            file = './scripts/console.sh'
             exec_path = shutil.which('bash') or shutil.which('sh')
             prompt = '$'
             newline = '\n'

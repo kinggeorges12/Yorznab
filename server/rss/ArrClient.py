@@ -5,10 +5,14 @@ import os
 from typing import Any, Optional
 from dacite import Config, from_dict
 from dacite.exceptions import MissingValueError
+from fastapi import requests
 import httpx
 
 # Import classes
+from server import PROJECT_ROOT
+from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
+from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
 class ArrType(Enum):
@@ -20,7 +24,7 @@ class LibraryConfig:
     ServerType: ArrType
     Url: str
     ApiKey: str
-    Endpoint: str
+    URLBase: Optional[str] = None
     TypeName: Optional[str] = None
     ServerName: Optional[str] = None
     ProperName: Optional[str] = None
@@ -45,8 +49,16 @@ class ArrClient:
         try:
             self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
         except MissingValueError as e:
-            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.path.join(os.getenv('PYTHONPATH'), self._config_file)}")
+            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
+
+    class EndpointType(Enum):
+        api = ''
+        command = '/command'
+        indexer = '/indexer'
+        queue = '/queue'
+        status = '/system/status'
+        wanted = '/wanted/missing'
 
     @dataclass
     class Mapper:
@@ -86,7 +98,18 @@ class ArrClient:
     def Url(self) -> str: return self._config.Url
     
     @property
-    def Endpoint(self) -> str: return self.serve(self.Mapper(Radarr="movie", Sonarr="series"), self._config.Endpoint)
+    def URLBase(self) -> str: return self.serve(self.Mapper(Radarr="", Sonarr=""), self._config.URLBase)
+    
+    @property
+    def APIVersion(self) -> str: return '/api/v3'
+
+    @property
+    def GetEndpoint(self, endpoint: EndpointType) -> str:
+        url_path = self.Url + self.URLBase + self.APIVersion
+        if endpoint == self.EndpointType.api:
+            return url_path + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
+        else:
+            return url_path + endpoint.value
     
     @property
     def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"), self._config.ProperName)
@@ -114,9 +137,8 @@ class ArrClient:
 
     def status(self) -> dict[str, Any]:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} Arr server")
-        url = f"{self.Url}/api/v3/system/status"
         headers = {"X-Api-Key": self._config.ApiKey}
-        resp = self.session.get(url, headers=headers, timeout=30)
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=headers, timeout=30)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} Arr server")
@@ -124,10 +146,9 @@ class ArrClient:
 
     def wanted_missing(self, page_size: int = 250) -> dict[str, Any]:
         self.LOGGER.info(f"🔍 Searching for missing videos.")
-        url = f"{self.Url}/api/v3/wanted/missing"
         headers = {"X-Api-Key": self._config.ApiKey}
         params = {"page": 1, "pageSize": page_size}
-        resp = self.session.get(url, headers=headers, params=params, timeout=60)
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.wanted), headers=headers, params=params, timeout=60)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"📺 Found {len(result.get('records', []))} missing {self.ProperNames.lower()}.")
@@ -135,10 +156,9 @@ class ArrClient:
 
     def queue(self, page_size: int = 250) -> dict[str, Any]:
         self.LOGGER.info(f"🔍 Searching for queued videos.")
-        url = f"{self.Url}/api/v3/queue"
         headers = {"X-Api-Key": self._config.ApiKey}
         params = {"page": 1, "pageSize": page_size}
-        resp = self.session.get(url, headers=headers, params=params, timeout=60)
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.queue), headers=headers, params=params, timeout=60)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"📺 Found {len(result.get('records', []))} queued {self.ProperNames.lower()}.")
@@ -148,7 +168,7 @@ class ArrClient:
     def lookup_video(self, external_id: str) -> dict[str, Any]:
         external_db = self.ExternalDb
         self.LOGGER.info(f"🔍 Looking for {self.ProperName} using database {external_db}.")
-        url = f"{self.Url}{self.Endpoint}?{external_db}Id={external_id}"
+        url = f"{self.GetEndpoint(self.EndpointType.api)}?{external_db}Id={external_id}"
         headers = {"X-Api-Key": self._config.ApiKey}
         resp = self.session.get(url, headers=headers, timeout=60)
         resp.raise_for_status()
@@ -157,7 +177,7 @@ class ArrClient:
 
     def get_video(self, item_id: str) -> dict[str, Any]:
         self.LOGGER.info(f"🔍 Fetching {self.ProperName} from {self.ServerName} server.")
-        url = f"{self.Url}{self.Endpoint}/{item_id}"
+        url = f"{self.GetEndpoint(self.EndpointType.api)}/{item_id}"
         headers = {"X-Api-Key": self._config.ApiKey}
         resp = self.session.get(url, headers=headers, timeout=60)
         resp.raise_for_status()
@@ -166,13 +186,47 @@ class ArrClient:
         return data
 
     def update_rss(self) -> dict[str, Any]:
-        url = f"{self.Url}/api/v3/command"
         headers = {"X-Api-Key": self._config.ApiKey}
         body = {
             "name": "RssSync"
         }
         self.LOGGER.info(f"🌐 Sending RSS sync command to {self.ServerName} server.")
-        resp = self.session.post(url, headers=headers, json=body, timeout=60)
+        resp = self.session.post(self.GetEndpoint(self.EndpointType.command), headers=headers, json=body, timeout=60)
         resp.raise_for_status()
         return resp.json()
 
+    def add_torznab_indexer(self):
+        YORZNAB = AppSettings(filename='yorznab.yaml')
+        payload = {
+            "name": YORZNAB.get('feed', 'title'),
+            "implementation": "Torznab",
+            "implementationName": "Torznab",
+            "configContract": "TorznabSettings",
+            "infoLink": YORZNAB.get('feed', 'link'),
+            "enableRss": True,
+            "enableAutomaticSearch": True,
+            "enableInteractiveSearch": True,
+            "priority": 25,
+            "tags": [],
+            "fields": [
+                {"name": "baseUrl", "value": YORZNAB.get('feed', 'link')},
+                {"name": "apiKey", "value": KeyStore.get_key('API_KEY')},
+                {"name": "apiPath", "value": YORZNAB.get('server', 'api_endpoint')},
+                {"name": "categories", "value": [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]},
+                {"name": "minimumSeeders", "value": 1},
+                {"name": "seedCriteria.seedTime", "value": 0},
+                {"name": "seedCriteria.seedRatio", "value": 0.0},
+                {"name": "rejectBlocklistedTorrentHashesWhileGrabbing", "value": False}
+            ]
+        }
+        
+        response = requests.post(
+            self.GetEndpoint(self.EndpointType.indexer),
+            headers={
+                "Content-Type": "application/json",
+                "X-Api-Key": self._config.ApiKey
+            },
+            json=payload
+        )
+        
+        return response.json()

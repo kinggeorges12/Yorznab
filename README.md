@@ -123,7 +123,7 @@ The dashboard features an 🖥️ Interactive Setup that helps input your creden
 </div>
 
 # Connect Apps
-Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automatically search for torrents. Setup the Seerr app to begin refreshing the Yorznab feed automatically and provide instant updates when content is requested. From the Yorznab dashboard, open the 🔐 Credentials page to view your keys for the API and webhook.
+Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automatically search for torrents. Setup the Seerr app to begin refreshing the Yorznab feed automatically and provide instant updates when content is requested. Navigate to the 🔐 Credentials page on the Yorznab dashboard to view your keys for the API and webhook.
 
 <div align="center">
   <picture>
@@ -212,7 +212,7 @@ Access the 📻 Feeds page on the Yorznab dashboard to edit and control your fee
   </picture>
 </div>
 
-To turn off the feed filters: delete all feeds from the 📻 Feeds page on the Yorznab dashboard, click the New Feed button, and save the blank template.
+To turn off the feed filters: delete all feeds from the 📻 Feeds page on the Yorznab dashboard.
 
 ## Tags
 The tags section of feed files allow creating multiple Indexers for Radarr and Sonarr to fulfill your seeding requirements on certain trackers. The tags are also helpful for monitoring progress of torrents in qBittorrent from specific trackers, e.g., private trackers and public trackers.
@@ -264,7 +264,7 @@ The Radarr and Sonarr apps allow you to configure specific rules for seeding bas
 Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename.
 
 # Updates
-The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below. If you run into issues connecting to your apps, update your App settings in the new version by running the 🖥️ Interactive Setup on the ⚙️ Configuration page of the Yorznab dashboard.
+The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below. If you run into issues connecting to your apps, update your App settings in the new version by running the 🖥️ Interactive Setup on the ⚙️ Configuration page on the Yorznab dashboard.
 
 ## Unix \(Shell\)
 ```
@@ -301,7 +301,7 @@ This allows Yorznab to pull lists of Wanted items from Sonarr and Radarr.
 
 1. Open Radarr or Sonarr in your browser.
 2. Go to **Settings → General → Security**.
-3. Copy the **API Key** to `ApiKey` under the Radarr or Sonarr entry.
+3. Copy the **API Key**.
 
 ## qBittorrent
 This allows Yorznab to query the qBittorrent search engine.
@@ -309,7 +309,7 @@ This allows Yorznab to query the qBittorrent search engine.
 1. Open qBittorrent WebUI in your browser.
 2. Go to **Settings → WebUI → Authentication**.
 3. Copy the **API Key** (`qbt_...`).
-4. If the qBittorrent version does not have API Key option, provide the `QUsername` and `QPassword` and DO NOT include the QApiKey.
+4. If the qBittorrent version does not have API Key option, provide the `Username` and `Password` and DO NOT include the ApiKey.
 
 ## Native Installation
 Docker is not required! To run natively on your operating system, just download, install, build & run:
@@ -317,27 +317,25 @@ Docker is not required! To run natively on your operating system, just download,
 1. Download: Click `Code > Download Zip` at the top of this page.
 2. Install: Unzip to any folder. Ensure you have prerequisites in your command path: python 3.11+, pip, etc.
 3. Build: Open a command prompt and navigate to the project folder. Run the OS-specific build and run files:
-  - Unix: .\build.ps1 && .\run.ps1
-  - Windows: .\build.ps1 && .\run.ps1
-    - \[Unix Shell\] `sudo chmod +x build.sh run.sh && .\build.ps1 && .\run.ps1`
-    - \[Windows PowerShell\] `.\build.ps1 && .\run.ps1`
+  - \[Unix Shell\] `cd /path/to/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
+  - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
+4. Visit the Yorznab dashboard to finish setup, e.g., https://localhost:9116/
 
 ## Manual Docker Setup
 Sometimes you want to do it yourself, or the installer just doesn't work. Here are the manual setup instructions.
 1. *Download Yorznab*: Click `Code > Download Zip` at the top of this page.
 2. *Install Yorznab*: Unzip into your Docker folder.
 3. *Docker Compose*: Customize the [docker-compose.yml](docker-compose.yml) file and launch the container.
-4. *Configure App Keys*: Run the 🖥️ Interactive Setup from the Yorznab Dashboard > Configuration. Alternatively, open `config/settings.yaml`, edit the Url and ApiKey for each app, then restart the container. For reference, see [`settings.yaml.sample`](config/settings.yaml.sample).
-5. *Connect apps*: Retrieve your setup keys from the Yorznab Dashboard \(or open `config/keys.yaml`\) and input them in Radarr, Sonarr, and Jellyseerr.
+4. *Configure App Keys*: Run the 🖥️ Interactive Setup on the ⚙️ Configuration page on the Yorznab dashboard. Alternatively, open `config/settings.yaml` file, edit the Url and ApiKey for each app, then restart the container. For reference, see [`settings.yaml.sample`](config/settings.yaml.sample).
+5. *Connect apps*: Retrieve your keys from the 🔐 Credentials page on the Yorznab dashboard. Alternatively, read the `config/keys.yaml` file. Input the 🔑 API Key in Radarr and Sonarr. Input the 🔗 Webhook Key Jellyseerr.
 
 # Development
-Setup the local Python environment for running locally without Docker.
+Setup the local Python environment for contributing to this project.
 
 1. Install [Python](https://www.python.org/downloads/) \(test on 3.11+\) on your server or PC. Ensure this is available in your shell: `python --version`
-2. Run the following commands for your OS:
-    - \[Unix Shell\] `cd /path/to/yorznab/app && sudo chmod +x build.sh run.sh setup.sh && ./run.sh`
-    - \[Windows PowerShell\] `Set-Location C:\Docker\yorznab\app && ./build.ps1 && ./run.ps1`
-3. Visit https://localhost:9116/status
+2. Fork the project to your own Github.
+3. Follow the instructions in [Native Installation](#Native-Installation) to run Yorznab in your IDE.
+4. Update the codebase and create a pull request.
 
 # AI Disclosure
 What you're reading on this page was not written by AI. I wrote the Torznab code for this in 2025 without AI, or even an IDE. You might be able to confirm this from looking at my spaghetti code in the [first commit](https://github.com/kinggeorges12/Yorznab/commit/f6ca64b8d559aafe647cdb8f0c9cacda5c0535b9). Most of the work was looking up the endpoints available for the protocol. More recently, I used AI to generate the front-end web server. I also regenerated my utility functions with AI to incorporate some features the desktop app was missing like handling the timezone and settings.

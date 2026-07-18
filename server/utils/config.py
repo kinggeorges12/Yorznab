@@ -1,8 +1,11 @@
 from pathlib import Path
 import os
 
+# Import modules
+from server import PROJECT_ROOT
+
 # Set default directory
-CONFIG_DIR = os.getenv("CONFIG_DIR", "/app/config")
+CONFIG_DIR = os.getenv("CONFIG_DIR") or os.path.join(PROJECT_ROOT, "config")
 
 """Get the configuration directory path from the environment variable or default to /app/config"""
 class ConfigFile:
