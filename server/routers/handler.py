@@ -35,14 +35,16 @@ class RouteHandler:
             cls.STATIC_DIR = os.path.join(cls.SERVER_DIR, "static")
             self._initialized = True
 
-    def get_static_url(self, file: str = None) -> str:
+    @classmethod
+    def get_static_url(cls, file: str = None) -> str:
         if file:
-            return PurePosixPath(self.STATIC, file)
-        return self.STATIC
+            return PurePosixPath(cls.STATIC, file)
+        return cls.STATIC
 
-    def get_static_dir(self, file: str = None) -> str:
+    @classmethod
+    def get_static_dir(cls, file: str = None) -> str:
         if file:
-            return os.path.join(self.STATIC_DIR, file)
-        return self.STATIC_DIR
-    
+            return os.path.join(cls.STATIC_DIR, file)
+        return cls.STATIC_DIR
+
 RouteHandler()  # Initialize the singleton instance

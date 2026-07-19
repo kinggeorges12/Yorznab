@@ -1,12 +1,13 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
+import os
 from typing import Dict, List, Optional
 import json
 import re
 import asyncio
 import signal
-from contextlib import suppress, asynccontextmanager
-from fastapi import WebSocketDisconnect
+from contextlib import suppress
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Import modules
 from server.web.common import LOGGER
@@ -39,10 +40,11 @@ class IWebSetup:
         self._tasks = []
         self._read_buffer = ''
         self._process_running = False
-        self._websocket = None
+        self._websocket: Optional[WebSocket] = None
         self._input_queue = asyncio.Queue()
         self._shutdown_event = asyncio.Event()
         self._seen_initial_vt = False
+        self._cleanup_done = False
         
         # Compile regex patterns once
         self._vt_escape = re.compile(
@@ -85,9 +87,29 @@ class IWebSetup:
         pass
 
     @abstractmethod
-    async def _stdin_writer(self):
+    async def _write_to_process(self, text: str):
         """Write text to stdin"""
         pass
+
+    async def _stdin_writer(self):
+        """Write text to stdin using abstract write method."""
+        await asyncio.sleep(2)
+        
+        while not self._shutdown_event.is_set() and self._is_process_alive():
+            try:
+                text = await asyncio.wait_for(self._input_queue.get(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                LOGGER.debug("Stdin writer task cancelled")
+                break 
+            
+            await self._send_echo(text)
+            await self._write_to_process(text)
+            self._input_queue.task_done()
+        
+        LOGGER.debug("Stdin writer finished")
+        self._shutdown_event.set()
 
     @abstractmethod
     def _is_process_alive(self) -> bool:
@@ -122,18 +144,10 @@ class IWebSetup:
         except Exception:
             return False
 
-    async def _safe_websocket_close(self):
-        """Safely close WebSocket if still open."""
-        if self._websocket:
-            try:
-                if self._websocket.client_state.value != "DISCONNECTED":
-                    await self._websocket.close()
-            except Exception:
-                pass
-
     def _clean_output(self, data: str) -> str:
         """Clean terminal escape sequences from output."""
-        if not self.os_config.is_windows: return data
+        if not self.os_config.is_windows: 
+            return data
         if not self._seen_initial_vt:
             data = self._vt_escape.sub('', data)
             if data.strip():
@@ -150,7 +164,6 @@ class IWebSetup:
         clean_data = self._clean_output(data)
         self._read_buffer += clean_data
         
-        # Process complete lines
         while '\n' in self._read_buffer:
             line, self._read_buffer = self._read_buffer.split('\n', 1)
             LOGGER.debug(f"📤 Sending output: {line}")
@@ -160,7 +173,6 @@ class IWebSetup:
                 "message": line
             }):
                 self._shutdown_event.set()
-                return
 
     async def _handle_input(self):
         """Handle user input from WebSocket."""
@@ -204,7 +216,6 @@ class IWebSetup:
                 LOGGER.debug("🟢 Client ready message received")
                 
         except json.JSONDecodeError:
-            # Fallback for plain text
             LOGGER.debug(f"📥 Input received (plain text): {data}")
             await self._input_queue.put(data)
         except Exception as e:
@@ -246,29 +257,29 @@ class IWebSetup:
     async def _cancel_tasks(self):
         """Cancel all running tasks."""
         for task in self._tasks:
-            if not task.done():
+            with suppress(asyncio.CancelledError):
                 task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
 
     # -------------------------------------------------------------------------
     # Main Methods
     # -------------------------------------------------------------------------
     async def cleanup(self):
         """Clean up resources."""
+        if self._cleanup_done:
+            return
+        
         LOGGER.debug("Running cleanup...")
+        
         self._shutdown_event.set()
         self._process_running = False
+        
         await self._cancel_tasks()
         self._read_buffer = ''
+
+        self._kill_process()
+        
+        self._cleanup_done = True
         LOGGER.debug("Cleanup complete.")
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.cleanup()
-        return False
 
     async def run(self, websocket):
         """Main WebSocket handler."""
@@ -296,11 +307,14 @@ class IWebSetup:
                 asyncio.create_task(self._stdin_writer()),
             ]
             
-            await self._shutdown_event.wait()
+            while not self._shutdown_event.is_set():
+                await asyncio.sleep(0.1)
             
             if self._process:
                 return_code = self._get_process_exit_code()
                 await self._handle_process_completion(return_code)
+            
+            LOGGER.debug("Main loop exited")
                 
         except WebSocketDisconnect:
             LOGGER.debug("WebSocket disconnected")
@@ -312,5 +326,12 @@ class IWebSetup:
             })
         finally:
             signal.signal(signal.SIGINT, original_sigint_handler)
+            signal.signal(signal.SIGTERM, original_sigint_handler)
+            
             await self.cleanup()
-            await self._safe_websocket_close()
+            
+            LOGGER.debug("WebSetup closing...")
+
+            # asyncio.get_running_loop().stop()
+            # asyncio.get_event_loop().stop()
+        return

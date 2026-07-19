@@ -59,6 +59,8 @@ class ArrClient:
         queue = '/queue'
         status = '/system/status'
         wanted = '/wanted/missing'
+        def __str__(self):
+                return self.value
 
     @dataclass
     class Mapper:
@@ -103,13 +105,12 @@ class ArrClient:
     @property
     def APIVersion(self) -> str: return '/api/v3'
 
-    @property
-    def GetEndpoint(self, endpoint: EndpointType) -> str:
+    def GetEndpoint(self, endpoint: ArrClient.EndpointType) -> str:
         url_path = self.Url + self.URLBase + self.APIVersion
-        if endpoint == self.EndpointType.api:
+        if endpoint == self.__class__.EndpointType.api:
             return url_path + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
         else:
-            return url_path + endpoint.value
+            return url_path + str(endpoint)
     
     @property
     def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"), self._config.ProperName)

@@ -1,7 +1,9 @@
 import os
+import atexit
 from pathlib import Path
 from typing import List
 import shutil
+import asyncio
 
 # Import modules
 from server import PROJECT_ROOT
@@ -15,6 +17,7 @@ class WebSetup(IWebSetup):
     # Class-level cached OS configuration
     _os_config: OSConfig = None
     _os_config_loaded: bool = False
+    _impl_instance = None
     
     def __new__(cls):
         """Create new instance and ensure OS config is loaded"""
@@ -32,8 +35,8 @@ class WebSetup(IWebSetup):
             from server.web.websocket.unix import WebSetupUnix
             self._impl = WebSetupUnix(self._os_config)
         
-        # Delegate interface methods to the implementation
-        self._impl_instance = self._impl
+        # Store instance for cleanup
+        WebSetup._impl_instance = self._impl
     
     def __getattr__(self, name):
         """
@@ -59,16 +62,21 @@ class WebSetup(IWebSetup):
         env['PYTHONPATH'] = directory
         
         preload_script_str = None
+        terminal_encoding='utf-8'
         
         if is_windows:
             file = './scripts/console.ps1'
-            exec_path = shutil.which('pwsh.exe') or shutil.which('powershell.exe')
+            powershell_cmd = None #shutil.which('pwsh.exe')
+            if powershell_cmd is None:
+                powershell_cmd = shutil.which('powershell.exe')
+                terminal_encoding='windows-1252'
+            exec_path = powershell_cmd
+            print(f"Using PowerShell executable: {exec_path}")
             prompt = 'PS>'
             newline = '\r\n'
             args = ['-NoProfile', '-ExecutionPolicy', 'Bypass']
             if file:
                 args.extend(['-File', file])
-            terminal_encoding='windows-1252'
             shell_name='PowerShell'
         else:
             file = './scripts/console.sh'
@@ -78,7 +86,6 @@ class WebSetup(IWebSetup):
             args = [file] if file else []
             filepath = Path(os.path.join(directory, file))
             preload_script_str = f"chmod +x {file}"
-            terminal_encoding='utf-8'
             shell_name='Bash'
 
         cls._os_config = OSConfig(
@@ -95,12 +102,6 @@ class WebSetup(IWebSetup):
             preload_script=preload_script_str,
         )
         cls._os_config_loaded = True
-    
-    @classmethod
-    def is_windows(cls) -> bool:
-        """Check if running on Windows"""
-        cls._load_os_config()
-        return cls._os_config.is_windows
     
     @classmethod
     def is_windows(cls) -> bool:

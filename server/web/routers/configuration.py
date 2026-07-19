@@ -102,9 +102,8 @@ async def setup(request: Request):
                 </div>
                 <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not qbittorrent_status else 'none'};">
                     {html_exceptions}
-                <p class="hint-message">Try the <a href="#" onclick="showTerminal()">🖥️ Interactive Setup</a> to configure your apps.</p>
-            </div>
-
+                </div>
+                <p class="hint-message">Try the <a href="#" onclick="showTerminal()">🖥️ Interactive Console</a> to configure your apps.</p>
             </div>
             
             <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.LOGIN}/setup/ws">

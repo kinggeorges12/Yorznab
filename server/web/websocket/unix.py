@@ -29,7 +29,7 @@ class WebSetupUnix(IWebSetup):
         if self._is_process_alive():
             try:
                 os.killpg(os.getpgid(self._process.pid), signal.SIGINT)
-                LOGGER.debug("✅ Sent SIGINT to process")
+                LOGGER.info("✅ Sent SIGINT to process")
             except Exception as e:
                 LOGGER.error(f"Error sending Ctrl+C: {e}")
 
@@ -43,7 +43,7 @@ class WebSetupUnix(IWebSetup):
         if self._is_process_alive():
             try:
                 os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
-                LOGGER.debug("✅ Sent SIGKILL to process")
+                LOGGER.info(f"✅ Force killed process {self._process.pid}")
             except Exception as e:
                 LOGGER.error(f"Error killing process: {e}")
 
@@ -80,7 +80,6 @@ class WebSetupUnix(IWebSetup):
         """Handle Ctrl+C signal."""
         LOGGER.info("🔴 Ctrl+C received, stopping bash process...")
         self._send_interrupt_to_process()
-        self.cleanup()
 
     # -------------------------------------------------------------------------
     # PTY Helpers
@@ -143,27 +142,7 @@ class WebSetupUnix(IWebSetup):
             else:
                 LOGGER.error(f"Error reading from pty: {e}")
         finally:
-            self._process_running = False
             self._shutdown_event.set()
-
-    async def _stdin_writer(self):
-        """Write text to stdin using PTY."""
-        await asyncio.sleep(2)  # Wait for bash to initialize
-        
-        while not self._shutdown_event.is_set() and self._is_process_alive():
-            try:
-                text = await asyncio.wait_for(self._input_queue.get(), timeout=0.5)
-            except asyncio.TimeoutError:
-                continue
-            except asyncio.CancelledError:
-                break
-            
-            await self._send_echo(text)
-            await self._write_to_pty_with_newline(text)
-            self._input_queue.task_done()
-        
-        LOGGER.debug("Stdin writer finished")
-        self._shutdown_event.set()
 
     # -------------------------------------------------------------------------
     # Helper Methods
@@ -176,7 +155,7 @@ class WebSetupUnix(IWebSetup):
                 "message": text
             })
 
-    async def _write_to_pty_with_newline(self, text: str):
+    async def _write_to_process(self, text: str):
         """Write text to PTY with proper newline handling."""
         try:
             LOGGER.debug(f"Incoming raw text: {repr(text)}")
@@ -200,25 +179,33 @@ class WebSetupUnix(IWebSetup):
     async def cleanup(self):
         """Clean up Unix-specific resources."""
         await super().cleanup()
+
+        LOGGER.debug("Unix cleanup started")
         
-        # Clean up process
-        if self._is_process_alive():
-            try:
-                if self._is_process_alive() is None:
-                    # Try SIGHUP first (graceful)
-                    try:
-                        os.killpg(os.getpgid(self._process.pid), signal.SIGHUP)
-                        await asyncio.sleep(1)
-                    except Exception:
-                        pass
-                    
-                    # If still alive, force kill
-                    if self._is_process_alive() is None:
-                        self._kill_process()
-            except Exception as e:
-                LOGGER.error(f"Error during process cleanup: {e}")
-            finally:
-                self._process = None
+        try:
+            # Try graceful shutdown with SIGINT first
+            self._send_interrupt_to_process()
+            await asyncio.sleep(.5)
+            
+            # If still alive, try SIGTERM
+            if self._is_process_alive():
+                LOGGER.info("Process didn't respond to SIGINT, attempting SIGTERM...")
+                try:
+                    self._process.kill()
+                    LOGGER.debug("Killed subprocess")
+                except Exception as e:
+                    LOGGER.error(f"Error killing subprocess: {e}")
+                
+        except Exception as e:
+            LOGGER.error(f"Error killing subprocess: {e}")
+            # Last resort: try to kill
+            if self._is_process_alive():
+                try:
+                    os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+                except Exception as kill_e:
+                    LOGGER.error(f"Failed to kill process during error recovery: {kill_e}")
+        finally:
+            self._process = None
+            # Clean up PTY
+            self._close_pty()
         
-        # Clean up PTY
-        self._close_pty()
