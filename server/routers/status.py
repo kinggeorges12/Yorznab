@@ -4,13 +4,25 @@ from fastapi.responses import JSONResponse
 # Import local modules
 from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
-from server.utils.timeformatter import TimezoneAware, IsoTimeFormatter
+from server.utils.timeformatter import TimezoneAware
 
-router = APIRouter()
+router = APIRouter(prefix=RouteHandler.STATUS, tags=["system"])
 
-# Docker status check
-@router.get(RouteHandler.STATUS)
+@router.get("")
 async def cron_status():
+    """
+    Get the current status of the RSS refresh cron job.
+    
+    Returns the cron job status, server time, and next scheduled run time.
+    
+    Status codes:
+    - healthy/active: Cron is running (Initializing, Started, Running)
+    - healthy/inactive: Cron is sleeping (Sleeping) 
+    - unhealthy: Cron has failed (Failed)
+    
+    Returns:
+        JSONResponse with status, active state, label, current time, and next run time
+    """
     cron_status = CronRunner.status()
     cron_next = TimezoneAware.isoformat(CronRunner.next_run())
     server_time = TimezoneAware.isoformat()

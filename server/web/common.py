@@ -12,10 +12,10 @@ LOGGER = CustomLogger(name="LoginService")
 ID_NAME = "LOGIN_PASSKEY"
 TITLE = AppSettings(filename='yorznab.yaml').get('feed', 'title') or "Yorznab"
 
-def get_csrf_token() -> str:
+def get_cache_token() -> str:
     return secrets.token_hex(16)
 
-def page_template(title: str, content: str, token: str,
+def page_template(title: str, content: str, token: str = get_cache_token(),
                   css: Union[str, List[str]] = None,
                   module: dict[str,tuple[str,str]] = None,
                   js: Union[str, List[str]] = None) -> str:
@@ -64,10 +64,10 @@ def page_template(title: str, content: str, token: str,
 
 def navigation(current_route: str = '') -> str:
     nav_items = [
-        (f"{RouteHandler.LOGIN}/home", "🏠", "Home", "home-btn"),
-        (f"{RouteHandler.LOGIN}/keys", "🔐", "Credentials", "creds-btn"),
-        (f"{RouteHandler.LOGIN}/setup", "⚙️", "Configuration", "config-btn"),
-        (f"{RouteHandler.LOGIN}/feeds", "📻", "Feeds", "feed-btn"),
+        (f"{RouteHandler.DASHBOARD}/home", "🏠", "Home", "home-btn"),
+        (f"{RouteHandler.DASHBOARD}/keys", "🔐", "Credentials", "creds-btn"),
+        (f"{RouteHandler.DASHBOARD}/setup", "⚙️", "Configuration", "config-btn"),
+        (f"{RouteHandler.DASHBOARD}/feeds", "📻", "Feeds", "feed-btn"),
     ]
     
     buttons = ""

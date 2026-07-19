@@ -1,77 +1,71 @@
 import json
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Header, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
 import yaml
 
 # Import modules
-from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
-from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
-from server.utils.timeformatter import TimezoneAware
-from server.web.common import TITLE, get_csrf_token, navigation, page_template
-from server.web.routers.auth import authenticate
+from server.web.common import LOGGER, TITLE, navigation, page_template
+from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
 from server.web.routers.cache import download_and_cache
 
-LOGGER = CustomLogger(name="feeds")
+dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"])
 
-router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
-
-@router.get("/feeds")
+@dashboard_router.get("/feeds", include_in_schema=False)
 async def feeds(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
     
-    token = get_csrf_token()
+    csrf_token = gen_csrf_token()
 
     # Get timestamp for countdown
     ace_css = "cache/css/ace.min.css"
     download_and_cache("https://unpkg.com/ace-css/css/ace.min.css", ace_css)
 
     # Load each feeds config
-    api_key = KeyStore.get_key('API_KEY')
+    indexer_key = KeyStore.get_key('INDEXER_KEY')
     webhook_key = KeyStore.get_key('WEBHOOK_KEY')
     feed_configs = FeedConfig.feeds()
     feed_info = ""
     for feed_config in feed_configs:
         feed_info += f'''
-            <div class="info-container" id="info-container-{feed_config.feed_name}">
+            <div class="info-container" id="info-container-{feed_config.feed_name}" data-name="{feed_config.feed_name}">
                 <div class="info-item">
                     <span class="info-value edit-feed clickable" name="{feed_config.feed_name}" title="Edit Feed"
                       onclick="showEditor('{feed_config.feed_name}')">✏️
                         <span class="info-label">{feed_config.feed_name}</span>
                     </span>
-                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=caps" target="_blank">
+                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=caps" target="_blank">
                         <span class="info-value" title="Capabilities">ℹ️</span>
                     </a>
-                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=movie" target="_blank">
+                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=movie" target="_blank">
                         <span class="info-value" title="Movie Search">🎬</span>
                     </a>
-                    <a href="{RouteHandler.API}/{feed_config.feed_name}?apikey={api_key}&t=tvsearch" target="_blank">
+                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=tvsearch" target="_blank">
                         <span class="info-value" title="TV Search">📺</span>
                     </a>
                     <span class="clickable" name="{feed_config.feed_name}" title="Refresh Feed"
                       onclick="refreshFeed(event, '{feed_config.feed_name}', '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
                         <span class="info-value" id="refresh-icon-{feed_config.feed_name}">🔄</span>
                     </span>
-                    </a>
                     <span class="clickable" name="{feed_config.feed_name}" title="Delete Feed"
-                      onclick="deleteFeed(event, '{feed_config.feed_name}', '{RouteHandler.LOGIN}/feeds/{feed_config.feed_name}', 'info-container-{feed_config.feed_name}')">
+                      onclick="deleteFeed(event, '{feed_config.feed_name}', '{RouteHandler.FEEDS}/{feed_config.feed_name}', 'info-container-{feed_config.feed_name}', '{gen_csrf_token()}')">
                         <span class="info-value" id="delete-icon-{feed_config.feed_name}">🗑️</span>
                     </span>
                 </div>
                 <div class="info-row">
                     <div class="info-btn")" onclick="copyKey('apiPath-{feed_config.feed_name}')">📋 API Path</div>
-                    <div class="key-value" id="apiPath-{feed_config.feed_name}">{f"{RouteHandler.API}/{feed_config.feed_name}"}</div>
+                    <div class="key-value" id="apiPath-{feed_config.feed_name}">{f"{RouteHandler.INDEXER}/{feed_config.feed_name}"}</div>
                 </div>
             </div>'''
 
     content = f'''
         <div class="app-container">
-            {navigation(f'{RouteHandler.LOGIN}/feed')}
+            {navigation(f'{RouteHandler.DASHBOARD}/feed')}
             <h1>{TITLE} 📻 Feeds</h1>
             
             <div id="main-page">
@@ -102,7 +96,7 @@ async def feeds(request: Request):
                 <div class="text-container">
                     <div class="header-container">
                         <h2>🗃️ Indexers</h2>
-                        <a title="Help"href="https://github.com/kinggeorges12/Yorznab#feeds" target="_blank" rel="noopener noreferrer">📖❓</a>
+                        <a href="https://github.com/kinggeorges12/Yorznab#feeds" title="Help" target="_blank" rel="noopener noreferrer">📖❓</a>
                         <button type="button" class="create-btn" onclick="newYAML('feed-yaml-new'); showEditor();">
                             <span class="" name="new_feed" title="Create New Feed">
                                 🆕 Feed
@@ -114,7 +108,12 @@ async def feeds(request: Request):
             </div>
 
             <!-- Ace Editor container -->
-            <div id="editor-container" style="display: none;" class="yaml-editor-wrapper" data-schema="{RouteHandler.LOGIN}/feeds/schema" data-list="{RouteHandler.LOGIN}/feeds/list" data-load="{RouteHandler.LOGIN}/feeds/load" data-save="{RouteHandler.LOGIN}/feeds/save">
+            <div id="editor-container" style="display: none;" class="yaml-editor-wrapper"
+              data-schema="{RouteHandler.FEEDS}/schema"
+                data-list="{RouteHandler.FEEDS}/list"
+                data-load="{RouteHandler.FEEDS}"
+                data-save="{RouteHandler.FEEDS}"
+                data-csrf="{csrf_token}">
                 <textarea id="feed-yaml-new" style="display: none;">{JsonEditor.get_blank()}</textarea>
                 <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_template()}</textarea>
                 <div id="editor-header">
@@ -173,26 +172,38 @@ async def feeds(request: Request):
             </div>
         </div>'''
     
-    return Response(content=page_template(title="Feeds", content=content, token=token, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")
+    response = Response(content=page_template(title="Feeds", content=content, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")
+    add_csrf_token(request, response, csrf_token)
+    return response
 
+router = APIRouter(prefix=RouteHandler.FEEDS, tags=["feeds"])
 
 # ===== YAML FILES ENDPOINT =====
 
-@router.post("/feeds/save/{feedname:str}")
-async def save_yaml(feedname: str, request: Request):
+@router.post("/{feed_name:str}")
+async def save_yaml(feed_name: str, request: Request,
+                    x_csrf_token: str = Header(..., alias="X-CSRF-Token")):
     """
     Save YAML content to a file - returns plain text response
     """
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+    
     try:
+        # Get CSRF token from header
+        csrf_token_header = x_csrf_token
+        
+        # Validate CSRF token
+        if not validate_csrf(request, csrf_token_header):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+        
         # Save yaml
         body_content = await request.body()
 
         # Try to save the feed config
         try:
-            feed_config = FeedConfig.save(feed_name=feedname, yaml_data=body_content.decode('utf-8'))
-            LOGGER.info(f"💾 Saved feed '{feedname}': {feed_config}")
+            feed_config = FeedConfig.save(feed_name=feed_name, yaml_data=body_content.decode('utf-8'))
+            LOGGER.info(f"💾 Saved feed '{feed_name}': {feed_config}")
         except yaml.YAMLError as e:
             LOGGER.error(f"❌ Invalid YAML content: {e}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to save invalid YAML content: {str(e)}")
@@ -203,19 +214,29 @@ async def save_yaml(feedname: str, request: Request):
             LOGGER.error(f"❌ Cannot parse feed config: {e}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse feed config: {str(e)}")
         
-        # Return success message
-        return Response(
-            content=json.dumps({"message": f"✅ Feed saved successfully: {feedname}"}),
+        # Create response and consume CSRF token
+        response = Response(
+            content=json.dumps({"message": f"✅ Feed saved successfully: {feed_name}"}),
             status_code=status.HTTP_200_OK,
             media_type="application/json"
         )
+        consume_csrf_token(request, response, csrf_token_header)
+        # Allow multiple save forms
+        csrf_token = gen_csrf_token()
+        add_csrf_token(request, response, csrf_token)
+        response.headers["X-CSRF-Token"] = csrf_token
+        return response
         
+    except HTTPException:
+        raise
     except Exception as e:
         LOGGER.error(f"Error saving file: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save yaml for feed: {feedname}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save yaml for feed: {feed_name}")
 
-@router.delete("/feeds/{feedname}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_feed(feedname: str, request: Request):
+
+@router.delete("/{feed_name:str}")
+async def delete_feed(feed_name: str, request: Request,
+                      x_csrf_token: str = Header(..., alias="X-CSRF-Token")):
     """
     Delete a feed by name
     """
@@ -225,33 +246,44 @@ async def delete_feed(feedname: str, request: Request):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required"
         )
+    
     try:
-        LOGGER.info(f"🗑️ Deleting feed '{feedname}': {FeedConfig(feed_name=feedname)}")
-        exists = FeedConfig.delete(feed_name=feedname)
+        # Get CSRF token from header
+        csrf_token_header = x_csrf_token
+        
+        # Validate CSRF token
+        if not validate_csrf(request, csrf_token_header):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+        
+        LOGGER.info(f"🗑️ Deleting feed '{feed_name}': {FeedConfig(feed_name=feed_name)}")
+        exists = FeedConfig.delete(feed_name=feed_name)
         if not exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Feed '{feedname}' not found"
+                detail=f"Feed '{feed_name}' not found"
             )
 
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        # Create response and consume CSRF token
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        consume_csrf_token(request, response, csrf_token_header)
+        return response
         
     except HTTPException:
         raise
     except Exception as e:
-        LOGGER.error(f"Error deleting feed {feedname}: {str(e)}", exc_info=True)
+        LOGGER.error(f"Error deleting feed {feed_name}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete feed: {feedname}"
+            detail=f"Failed to delete feed: {feed_name}"
         )
-
-@router.get("/feeds/schema")
+    
+@router.get("/schema", include_in_schema=False)
 async def load_schema(request: Request):
     """
     Load the JSON schema for the feed configuration editor - returns JSON
     """
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
     # Get blank config schema
     json_editor = JsonEditor(FeedFilter())
     json_schema = json.dumps(json_editor.to_schema())
@@ -260,16 +292,16 @@ async def load_schema(request: Request):
         media_type="application/json"
     )
 
-@router.get("/feeds/load/{feedname:str}")
-async def load_yaml(request: Request, feedname: str):
+@router.get("/{feed_name:str}")
+async def load_yaml(request: Request, feed_name: str):
     """
     Load YAML content from a file - returns the raw YAML file
     """
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
     
     try:
-        feed_config = FeedConfig(feedname)
+        feed_config = FeedConfig(feed_name)
         
         if not feed_config.config_path.exists():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -287,13 +319,13 @@ async def load_yaml(request: Request, feedname: str):
         LOGGER.error(f"Error loading file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error loading file: {str(e)}")
 
-@router.get("/feeds/list")
+@router.get("/list")
 async def list_files(request: Request):
     """
     List available YAML files - returns plain text list
     """
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
 
     try:
         file_list = [feed.feed_name for feed in FeedConfig.feeds()]

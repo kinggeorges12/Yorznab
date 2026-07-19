@@ -120,10 +120,10 @@ class YAMLEditorHelper {
         window.addEventListener('beforeunload', (e) => {
             // Check if any cached feeds are dirty
             const dirtyFiles = [];
-            for (const [filename, data] of Object.entries(this.loadedFeeds)) {
+            for (const [feedname, data] of Object.entries(this.loadedFeeds)) {
                 // Check both the cache entry's dirty flag and the current file's dirty state
-                if (data.dirty || (filename === this.currentFile && this.isDirty)) {
-                    dirtyFiles.push(filename);
+                if (data.dirty || (feedname === this.currentFile && this.isDirty)) {
+                    dirtyFiles.push(feedname);
                 }
             }
             
@@ -166,6 +166,7 @@ class YAMLEditorHelper {
             this.apiEndpoints.list = wrapper.dataset.list || '';
             this.apiEndpoints.load = wrapper.dataset.load || '';
             this.apiEndpoints.save = wrapper.dataset.save || '';
+            this.apiEndpoints.csrf = wrapper.dataset.csrf || '';
             console.log('📡 API Endpoints configured:', this.apiEndpoints);
         } else {
             console.warn('⚠️ No .yaml-editor-wrapper found');
@@ -775,32 +776,32 @@ class YAMLEditorHelper {
     }
 
     // ===== CENTRAL LOADING FUNCTION =====
-    async loadFile(filename, forceReload = false) {
-        if (!filename) {
-            this.showToast('❌ No filename provided', 'error');
+    async loadFile(feedname, forceReload = false) {
+        if (!feedname) {
+            this.showToast('❌ No feedname provided', 'error');
             return;
         }
 
         // Save current file to cache before switching ONLY if it's dirty
-        if (this.currentFile && this.currentFile !== filename && this.isDirty) {
+        if (this.currentFile && this.currentFile !== feedname && this.isDirty) {
             this.saveCurrentToCache();
         }
 
         // Check if we should use cache
-        if (!forceReload && this.loadedFeeds[filename] && this.loadedFeeds[filename].loaded) {
-            console.log(`📂 Loading "${filename}" from cache`);
-            this.loadFromCache(filename);
+        if (!forceReload && this.loadedFeeds[feedname] && this.loadedFeeds[feedname].loaded) {
+            console.log(`📂 Loading "${feedname}" from cache`);
+            this.loadFromCache(feedname);
             return;
         }
 
         // Load from server
-        console.log(`📂 Loading "${filename}" from server${forceReload ? ' (forced)' : ''}`);
-        this.showToast(`📂 Loading: ${filename}...`, 'info');
+        console.log(`📂 Loading "${feedname}" from server${forceReload ? ' (forced)' : ''}`);
+        this.showToast(`📂 Loading: ${feedname}...`, 'info');
 
         try {
             const loadUrl = this.apiEndpoints.load.endsWith('/') 
-                ? this.apiEndpoints.load + encodeURIComponent(filename)
-                : this.apiEndpoints.load + '/' + encodeURIComponent(filename);
+                ? this.apiEndpoints.load + encodeURIComponent(feedname)
+                : this.apiEndpoints.load + '/' + encodeURIComponent(feedname);
             
             const response = await fetch(loadUrl);
             
@@ -811,16 +812,16 @@ class YAMLEditorHelper {
             }
             else {
                 if (response.status === 404) {
-                    this.showToast('❌ File not found: ' + filename, 'error');
+                    this.showToast('❌ File not found: ' + feedname, 'error');
                 } else {
                     this.showToast('❌ Error loading file: ' + response.status, 'error');
                 }
                 await this.newYAML('feed-yaml-new');
             }
             
-            this.currentFile = filename;
+            this.currentFile = feedname;
             // Store in cache
-            this.loadedFeeds[filename] = {
+            this.loadedFeeds[feedname] = {
                 content: this.yamlContent,
                 loaded: true,
                 timestamp: Date.now(),
@@ -828,77 +829,76 @@ class YAMLEditorHelper {
             };
             
             // Update title
-            this.updateEditorTitle(filename);
+            this.updateEditorTitle(feedname);
             !response.ok ?  this.markDirty() : this.markClean();
             
             // Update file selector
             const fileSelect = document.getElementById('fileSelector');
             if (fileSelect) {
                 for (let i = 0; i < fileSelect.options.length; i++) {
-                    if (fileSelect.options[i].value === filename) {
-                        fileSelect.value = filename;
+                    if (fileSelect.options[i].value === feedname) {
+                        fileSelect.value = feedname;
                         break;
                     }
                 }
             }
             
             const fileDisplay = document.getElementById('currentFileDisplay');
-            if (fileDisplay) fileDisplay.textContent = '📄 ' + filename;
+            if (fileDisplay) fileDisplay.textContent = '📄 ' + feedname;
             
-            this.showToast('✅ Loaded: ' + filename, 'success');
+            this.showToast('✅ Loaded: ' + feedname, 'success');
             
         } catch (e) {
             console.error('Failed to load file:', e);
             this.showToast('❌ Network error loading file', 'error');
-            delete this.loadedFeeds[filename];
+            delete this.loadedFeeds[feedname];
         }
     }
 
     // ===== LOAD FROM CACHE =====
-    loadFromCache(filename) {
-        const cached = this.loadedFeeds[filename];
+    loadFromCache(feedname) {
+        const cached = this.loadedFeeds[feedname];
         if (!cached || !cached.content) {
             // Cache is invalid, reload from server
-            delete this.loadedFeeds[filename];
-            this.loadFile(filename, true);
+            delete this.loadedFeeds[feedname];
+            this.loadFile(feedname, true);
             return;
         }
         
-        this.currentFile = filename;
+        this.currentFile = feedname;
         this.editor.setValue(cached.content, -1);
         this.yamlContent = cached.content;
         
         // Update title
-        this.updateEditorTitle(filename);
+        this.updateEditorTitle(feedname);
         
         // Update file selector
         const fileSelect = document.getElementById('fileSelector');
         if (fileSelect) {
             for (let i = 0; i < fileSelect.options.length; i++) {
-                if (fileSelect.options[i].value === filename) {
-                    fileSelect.value = filename;
+                if (fileSelect.options[i].value === feedname) {
+                    fileSelect.value = feedname;
                     break;
                 }
             }
         }
         
         const fileDisplay = document.getElementById('currentFileDisplay');
-        if (fileDisplay) fileDisplay.textContent = '📄 ' + filename + ' (cached)';
+        if (fileDisplay) fileDisplay.textContent = '📄 ' + feedname + ' (cached)';
         
-        this.markClean();
-        this.showToast('✅ Loaded cached: ' + filename, 'success');
+        this.showToast('✅ Loaded cached: ' + feedname, 'success');
     }
 
     // ===== UPDATE EDITOR TITLE =====
-    updateEditorTitle(filename) {
+    updateEditorTitle(feedname) {
         const titleEl = document.getElementById('editor-title');
         if (titleEl) {
-            titleEl.textContent = filename;
+            titleEl.textContent = feedname;
         }
     }
 
-    // ===== GET FILENAME FROM TITLE =====
-    getFilenameFromTitle() {
+    // ===== GET FEEDNAME FROM TITLE =====
+    getFeednameFromTitle() {
         const titleEl = document.getElementById('editor-title');
         return titleEl ? titleEl.textContent.trim() : '';
     }
@@ -910,26 +910,26 @@ class YAMLEditorHelper {
         const content = this.editor.getValue();
         const dirty = this.isDirty;
         
-        // Get the current filename from the title (in case it was changed)
-        const titleFilename = this.getFilenameFromTitle();
-        const cacheKey = titleFilename || this.currentFile;
+        // Get the current feedname from the title (in case it was changed)
+        const titleFeedname = this.getFeednameFromTitle();
+        const cacheKey = titleFeedname || this.currentFile;
         
-        // If the filename changed, we need to handle this
-        if (titleFilename && titleFilename !== this.currentFile) {
+        // If the feedname changed, we need to handle this
+        if (titleFeedname && titleFeedname !== this.currentFile) {
             // Keep old version in cache with dirty flag
             if (this.loadedFeeds[this.currentFile]) {
                 this.loadedFeeds[this.currentFile].dirty = true;
             }
             
-            // Save to new filename in cache
-            this.loadedFeeds[titleFilename] = {
+            // Save to new feedname in cache
+            this.loadedFeeds[titleFeedname] = {
                 content: content,
                 loaded: true,
                 timestamp: Date.now(),
                 dirty: dirty
             };
             
-            this.currentFile = titleFilename;
+            this.currentFile = titleFeedname;
             console.log(`💾 Saved "${this.currentFile}" to local cache (renamed from previous)`);
         } else {
             // Update existing cache entry
@@ -1034,10 +1034,10 @@ class YAMLEditorHelper {
     }
 
     async saveYAML() {
-        // Use the filename from the title
-        const filename = this.getFilenameFromTitle();
-        if (!filename) {
-            this.showToast('❌ No filename specified', 'error');
+        // Use the feedname from the title
+        const feedname = this.getFeednameFromTitle();
+        if (!feedname) {
+            this.showToast('❌ No feedname specified', 'error');
             return;
         }
         
@@ -1045,12 +1045,15 @@ class YAMLEditorHelper {
         
         try {
             const saveUrl = this.apiEndpoints.save.endsWith('/') 
-                ? this.apiEndpoints.save + encodeURIComponent(filename)
-                : this.apiEndpoints.save + '/' + encodeURIComponent(filename);
+                ? this.apiEndpoints.save + encodeURIComponent(feedname)
+                : this.apiEndpoints.save + '/' + encodeURIComponent(feedname);
             
             const response = await fetch(saveUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'X-CSRF-Token': this.apiEndpoints.csrf
+                 },
                 body: content
             });
             
@@ -1061,17 +1064,18 @@ class YAMLEditorHelper {
             }
             
             const result = await response.json();
+            this.apiEndpoints.csrf = result.csrf || this.apiEndpoints.csrf;
             this.yamlContent = content;
             
             // Update cache if this file is cached
-            if (this.loadedFeeds[filename]) {
-                this.loadedFeeds[filename].content = content;
-                this.loadedFeeds[filename].timestamp = Date.now();
-                this.loadedFeeds[filename].dirty = false;
-                console.log(`📝 Updated cache for: ${filename}`);
+            if (this.loadedFeeds[feedname]) {
+                this.loadedFeeds[feedname].content = content;
+                this.loadedFeeds[feedname].timestamp = Date.now();
+                this.loadedFeeds[feedname].dirty = false;
+                console.log(`📝 Updated cache for: ${feedname}`);
             } else {
                 // Add to cache if not present
-                this.loadedFeeds[filename] = {
+                this.loadedFeeds[feedname] = {
                     content: content,
                     loaded: true,
                     timestamp: Date.now(),
@@ -1080,14 +1084,14 @@ class YAMLEditorHelper {
             }
             
             // Update current file
-            this.currentFile = filename;
+            this.currentFile = feedname;
             
             // Update file display
             const fileDisplay = document.getElementById('currentFileDisplay');
-            if (fileDisplay) fileDisplay.textContent = '📄 ' + filename;
+            if (fileDisplay) fileDisplay.textContent = '📄 ' + feedname;
             
             this.markClean();
-            this.showToast(result.message || '✅ Saved: ' + filename, 'success');
+            this.showToast(result.message || '✅ Saved: ' + feedname, 'success');
             
         } catch (e) {
             this.showToast('❌ Network error: ' + e.message, 'error');
@@ -1139,23 +1143,23 @@ class YAMLEditorHelper {
         if (this.currentFile && this.isDirty) {
             this.saveCurrentToCache();
         }
-        const filename = name + '.yaml';
+        const feedname = name;
         
         // Store in cache
-        this.loadedFeeds[filename] = {
+        this.loadedFeeds[feedname] = {
             content: content,
             loaded: true,
             timestamp: Date.now(),
             dirty: false
         };
         
-        this.currentFile = filename;
+        this.currentFile = feedname;
         this.editor.setValue(content, -1);
         this.yamlContent = content;
         this.updateEditorTitle(name);
         
         const fileDisplay = document.getElementById('currentFileDisplay');
-        if (fileDisplay) fileDisplay.textContent = '📄 ' + filename + ' (new)';
+        if (fileDisplay) fileDisplay.textContent = '📄 ' + feedname + ' (new)';
         
         this.markClean();
         this.showToast('📄 New YAML file created', 'success');
@@ -1184,10 +1188,10 @@ class YAMLEditorHelper {
             option.disabled = true;
             fileSelect.appendChild(option);
         } else {
-            files.forEach(filename => {
+            files.forEach(feedname => {
                 const option = document.createElement('option');
-                option.value = filename;
-                option.textContent = filename;
+                option.value = feedname;
+                option.textContent = feedname;
                 fileSelect.appendChild(option);
             });
         }
@@ -1645,7 +1649,7 @@ class YAMLEditorHelper {
 
     exposeToWindow() {
         window.saveYAML = () => this.saveYAML();
-        window.loadFile = (filename, forceReload = false) => this.loadFile(filename, forceReload);
+        window.loadFile = (feedname, forceReload = false) => this.loadFile(feedname, forceReload);
         window.refreshFeedFromServer = (feedName) => this.refreshFeedFromServer(feedName);
         window.reloadYAML = () => this.refreshFeedFromServer(this.currentFile);
         window.clearFeedCache = (feedName) => this.clearFeedCache(feedName);
@@ -1786,17 +1790,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     const closeEditorBtn = document.getElementById('close-editor');
     if (closeEditorBtn) {
         closeEditorBtn.addEventListener('click', function() {
-            dirtyFiles = Object.keys(editorHelper.loadedFeeds).filter(filename => editorHelper.loadedFeeds[filename].dirty);
+            const dirtyFiles = Object.keys(editorHelper.loadedFeeds).filter(feed => editorHelper.loadedFeeds[feed].dirty);
+            
             if (!dirtyFiles.length) {
                 location.reload();
             } else {
-                const confirmClose = confirm('You have unsaved changes in' + dirtyFiles.join(', '));
+                const confirmClose = confirm('You have unsaved changes in:\n' + dirtyFiles.join('\n') + '\n\nSave before closing?');
+                
                 if (confirmClose) {
-                    dirtyFiles.forEach(filename => {
-                        editorHelper.loadedFeeds[filename].save = false;
+                    // Save everything
+                    dirtyFiles.forEach(feed => {
+                        editorHelper.loadFile(feed);
+                        editorHelper.saveYAML();
                     });
-                    location.reload();
+                    // Reload after saving
+                    setTimeout(() => location.reload(), 500);
                 }
+                editorHelper.saveCurrentToCache()
             }
         });
     }

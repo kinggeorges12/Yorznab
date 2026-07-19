@@ -9,19 +9,17 @@ from server.web.websocket.factory import WebSetup
 from server.routers.handler import RouteHandler
 from server.rss.ArrClient import ArrClient, ArrType
 from server.rss.QBitClient import QBitClient
-from server.web.common import LOGGER, TITLE, get_csrf_token, navigation, page_template
+from server.web.common import LOGGER, TITLE, navigation, page_template
 from server.web.routers.auth import authenticate
 
-router = APIRouter(prefix=RouteHandler.LOGIN, tags=["web"])
+router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schema=False)
 
 @router.get("/setup")
 async def setup(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
 
-    token = get_csrf_token()
     exceptions = []
-
     try:
         radarr_client = ArrClient(ArrType.Radarr)
         radarr_status = radarr_client.status() if radarr_client else ""
@@ -91,7 +89,7 @@ async def setup(request: Request):
 
     content = f'''
         <div class="app-container">
-            {navigation(f'{RouteHandler.LOGIN}/setup')}
+            {navigation(f'{RouteHandler.DASHBOARD}/setup')}
             <h1>{TITLE} ⚙️ Configuration</h1>
 
             <div id="appIconsContainer" class="text-container">
@@ -103,10 +101,10 @@ async def setup(request: Request):
                 <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not qbittorrent_status else 'none'};">
                     {html_exceptions}
                 </div>
-                <p class="hint-message">Try the <a href="#" onclick="showTerminal()">🖥️ Interactive Console</a> to configure your apps.</p>
+                <p class="hint-message">Try the <a href="#" onclick="showTerminal()"><span>🖥️ Interactive Console</span></a> to configure your apps.</p>
             </div>
             
-            <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.LOGIN}/setup/ws">
+            <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.DASHBOARD}/setup/ws">
                 <div class="terminal-header">
                     <span class="terminal-title">🖥️ Interactive Console: {WebSetup.shell_name()}</span>
                     <div class="terminal-controls">
@@ -144,7 +142,7 @@ async def setup(request: Request):
             </div>
         </div>'''
     
-    return Response(content=page_template(title="Configuration", content=content, token=token, js="js/terminal.js", css=["css/setup.css", "cache/css/dejavu-sans-mono"]), media_type="text/html")
+    return Response(content=page_template(title="Configuration", content=content, js="js/terminal.js", css=["css/setup.css", "cache/css/dejavu-sans-mono"]), media_type="text/html")
 
 @router.websocket("/setup/ws")
 async def websocket_setup(websocket: WebSocket):

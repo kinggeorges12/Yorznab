@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
@@ -11,6 +11,9 @@ import server.cron.rssrefresh
 from server.routers import status, torznab, webhook
 from server.web.routers import web_routers
 from server.routers.handler import RouteHandler
+
+# Import docs
+from server.utils.docs import create_openapi, project_info
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +39,8 @@ app.include_router(torznab.router)
 app.include_router(webhook.router)
 app.include_router(web_routers)
 
+# Setup docs
+app.openapi_schema = create_openapi(app)
 
 # Mount static directory
 app.mount(RouteHandler.STATIC, StaticFiles(directory=RouteHandler.STATIC_DIR), name="static")
@@ -44,8 +49,3 @@ app.mount(RouteHandler.STATIC, StaticFiles(directory=RouteHandler.STATIC_DIR), n
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse(RouteHandler.get_static_dir("favicon.ico"))
-
-# Default route - redirects root to /login
-@app.get("/")
-async def root():
-    return RedirectResponse(url=RouteHandler.LOGIN, status_code=302)

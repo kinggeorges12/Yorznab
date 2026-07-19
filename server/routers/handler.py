@@ -3,7 +3,7 @@ from pathlib import PurePosixPath
 from threading import Lock
 
 # Import modules
-from server import SERVER_DIR
+import server
 from server.utils.settings import AppSettings
 
 class RouteHandler:
@@ -11,8 +11,17 @@ class RouteHandler:
     _instance = None
     _lock = Lock()
     
-    API, LOGIN, STATUS, STATIC, WEBHOOK, STATIC_DIR = None, None, None, None, None, None
-    SERVER_DIR = SERVER_DIR
+    SERVER_DIR = server.SERVER_DIR
+    API = "/api/v1"
+    FEEDS = API + "/feeds"
+    INDEXER = API + "/indexer"
+    AUTH = API + "/auth"
+    ROUTES = API + "/routes"
+    STATUS = API + "/status"
+    WEBHOOK = API + "/webhook"
+    DASHBOARD = ""
+    STATIC = "/static"
+    STATIC_DIR = os.path.join(SERVER_DIR, "static")
     
     def __new__(cls):
         with cls._lock:
@@ -23,16 +32,8 @@ class RouteHandler:
     def __init__(self):
         if getattr(self, "_initialized", False):
             return
-        cls = self.__class__
         
         with self._lock:
-            YORZNAB = AppSettings(filename='yorznab.yaml')
-            cls.API = YORZNAB.get('server', 'api_endpoint') or "/api"
-            cls.LOGIN = YORZNAB.get('server', 'login_endpoint') or "/login"
-            cls.STATIC = YORZNAB.get('server', 'static_endpoint') or "/static"
-            cls.STATUS = YORZNAB.get('server', 'status_endpoint') or "/status"
-            cls.WEBHOOK = YORZNAB.get('server', 'webhook_endpoint') or "/webhook"
-            cls.STATIC_DIR = os.path.join(cls.SERVER_DIR, "static")
             self._initialized = True
 
     @classmethod

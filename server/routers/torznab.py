@@ -14,7 +14,7 @@ from server.utils.feedconfig import FeedConfig
 from server.utils.settings import AppSettings
 from server.utils.keystore import KeyStore
 
-router = APIRouter()
+router = APIRouter(prefix=RouteHandler.INDEXER, tags=["indexer"])
 
 # Export config vars to globals
 YORZNAB = AppSettings(filename='yorznab.yaml')
@@ -121,7 +121,7 @@ def filter_items(torrents, q=None, cat=None, extra_filters=None):
 
 def generate_rss(items, offset=0, limit=0):
     global YORZNAB
-    API_KEY = KeyStore.get_key("API_KEY")
+    INDEXER_KEY = KeyStore.get_key("INDEXER_KEY")
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
@@ -144,7 +144,7 @@ def generate_rss(items, offset=0, limit=0):
         # The relationship type (rel) must be enclosure for Sonarr to grab torrents.
         fe.link(href=t.get("fileUrl"))
         fe.enclosure(url=t.get("fileUrl"), length=t.get("fileSize", 0), type="application/x-bittorrent")
-        fe.guid(guid=f"{YORZNAB.get('feed', 'link')}/api?apikey={API_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
+        fe.guid(guid=f"{YORZNAB.get('feed', 'link')}/api?apikey={INDEXER_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
         pub_date = datetime.fromtimestamp(t.get("pubDate"), tz=timezone.utc)
         fe.pubDate(pub_date)
         # Look for category field and handle strings, then parse as array
@@ -164,22 +164,22 @@ def generate_rss(items, offset=0, limit=0):
     return fg.rss_str(pretty=True)
 
 # Default feed file
-@router.get(RouteHandler.API + "/")
+@router.get("")
 async def base_endpoint(request: Request):
     # Load first or default feed file
     feed = FeedConfig.feed().feed_name
     LOGGER.debug(f"↪️ Redirecting to feed: {feed}")
     # Inject the feed parameter into the path
-    redirect_url = f"{RouteHandler.API}/{feed}"
+    redirect_url = f"{RouteHandler.INDEXER}/{feed}"
     # Append the original query string back onto the end if it exists
     query_string = request.url.query
     redirect_url += f"?{query_string}" if query_string else ""
     # Redirect to torznab_api handler
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
-@router.get(RouteHandler.API + "/{feed}")
+@router.get("/{feed_name:str}")
 async def torznab_api(
-    feed: str,
+    feed_name: str,
     apikey: str = Query(None, description="API key from config file"),
     t: str = Query(..., description="Torznab function: caps, search, tvsearch, movie, details"),
     q: str = Query(None, description="Search query"),
@@ -194,9 +194,9 @@ async def torznab_api(
 ):
     global YORZNAB, CATEGORIES, CAT_LOOKUP
     
-    API_KEY = KeyStore.get_key("API_KEY")
+    INDEXER_KEY = KeyStore.get_key("INDEXER_KEY")
     # API key check
-    if apikey != API_KEY:
+    if apikey != INDEXER_KEY:
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
@@ -209,8 +209,8 @@ async def torznab_api(
         return Response(content=apikey_error, media_type="application/xml", status_code=status.HTTP_401_UNAUTHORIZED)
 
     # Load torrents JSON after checking API key
-    feed_config = FeedConfig.feed(feed)
-    LOGGER.debug(f"Loaded feed config for '{feed}': {feed_config}")
+    feed_config = FeedConfig.feed(feed_name)
+    LOGGER.debug(f"Loaded feed config for '{feed_name}': {feed_config}")
     torrents = None
     if feed_config:
         torrents = feed_config.read()

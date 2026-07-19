@@ -77,11 +77,11 @@ Write-Delay "╿          ██╿   ╰██████╭╯██╿  █�
 Write-Delay "╽          ╰╼╯    ╰╼╾╼╾╼╯ ╰╼╯  ╰╼╯╰╼╾╼╾╼╾╯╰╼╯  ╰╼╾╼╯╰╼╯  ╰╼╯╰╼╾╼╾╼╯ ╰╼╯        ╽"
 Write-Delay "╟╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╢" -Delay 100
 Write-Delay "╿                                                                              ╿"
-Write-Delay "╽       ...a Torznab Indexer that's all YORZ                                   ╽" -Delay 2000
+Write-Delay "╽       ...a Torznab Indexer that's all YORZ                                   ╽" -Delay 1000
 Write-Delay "╿                                                                              ╿"
 Write-Delay "╰╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╯"
 Write-Delay ""
-Write-Delay -Delay 1000 "This is your command console!"
+Write-Delay "This is your command console!"
 
 Write-Delay "Enter any command to execute on the Yorznab server."
 while ($true) {

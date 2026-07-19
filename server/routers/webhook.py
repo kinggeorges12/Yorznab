@@ -13,7 +13,7 @@ from server.utils.feedconfig import FeedConfig
 from server.utils.keystore import KeyStore
 import server.rss.builder as rssbuilder
 
-router = APIRouter()
+router = APIRouter(prefix=RouteHandler.WEBHOOK, tags=["webhook"])
 
 # Export config vars to globals
 SETTINGS = AppSettings(filename='yorznab.yaml')
@@ -56,10 +56,10 @@ async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type
         return 1
     
 # Manual run from the web browser
-@router.get(RouteHandler.WEBHOOK)
+@router.get('')
 async def webhook_get(
     feed: str,
-    apikey: str = Query(None, description="API key from config file"),
+    apikey: str = Query(None, description="Webhook key from config file"),
 ):
     # API key check
     if apikey != KeyStore.get_key("WEBHOOK_KEY"):
@@ -79,7 +79,7 @@ async def webhook_get(
 
 
 # Runs from the Jellyseerr webhook
-@router.post(RouteHandler.WEBHOOK)
+@router.post('')
 async def webhook(request: Request, authorization: str = Header(None)):
     # Check header exists
     if not authorization:

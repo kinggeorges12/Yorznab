@@ -6,6 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "Yorznab"
 version = "1.0"
 description = "... a Torznab indexer that's all YORZ"
+authors = [
+    {name = "kinggeorges12", email = "kinggeorges12@github.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -20,8 +24,19 @@ dependencies = [
     "tzdata",
     "websockets",
     "dotenv",
+    "python-multipart",
     'pywinpty; sys_platform == "win32"',  # Only installs on Windows
 ]
+
+[project.urls]
+repository = "https://github.com/kinggeorges12/Yorznab"
+documentation = "http://localhost:9116/docs"
+support = "https://github.com/kinggeorges12/Yorznab/issues"
+license = "https://github.com/kinggeorges12/Yorznab?tab=MIT-1-ov-file"
+
+[tool.fastapi]
+api_version = "1.0.0"
+api_prefix = "/api/v1"
 
 [tool.setuptools.packages.find]
 where = ["."]

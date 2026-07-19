@@ -11,11 +11,10 @@ import httpx
 # Import modules
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
-from server.web.routers.auth import authenticate
 
 LOGGER = CustomLogger(name="CacheRouter")
 
-router = APIRouter(prefix=RouteHandler.STATIC, tags=["web"])
+router = APIRouter(prefix=RouteHandler.STATIC, tags=["web"], include_in_schema=False)
 
 @router.get("/cache/ace/{file_path:path}")
 async def get_ace_file(file_path: str):

@@ -156,7 +156,7 @@ Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted 
     - Enable Interactive Search: ✅
     - URL (defaults\*): http://localhost:9116
     - API Path (defaults\*): /api
-    - API Key (dashboard: API_KEY): YOUR_API_KEY
+    - API Key (dashboard: INDEXER_KEY): YOUR_INDEXER_KEY
     - \[RADARR\] Categories: ✅ Movies \(all\)
     - \[SONARR\] Categories: ✅ TV \(all except 🔲 Anime\)
     - \[SONARR\] Anime Categories: 🔲TV > ✅ Anime \(only\)

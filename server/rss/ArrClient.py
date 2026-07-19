@@ -211,7 +211,7 @@ class ArrClient:
             "tags": [],
             "fields": [
                 {"name": "baseUrl", "value": YORZNAB.get('feed', 'link')},
-                {"name": "apiKey", "value": KeyStore.get_key('API_KEY')},
+                {"name": "apiKey", "value": KeyStore.get_key('INDEXER_KEY')},
                 {"name": "apiPath", "value": YORZNAB.get('server', 'api_endpoint')},
                 {"name": "categories", "value": [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]},
                 {"name": "minimumSeeders", "value": 1},

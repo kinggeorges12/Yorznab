@@ -241,10 +241,10 @@ async function refreshFeed(event, feedName, url, iconId) {
     }
 }
 
-async function deleteFeed(event, feedName, url, itemId) {
+async function deleteFeed(event, feedName, url, itemId, csrfToken) {
     event.preventDefault();
     
-    const item = document.getElementById(itemId);
+    const csrf = document.getElementById(itemId);
     if (!item) {
         console.error('Feed item not found:', feedName);
         return;
@@ -260,6 +260,7 @@ async function deleteFeed(event, feedName, url, itemId) {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             },
             credentials: 'same-origin'
         });

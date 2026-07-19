@@ -4,7 +4,7 @@ import yaml
 
 # Import classes
 from server.utils.config import ConfigFile
-KEYS_ALL = ["API_KEY", "WEBHOOK_KEY", "UNIQUE_APPID", "LOGIN_PASSKEY"]
+KEYS_ALL = ["INDEXER_KEY", "WEBHOOK_KEY", "UNIQUE_APPID", "LOGIN_PASSKEY"]
 KEY_LOGIN = "LOGIN_PASSKEY"
 KEY_FILE = "keys.yaml"
 
