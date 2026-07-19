@@ -66,12 +66,11 @@ class WebSetup(IWebSetup):
         
         if is_windows:
             file = './scripts/console.ps1'
-            powershell_cmd = None #shutil.which('pwsh.exe')
+            powershell_cmd = shutil.which('pwsh.exe')
             if powershell_cmd is None:
                 powershell_cmd = shutil.which('powershell.exe')
                 terminal_encoding='windows-1252'
             exec_path = powershell_cmd
-            print(f"Using PowerShell executable: {exec_path}")
             prompt = 'PS>'
             newline = '\r\n'
             args = ['-NoProfile', '-ExecutionPolicy', 'Bypass']

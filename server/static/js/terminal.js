@@ -239,9 +239,9 @@ function addTerminalLine(type, message) {
     
     if (type !== 'system' && type !== 'output' && type !== 'success' && type !== 'warning' && type !== 'error') {
         const timestamp = new Date().toLocaleTimeString();
-        line.textContent = `[${timestamp}] ${message}`;
+        line.innerHTML = `[${timestamp}] ${message}`;
     } else {
-        line.textContent = message;
+        line.innerHTML = message;
     }
     
     terminalOutput.appendChild(line);

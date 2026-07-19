@@ -1,11 +1,8 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
-import os
 from typing import Dict, List, Optional
 import json
-import re
 import asyncio
-import signal
 from contextlib import suppress
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -45,24 +42,6 @@ class IWebSetup:
         self._shutdown_event = asyncio.Event()
         self._seen_initial_vt = False
         self._cleanup_done = False
-        
-        # Compile regex patterns once
-        self._vt_escape = re.compile(
-            r"""
-            \x1B
-            (?:
-                \[[0-?]*[ -/]*[@-~]      # CSI sequences: ESC[...letter
-                |
-                \][^\x07]*(?:\x07|\x1B\\) # OSC sequences
-                |
-                [@-_]                     # Single ESC commands
-            )
-            """,
-            re.VERBOSE
-        )
-        self._line_escape = re.compile(
-            r'(?:\x1b\[0m)+|(?:\x1b\[(\d+);(\d+)H)'
-        )
 
     @property
     def nl(self):
@@ -77,11 +56,6 @@ class IWebSetup:
         pass
 
     @abstractmethod
-    def _signal_handler(self, signum, frame):
-        """Handle Ctrl+C signal"""
-        pass
-
-    @abstractmethod
     async def _read_output(self):
         """Read from process output and send to WebSocket"""
         pass
@@ -90,6 +64,14 @@ class IWebSetup:
     async def _write_to_process(self, text: str):
         """Write text to stdin"""
         pass
+
+    async def _send_echo(self, text: str):
+        """Send echo back to frontend."""
+        if self._websocket:
+            await self._safe_send_json({
+                "type": "echo",
+                "message": text
+            })
 
     async def _stdin_writer(self):
         """Write text to stdin using abstract write method."""
@@ -144,20 +126,10 @@ class IWebSetup:
         except Exception:
             return False
 
+    @abstractmethod
     def _clean_output(self, data: str) -> str:
-        """Clean terminal escape sequences from output."""
-        if not self.os_config.is_windows: 
-            return data
-        if not self._seen_initial_vt:
-            data = self._vt_escape.sub('', data)
-            if data.strip():
-                self._seen_initial_vt = True
-        
-        clean_line = self._line_escape.sub('', data)
-        return clean_line.encode(
-            self.os_config.terminal_encoding, 
-            errors="replace"
-        ).decode("utf-8", errors="replace")
+        """Clean output for OS."""
+        pass
 
     async def _process_output_data(self, data: str):
         """Process output data and send to WebSocket."""
@@ -286,8 +258,6 @@ class IWebSetup:
         self._websocket = websocket
         await self._websocket.accept()
         
-        original_sigint_handler = signal.signal(signal.SIGINT, self._signal_handler)
-        
         try:
             await self._send_initial_messages()
             
@@ -325,13 +295,7 @@ class IWebSetup:
                 "message": f"Error: {str(e)}"
             })
         finally:
-            signal.signal(signal.SIGINT, original_sigint_handler)
-            signal.signal(signal.SIGTERM, original_sigint_handler)
-            
             await self.cleanup()
             
             LOGGER.debug("WebSetup closing...")
-
-            # asyncio.get_running_loop().stop()
-            # asyncio.get_event_loop().stop()
-        return
+        return 

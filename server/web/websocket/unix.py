@@ -76,11 +76,6 @@ class WebSetupUnix(IWebSetup):
             LOGGER.error(f"Failed to start bash: {e}")
             return False
 
-    def _signal_handler(self, signum, frame):
-        """Handle Ctrl+C signal."""
-        LOGGER.info("🔴 Ctrl+C received, stopping bash process...")
-        self._send_interrupt_to_process()
-
     # -------------------------------------------------------------------------
     # PTY Helpers
     # -------------------------------------------------------------------------
@@ -147,13 +142,10 @@ class WebSetupUnix(IWebSetup):
     # -------------------------------------------------------------------------
     # Helper Methods
     # -------------------------------------------------------------------------
-    async def _send_echo(self, text: str):
-        """Send echo back to frontend."""
-        if self._websocket:
-            await self._safe_send_json({
-                "type": "echo",
-                "message": text
-            })
+
+    def _clean_output(self, data: str) -> str:
+        """No cleaning necessary for Unix."""
+        return data
 
     async def _write_to_process(self, text: str):
         """Write text to PTY with proper newline handling."""
