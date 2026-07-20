@@ -42,9 +42,10 @@ function sendInput(text) {
     console.log('📤 Sending text:', JSON.stringify(text));
     if (ws && ws.readyState === WebSocket.OPEN) {
         const currentTimestamp = Date.now();
-        if (!text.trim()) {
-            text = '=';
-        }
+        // Previously used for indicating blank input; Removed from console script
+        // if (!text.trim()) {
+        //     text = '=';
+        // }
         ws_last_message = { timestamp: currentTimestamp, message: text };
         ws_message_received = false;
         console.log('📤 Sending:', text);

@@ -87,5 +87,7 @@ Write-Delay "Enter any command to execute on the Yorznab server."
 while ($true) {
     Write-Delay -NoNewline "PS> "
     $command = Read-Host
-    Invoke-SafeExpression -Command $command
+    if ($command) {
+        Invoke-SafeExpression -Command $command
+    }
 }

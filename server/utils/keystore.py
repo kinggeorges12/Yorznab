@@ -31,7 +31,7 @@ class KeyStore:
 
     def _generate(self) -> str:
         """Generate a new key without writing to file."""
-        return "yz_" + secrets.token_urlsafe(16).rstrip("=")
+        return "yz_" + secrets.token_urlsafe(16)
 
     @classmethod
     def exists(cls) -> bool:
