@@ -96,13 +96,16 @@ class ArrClient:
     def ApiVersion(self) -> str: return '/api/v3'
     
     @property
-    def Url(self) -> str: return self._config.Url + self.ApiVersion
+    def Url(self) -> str: return self._config.Url
+    
+    @property
+    def UrlPath(self) -> str: return self.Url + self.ApiVersion
 
     def GetEndpoint(self, endpoint: ArrClient.EndpointType) -> str:
         if endpoint == self.__class__.EndpointType.api:
-            return self.Url + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
+            return self.UrlPath + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
         else:
-            return self.Url + str(endpoint)
+            return self.UrlPath + str(endpoint)
     
     @property
     def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"))

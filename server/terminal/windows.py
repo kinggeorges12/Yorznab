@@ -10,7 +10,7 @@ except ImportError:
 
 # Import modules
 from server.web.common import LOGGER
-from server.web.websocket.iwebsetup import IWebSetup, OSConfig
+from server.terminal.iwebsetup import IWebSetup, OSConfig
 
 def ansi_to_html(text: str) -> str:
     """Convert all ANSI codes to HTML."""

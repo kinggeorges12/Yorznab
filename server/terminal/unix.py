@@ -7,7 +7,7 @@ import errno
 
 # Import modules
 from server.web.common import LOGGER
-from server.web.websocket.iwebsetup import IWebSetup, OSConfig
+from server.terminal.iwebsetup import IWebSetup, OSConfig
 
 
 class WebSetupUnix(IWebSetup):

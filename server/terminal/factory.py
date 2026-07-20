@@ -7,7 +7,7 @@ import asyncio
 
 # Import modules
 from server import PROJECT_ROOT
-from server.web.websocket.iwebsetup import OSConfig, IWebSetup
+from server.terminal.iwebsetup import OSConfig, IWebSetup
 
 class WebSetup(IWebSetup):
     """Proxy class for web setup with WebSocket communication.
@@ -28,11 +28,11 @@ class WebSetup(IWebSetup):
         """Initialize the proxy instance - factory creates the appropriate implementation"""
         # Factory logic to create the proper implementation
         if self._os_config.is_windows:
-            from server.web.websocket.windows import WebSetupWindows
+            from server.terminal.windows import WebSetupWindows
             self._impl = WebSetupWindows(self._os_config)
         else:
             # For Unix/Linux systems
-            from server.web.websocket.unix import WebSetupUnix
+            from server.terminal.unix import WebSetupUnix
             self._impl = WebSetupUnix(self._os_config)
         
         # Store instance for cleanup

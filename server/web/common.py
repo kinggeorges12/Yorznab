@@ -66,7 +66,7 @@ def navigation(current_route: str = '') -> str:
     nav_items = [
         (f"{RouteHandler.DASHBOARD}/home", "🏠", "Home", "home-btn"),
         (f"{RouteHandler.DASHBOARD}/keys", "🔐", "Credentials", "creds-btn"),
-        (f"{RouteHandler.DASHBOARD}/setup", "⚙️", "Configuration", "config-btn"),
+        (f"{RouteHandler.DASHBOARD}/applications", "📲", "Applications", "config-btn"),
         (f"{RouteHandler.DASHBOARD}/feeds", "📻", "Feeds", "feed-btn"),
     ]
     
