@@ -4,7 +4,8 @@ import os
 from dotenv import load_dotenv
 
 # Set Docker environment variables in compose file
-if not os.getenv("DOCKER_ENV"):
+not_docker_env = os.getenv("DOCKER_ENV") is None
+if not_docker_env:
     load_dotenv()
 
 def start():
@@ -14,6 +15,6 @@ def start():
     uvicorn.run(
         "server.run:app",
         host="0.0.0.0",
-        port=9116,
-        reload=True
+        port=os.getenv("PORT", 9116),
+        reload=not_docker_env
     )

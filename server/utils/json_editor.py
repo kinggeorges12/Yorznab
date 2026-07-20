@@ -54,7 +54,7 @@ class JsonEditor:
     @classmethod
     def get_template(cls) -> str:
         template_content = ''
-        template_file = ConfigFile('feed.yaml.sample')
+        template_file = ConfigFile('feed.yaml.demo')
         with open(template_file.path, "r") as file:
             template_content = file.read()
         return template_content

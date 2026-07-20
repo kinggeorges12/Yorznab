@@ -18,8 +18,8 @@ dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
 # Constants
 SESSION_MAX_AGE = int(timedelta(hours=24).total_seconds())
 CSRF_MAX_AGE = int(timedelta(hours=1).total_seconds())
-MAX_CSRF_TOKENS = 9999  # Max tokens to store per session
-CSRF_TOKEN_SIZE = 32  # Size of the CSRF token in bytes
+MAX_CSRF_TOKENS = 1000  # Max tokens to store per session
+CSRF_TOKEN_SIZE = 16  # Size of the CSRF token in bytes
 
 # Helpers
 def validate_passkey(passkey: str) -> bool:

@@ -244,7 +244,7 @@ async function refreshFeed(event, feedName, url, iconId) {
 async function deleteFeed(event, feedName, url, itemId, csrfToken) {
     event.preventDefault();
     
-    const csrf = document.getElementById(itemId);
+    const item = document.getElementById(itemId);
     if (!item) {
         console.error('Feed item not found:', feedName);
         return;
@@ -261,8 +261,7 @@ async function deleteFeed(event, feedName, url, itemId, csrfToken) {
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': csrfToken
-            },
-            credentials: 'same-origin'
+            }
         });
         
         if (!response.ok) {

@@ -13,6 +13,7 @@ class RouteHandler:
     
     SERVER_DIR = server.SERVER_DIR
     API = "/api/v1"
+    FEED = API + "/feed"
     FEEDS = API + "/feeds"
     INDEXER = API + "/indexer"
     AUTH = API + "/auth"

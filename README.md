@@ -60,8 +60,8 @@ sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
 cd app
-cp --update=none ./config/yorznab.yaml.sample ./config/yorznab.yaml
-cp --update=none ./config/feed.yaml.sample ./config/feeds/myfeed.yaml # Recommended
+cp --update=none ./config/yorznab.yaml.demo ./config/yorznab.yaml
+cp --update=none ./config/feed.yaml.demo ./config/feeds/myfeed.yaml # Recommended
 ```
 
 ## Windows \(PowerShell\)
@@ -73,8 +73,8 @@ Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/he
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
 Set-Location app
-Copy-Item -Confirm -Path ./config/yorznab.yaml.sample -Destination ./config/yorznab.yaml
-Copy-Item -Confirm -Path ./config/feed.yaml.sample -Destination ./config/myfeed.yaml # Recommended
+Copy-Item -Confirm -Path ./config/yorznab.yaml.demo -Destination ./config/yorznab.yaml
+Copy-Item -Confirm -Path ./config/feed.yaml.demo -Destination ./config/myfeed.yaml # Recommended
 ```
 
 # Docker Compose
@@ -326,7 +326,7 @@ Sometimes you want to do it yourself, or the installer just doesn't work. Here a
 1. *Download Yorznab*: Click `Code > Download Zip` at the top of this page.
 2. *Install Yorznab*: Unzip into your Docker folder.
 3. *Docker Compose*: Customize the [docker-compose.yml](docker-compose.yml) file and launch the container.
-4. *Configure App Keys*: Run the 🖥️ Interactive Setup on the ⚙️ Configuration page on the Yorznab dashboard. Alternatively, open `config/settings.yaml` file, edit the Url and ApiKey for each app, then restart the container. For reference, see [`settings.yaml.sample`](config/settings.yaml.sample).
+4. *Configure App Keys*: Run the 🖥️ Interactive Setup on the ⚙️ Configuration page on the Yorznab dashboard. Alternatively, open `config/settings.yaml` file, edit the Url and ApiKey for each app, then restart the container. For reference, see [`settings.yaml.demo`](config/settings.yaml.demo).
 5. *Connect apps*: Retrieve your keys from the 🔐 Credentials page on the Yorznab dashboard. Alternatively, read the `config/keys.yaml` file. Input the 🔑 API Key in Radarr and Sonarr. Input the 🔗 Webhook Key Jellyseerr.
 
 # Development

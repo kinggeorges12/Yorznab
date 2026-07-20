@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
 from server.web.common import LOGGER, TITLE, navigation, page_template
-from server.web.routers.auth import authenticate, logout, validate_csrf, add_csrf_token, consume_csrf_token, gen_csrf_token
+from server.web.routers.auth import authenticate, logout, validate_csrf, add_csrf_token, gen_csrf_token
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD)
 
