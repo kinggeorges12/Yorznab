@@ -10,7 +10,6 @@ import httpx
 
 # Import classes
 from server import PROJECT_ROOT
-from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettings, AppSettingsUndefined
@@ -20,21 +19,18 @@ class ArrType(Enum):
     Sonarr = "Sonarr"
 
 @dataclass
-class LibraryConfig:
+class ArrConfig:
     ServerType: ArrType
     Url: str
     ApiKey: str
-    URLBase: Optional[str] = None
+    UrlFrom: Optional[str] = None
     TypeName: Optional[str] = None
-    ServerName: Optional[str] = None
-    ProperName: Optional[str] = None
-    ProperNames: Optional[str] = None
 
 @dataclass
 class ArrClient:
 
     _session = None
-    _config: LibraryConfig = None
+    _config: ArrConfig = None
     _config_file = "settings.yaml"
 
     def __init__(self, server_type: ArrType):
@@ -47,7 +43,7 @@ class ArrClient:
             raise Exception(e)
         config_raw["ServerType"] = server_type.value
         try:
-            self._config = from_dict(data_class=LibraryConfig, data=config_raw, config=Config(cast=[ArrType]))
+            self._config = from_dict(data_class=ArrConfig, data=config_raw, config=Config(cast=[ArrType]))
         except MissingValueError as e:
             self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
@@ -88,7 +84,7 @@ class ArrClient:
                 raise ValueError(f"Unknown library type: {type_name}")
     
     @property
-    def ServerName(self) -> str: return self._config.ServerName if self._config.ServerName else self.ServerType.value
+    def ServerName(self) -> str: return self.ServerType.value
     
     @property
     def ServerType(self) -> ArrType: return self._config.ServerType
@@ -97,26 +93,22 @@ class ArrClient:
     def TypeName(self) -> str: return self.serve(self.Mapper(Radarr="Movies", Sonarr="TV"))
     
     @property
-    def Url(self) -> str: return self._config.Url
+    def ApiVersion(self) -> str: return '/api/v3'
     
     @property
-    def URLBase(self) -> str: return self.serve(self.Mapper(Radarr="", Sonarr=""), self._config.URLBase)
-    
-    @property
-    def APIVersion(self) -> str: return '/api/v3'
+    def Url(self) -> str: return self._config.Url + self.ApiVersion
 
     def GetEndpoint(self, endpoint: ArrClient.EndpointType) -> str:
-        url_path = self.Url + self.URLBase + self.APIVersion
         if endpoint == self.__class__.EndpointType.api:
-            return url_path + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
+            return self.Url + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
         else:
-            return url_path + str(endpoint)
+            return self.Url + str(endpoint)
     
     @property
-    def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"), self._config.ProperName)
+    def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"))
     
     @property
-    def ProperNames(self) -> str: return self.serve(self.Mapper(Radarr="Movies", Sonarr="Shows"), self._config.ProperNames)
+    def ProperNames(self) -> str: return self.serve(self.Mapper(Radarr="Movies", Sonarr="Shows"))
     
     @property
     def ExternalDb(self) -> str: return self.serve(self.Mapper(Radarr="tmdb", Sonarr="tvdb"))

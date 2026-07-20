@@ -15,11 +15,11 @@ from server.utils.settings import AppSettings, AppSettingsUndefined
 @dataclass
 class QBitConfig:
     ServerType: str
-    QUrl: str
-    QApiKey: Optional[str] = None
-    QUsername: Optional[str] = None
-    QPassword: Optional[str] = None
-    QEndpoint: Optional[str] = None
+    Url: str
+    URLFrom: str
+    ApiKey: Optional[str] = None
+    Username: Optional[str] = None
+    Password: Optional[str] = None
     SearchTimeout: Optional[int] = 60
     SearchLimit: Optional[int] = 0
     SearchPing: Optional[int] = 10
@@ -46,21 +46,21 @@ class QBitClient:
         config_raw["ServerType"] = self.Name # Required field
         try:
             self._config = from_dict(data_class=QBitConfig, data=config_raw)
-        except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "QUrl"
+        except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "Url"
             self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
 
     @property
-    def ServerName(self) -> str: return self._config.ServerName if self._config.ServerName else self.ServerType
+    def ServerName(self) -> str: return self.ServerType
     
     @property
     def ServerType(self) -> str: return self._config.ServerType
     
     @property
-    def Url(self) -> str: return self._config.QUrl
+    def ApiVersion(self) -> str: return '/api/v2'
     
     @property
-    def Endpoint(self) -> str: return self._config.QEndpoint if self._config.QEndpoint else "/api/v2"
+    def Url(self) -> str: return self._config.Url + self.ApiVersion
     
     @property
     def Filters(self) -> bool | None: return self._config.Filters
@@ -90,14 +90,14 @@ class QBitClient:
     def _login(self) -> None:
         """Private login function"""
         self.LOGGER.info(f"🛜 Authenticating {self.ServerName} server")
-        url = f"{self.Url}{self.Endpoint}/auth/login"
+        url = f"{self.Url}/auth/login"
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
         session = self._get_session()
         data = {}
-        if self._config.QApiKey:
-            headers["Authorization"] = f"Bearer {self._config.QApiKey}"
+        if self._config.ApiKey:
+            headers["Authorization"] = f"Bearer {self._config.ApiKey}"
         else:
-            data = {"username": self._config.QUsername, "password": self._config.QPassword}
+            data = {"username": self._config.Username, "password": self._config.Password}
             resp = session.post(url, data=data, headers=headers, timeout=30)
             resp.raise_for_status()
         self._set_session_header(headers)
@@ -122,7 +122,7 @@ class QBitClient:
 
     def status(self) -> str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
-        url = f"{self.Url}{self.Endpoint}/app/version"
+        url = f"{self.Url}/app/version"
         resp = self.session.post(url, headers=self._headers, timeout=30)
         resp.raise_for_status()
         result = resp.text.strip()
@@ -131,7 +131,7 @@ class QBitClient:
 
     def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
-        url = f"{self.Url}{self.Endpoint}/search/start"
+        url = f"{self.Url}/search/start"
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
         resp.raise_for_status()
@@ -139,7 +139,7 @@ class QBitClient:
         return int(payload.get("id"))
 
     def search_status(self, job_id: int) -> dict[str, Any]:
-        url = f"{self.Url}{self.Endpoint}/search/status"
+        url = f"{self.Url}/search/status"
         params = {"id": str(job_id)}
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -148,7 +148,7 @@ class QBitClient:
         return status_data
 
     def search_results(self, job_id: int) -> list[dict[str, Any]]:
-        url = f"{self.Url}{self.Endpoint}/search/results"
+        url = f"{self.Url}/search/results"
         params = {"id": str(job_id)} # Optional limit parameter
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -157,13 +157,13 @@ class QBitClient:
         return list(payload.get("results", []))
 
     def search_stop(self, job_id: int) -> None:
-        url = f"{self.Url}{self.Endpoint}/search/stop"
+        url = f"{self.Url}/search/stop"
         data = {"id": str(job_id)}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=self._response_timeout)
         resp.raise_for_status()
 
     def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
-        url = f"{self.Url}{self.Endpoint}/torrents/add"
+        url = f"{self.Url}/torrents/add"
         form = {"urls": torrent_url, "rename": rename or "", "tags": tags or "", "category": category}
         resp = self.session.post(url, data=form, headers=self._headers, timeout=self._response_timeout)
         resp.raise_for_status()
