@@ -84,9 +84,9 @@ write_delay "This is your command console!"
 
 write_delay "Enter any command to execute on the Yorznab server."
 while true; do
-    write_delay "sh> " "" "true"
+    write_delay "> " "" "true"
     input=$(read_input)
     if [ -n "$input" ]; then
-        safe_eval "$(printf "%q" "$input")"
+        safe_eval "$input"
     fi
 done
