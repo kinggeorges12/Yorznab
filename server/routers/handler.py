@@ -12,14 +12,16 @@ class RouteHandler:
     _lock = Lock()
     
     SERVER_DIR = server.SERVER_DIR
-    API = "/api/v1"
-    FEED = API + "/feed"
-    FEEDS = API + "/feeds"
-    INDEXER = API + "/indexer"
-    AUTH = API + "/auth"
-    ROUTES = API + "/routes"
-    STATUS = API + "/status"
-    WEBHOOK = API + "/webhook"
+    API = "/api"
+    API_v1 = API + "/v1"
+    FEED = API_v1 + "/feed"
+    FEEDS = API_v1 + "/feeds"
+    INDEXER = API_v1 + "/indexer"
+    AUTH = API_v1 + "/auth"
+    ROUTES = API_v1 + "/routes"
+    STATUS = API_v1 + "/status"
+    WEBHOOK = API_v1 + "/webhook"
+    API_DEFAULT = INDEXER
     DASHBOARD = ""
     STATIC = "/static"
     STATIC_DIR = os.path.join(SERVER_DIR, "static")

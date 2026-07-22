@@ -42,7 +42,7 @@ services:
         pip install -e . &&
         yorznab;"
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 9116); conn.request(\"GET\", \"/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]
+      test: ["CMD-SHELL", "python -c 'import http.client; conn = http.client.HTTPConnection(\"localhost\", 9116); conn.request(\"GET\", \"/api/v1/status\"); r = conn.getresponse(); exit(0 if r.status < 400 else 1)'"]
       start_period: 20s
       interval: 300s
       timeout: 15s

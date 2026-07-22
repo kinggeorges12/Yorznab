@@ -39,6 +39,19 @@ app.include_router(torznab.router)
 app.include_router(webhook.router)
 app.include_router(web_routers)
 
+# Mount default routes for API to v1
+@app.api_route(RouteHandler.API, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def redirect_to_v1(request: Request):
+    url = request.url
+    new_path = f"{RouteHandler.INDEXER}"
+    return RedirectResponse(url=url.replace(path=new_path), status_code=307)
+
+@app.api_route(RouteHandler.API + "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def redirect_to_v1(path: str, request: Request):
+    url = request.url
+    new_path = f"{RouteHandler.API_v1}/{path}"
+    return RedirectResponse(url=url.replace(path=new_path), status_code=307)
+
 # Setup docs
 app.openapi_schema = create_openapi(app)
 

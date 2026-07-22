@@ -14,8 +14,6 @@ from server.utils.feedconfig import FeedConfig
 from server.utils.settings import AppSettings
 from server.utils.keystore import KeyStore
 
-router = APIRouter(prefix=RouteHandler.INDEXER, tags=["indexer"])
-
 # Export config vars to globals
 YORZNAB = AppSettings(filename='yorznab.yaml')
 NS = {"torznab": "http://torznab.com/schemas/2015/feed"}
@@ -162,6 +160,9 @@ def generate_rss(items, offset=0, limit=0):
         fe.torrent.peers(str(t.get("nbLeechers", 0)))
 
     return fg.rss_str(pretty=True)
+
+
+router = APIRouter(prefix=RouteHandler.INDEXER, tags=["indexer"])
 
 # Default feed file
 @router.get("")
