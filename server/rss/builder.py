@@ -89,7 +89,7 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
         do_torrent: Whether to send top result directly to qBittorrent
         whatif: Dry-run mode (simulates execution without making changes)
     """
-    LOGGER.info(f"💡 Loading configuration file for {QBitClient.Name} and {server_type.value}")
+    LOGGER.info(f"💡 Loading configuration file for {QBitClient.ServerName} and {server_type.value}")
     try:
         qBit = QBitClient()
         test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: qBit.status())
