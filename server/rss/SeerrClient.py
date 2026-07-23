@@ -6,6 +6,7 @@ from dacite import MissingValueError, from_dict
 
 # Import classes
 from server import PROJECT_ROOT
+from server.rss.AppClient import AppClient
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
@@ -19,12 +20,14 @@ class SeerrConfig:
     TypeName: Optional[str] = None
 
 @dataclass
-class SeerrClient:
-    Name: str = "Seerr"
-    _config: SeerrConfig = None
-    _config_file = "settings.yaml"
+class SeerrClient(AppClient):
     
     def __init__(self):
+        # Initialize qBittorrent client defaults
+        self._name: str = "Seerr"
+        self._config_file = "settings.yaml"
+        self._config: SeerrConfig = None
+
         self.LOGGER = CustomLogger(name=self.Name)
         # Resolve config file settings.yaml
         try:

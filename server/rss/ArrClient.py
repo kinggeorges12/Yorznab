@@ -10,6 +10,7 @@ import httpx
 
 # Import classes
 from server import PROJECT_ROOT
+from server.rss.AppClient import AppClient
 from server.utils.customlogger import CustomLogger
 from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettings, AppSettingsUndefined
@@ -27,25 +28,26 @@ class ArrConfig:
     TypeName: Optional[str] = None
 
 @dataclass
-class ArrClient:
-
-    _session = None
-    _config: ArrConfig = None
-    _config_file = "settings.yaml"
+class ArrClient(AppClient):
 
     def __init__(self, server_type: ArrType):
-        self.LOGGER = CustomLogger(name=server_type.value)
+        # Initialize ArrClient client defaults
+        self._name: str = server_type.value
+        self._config_file = "settings.yaml"
+        self._config: ArrConfig = None
+
+        self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            config_raw = AppSettings(filename=ArrClient._config_file).exists(name=server_type.value).get(key=server_type.value, exists=True)
+            config_raw = AppSettings(filename=self._config_file).exists(name=self._name).get(key=self._name, exists=True)
         except AppSettingsUndefined as e:
-            self.LOGGER.warning(f"🚩 Server has bad configuration for {server_type.value}. Continuing without this app.")
+            self.LOGGER.warning(f"🚩 Server has bad configuration for {self._name}. Continuing without this app.")
             raise Exception(e)
-        config_raw["ServerType"] = server_type.value
+        config_raw["ServerType"] = self._name
         try:
             self._config = from_dict(data_class=ArrConfig, data=config_raw, config=Config(cast=[ArrType]))
         except MissingValueError as e:
-            self.LOGGER.error(f"🚩 Trouble parsing field for {server_type.value}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
+            self.LOGGER.error(f"🚩 Trouble parsing field for {self._name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
 
     class EndpointType(Enum):
@@ -119,13 +121,6 @@ class ArrClient:
     @property
     def ExternalId(self) -> str: return self.serve(self.Mapper(Radarr="tmdbId", Sonarr="tvdbId"))
 
-    @classmethod
-    def _get_session(cls) -> httpx.Client:
-        """Get or create singleton Arr session"""
-        if cls._session is None:
-            cls._session = httpx.Client()
-        return cls._session
-    
     @property
     def session(self) -> httpx.Client:
         """Get the session, always using singleton"""

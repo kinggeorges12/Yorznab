@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 # Import classes
 from server import PROJECT_ROOT
+from server.rss.AppClient import AppClient
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
@@ -16,7 +17,7 @@ from server.utils.settings import AppSettings, AppSettingsUndefined
 class QBitConfig:
     ServerType: str
     Url: str
-    URLFrom: str
+    UrlFrom: Optional[str] = None
     ApiKey: Optional[str] = None
     Username: Optional[str] = None
     Password: Optional[str] = None
@@ -26,28 +27,29 @@ class QBitConfig:
     ServerName: Optional[str] = None
 
 @dataclass
-class QBitClient:
-    Name: str = "qBittorrent"
-    _config: QBitConfig = None
-    _config_file = "settings.yaml"
-    _session: httpx.Client | None = None
-    _headers: dict[str, str] = None
-    _authenticated: bool = False
-    _response_timeout: int = 60
+class QBitClient(AppClient):
     
     def __init__(self):
-        self.LOGGER = CustomLogger(name=self.Name)
+        # Initialize qBittorrent client defaults
+        self._name: str = "qBittorrent"
+        self._config_file = "settings.yaml"
+        self._config: QBitConfig = None
+        self._headers: dict[str, str] = None
+        self._authenticated: bool = False
+        self._response_timeout: int = 60
+
+        self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(key=self.Name, exists=True)
+            config_raw = AppSettings(filename=self._config_file).exists(name=self._name).get(key=self._name, exists=True)
         except AppSettingsUndefined as e:
-            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self.Name}.")
+            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
             raise Exception(e)
-        config_raw["ServerType"] = self.Name # Required field
+        config_raw["ServerType"] = self._name # Required field
         try:
             self._config = from_dict(data_class=QBitConfig, data=config_raw)
         except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "Url"
-            self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
+            self.LOGGER.error(f"☠️ Trouble parsing field for {self._name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
 
     @property
@@ -77,18 +79,10 @@ class QBitClient:
     @property
     def SearchPing(self) -> int | None: return self._config.SearchPing if self._config.SearchPing else 10
     
-    @classmethod
-    def _get_session(cls) -> httpx.Client:
+    def _set_session_header(self, headers: dict) -> httpx.Client:
         """Get or create singleton qBittorrent session"""
-        if cls._session is None:
-            cls._session = httpx.Client()
-        return cls._session
-    
-    @classmethod
-    def _set_session_header(cls, headers: dict) -> httpx.Client:
-        """Get or create singleton qBittorrent session"""
-        cls._headers = headers
-        return cls._session
+        self._headers = headers
+        return self._session
     
     def _login(self) -> None:
         """Private login function"""

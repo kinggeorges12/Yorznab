@@ -100,7 +100,7 @@ async def webhook(request: Request, authorization: str = Header(None)):
         media_type = media.get("media_type")
         
         # Initialize ArrClient based on Jellyseerr media type
-        arr = ArrClient.init_jellyseerr(media_type)
+        arr = ArrClient.init_jellyseerr(media_type) #TODO: move to SeerrClient
         
         # Set initial to the database ID, then process seasons for TV
         external_id = arr.ExternalId
