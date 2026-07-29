@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 import asyncio
 
 # Import classes
+from server.rss.SeerrClient import SeerrClient
 from server.utils.settings import AppSettings
 from server.rss.ArrClient import ArrClient, ArrType
 from server.routers.handler import RouteHandler
@@ -95,26 +96,11 @@ async def webhook(request: Request, authorization: str = Header(None)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
 
     # Handle MEDIA_AUTO_APPROVED and MEDIA_APPROVED notifications
-    if payload.get("notification_type") in ["MEDIA_AUTO_APPROVED", "MEDIA_APPROVED"] and payload.get("media"):
-        media = payload["media"]
-        media_type = media.get("media_type")
-        
-        # Initialize ArrClient based on Jellyseerr media type
-        arr = ArrClient.init_jellyseerr(media_type) #TODO: move to SeerrClient
-        
-        # Set initial to the database ID, then process seasons for TV
-        external_id = arr.ExternalId
-        if(arr.ServerType == ArrType.Sonarr):
-            # Get requested seasons from extra data
-            requested_seasons = []
-            for extra_item in payload.get("extra", []):
-                if extra_item.get("name") == "Requested Seasons":
-                    requested_seasons += extra_item.get("value")
-            # Build external parameter with tvdbId and season
-            if requested_seasons:
-                external_id = f"{arr.ExternalId}:{','.join(str(s) for s in requested_seasons)}"
+    parsed_payload = SeerrClient.parse_payload(payload)
 
-        LOGGER.info(f"Webhook received, processing {arr.TypeName} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
+    if parsed_payload.is_valid:
+
+        LOGGER.info(f"Webhook received, processing {parsed_payload.arr_type} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
         
         # Define the background processing function
         async def process_request():
@@ -123,26 +109,29 @@ async def webhook(request: Request, authorization: str = Header(None)):
                 await asyncio.sleep(SETTINGS.get('cron', 'webhook_wait'))
                 
                 # Call the shared run_requests function
-                result = await run_requests(server_type=arr.ServerType, external_id=external_id)
+                result = await run_requests(server_type=parsed_payload.arr_type, external_id=parsed_payload.external_param)
                 
                 if result == 0:
-                    LOGGER.info(f"Successfully processed {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
+                    LOGGER.info(f"Successfully processed {parsed_payload.arr_type} request for {parsed_payload.external_id} ID: {parsed_payload.external_param}")
                 else:
-                    LOGGER.error(f"Failed to process {arr.ServerName} request for {arr.ExternalDb} ID: {external_id}")
+                    LOGGER.error(f"Failed to process {parsed_payload.arr_type} request for {parsed_payload.external_id} ID: {parsed_payload.external_param}")
             except Exception as e:
-                LOGGER.error(f"Error processing {arr.ServerName} request: {str(e)}", exc_info=True)
+                LOGGER.error(f"Error processing {parsed_payload.arr_type} request: {str(e)}", exc_info=True)
         
         # Start background task
         asyncio.create_task(process_request())
         return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_202_ACCEPTED) # 202 Accepted for async processing
         
+    elif parsed_payload.is_test:
+        LOGGER.info(f"Webhook test received: {payload}")
+        return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_200_OK)
     else:
-        LOGGER.info(f"Webhook received with no handler: {payload}")
+        LOGGER.warning(f"Webhook received with no handler: {payload}")
         return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_200_OK)
 
 
 # Example payloads from Jellyseerr
 # {'notification_type': 'TEST_NOTIFICATION', 'event': '', 'subject': 'Test Notification', 'message': 'Check check, 1, 2, 3. Are we coming in clear?', 'image': '', 'media': None, 'request': None, 'issue': None, 'comment': None, 'extra': []}
 # Webhook received: {'notification_type': 'MEDIA_AUTO_APPROVED', 'event': 'Series Request Automatically Approved', 'subject': 'A Brand New Show (2025)', 'message': 'Someone requested the first season of a show!', 'image': 'https://image.tmdb.org/image.jpg', 'media': {'media_type': 'tv', 'tmdbId': '223326', 'tvdbId': '466126', 'status': 'PENDING', 'status4k': 'UNKNOWN'}, 'request': {'request_id': '17', 'requestedBy_email': 'jellyseerr_user2', 'requestedBy_username': 'jellyseerr_user2', 'requestedBy_avatar': '/avatarproxy/fcacd22c11aa64e3a2367224bdece3ef?v=1234567890321', 'requestedBy_settings_discordId': '', 'requestedBy_settings_telegramChatId': ''}, 'issue': None, 'comment': None, 'extra': [{'name': 'Requested Seasons', 'value': '1'}]}
-# Webhook received: {'notification_type': 'MEDIA_AUTO_APPROVED', 'event': 'Series Request Automatically Approved', 'subject': 'Season 2 of Another Show (2026)', 'message': 'This is the show description.', 'image': 'https://image.tmdb.org/image.jpg', 'media': {'media_type': 'tv', 'tmdbId': '00000', 'tvdbId': '000000', 'status': 'PARTIALLY_AVAILABLE', 'status4k': 'UNKNOWN'}, 'request': {'request_id': '16', 'requestedBy_email': 'jellyseerr_user1', 'requestedBy_username': 'jellyseerr_user1', 'requestedBy_avatar': '/avatarproxy/4548243867c123655494d44fc5d96383?v=1234567890321', 'requestedBy_settings_discordId': '', 'requestedBy_settings_telegramChatId': ''}, 'issue': None, 'comment': None, 'extra': [{'name': 'Requested Seasons', 'value': '2'}]}
+# Webhook received: {'notification_type': 'MEDIA_AUTO_APPROVED', 'event': 'Series Request Automatically Approved', 'subject': 'First 2 Seasons of Another Show (2026)', 'message': 'This is the show description.', 'image': 'https://image.tmdb.org/image.jpg', 'media': {'media_type': 'tv', 'tmdbId': '00000', 'tvdbId': '000000', 'status': 'PARTIALLY_AVAILABLE', 'status4k': 'UNKNOWN'}, 'request': {'request_id': '16', 'requestedBy_email': 'jellyseerr_user1', 'requestedBy_username': 'jellyseerr_user1', 'requestedBy_avatar': '/avatarproxy/4548243867c123655494d44fc5d96383?v=1234567890321', 'requestedBy_settings_discordId': '', 'requestedBy_settings_telegramChatId': ''}, 'issue': None, 'comment': None, 'extra': [{'name': 'Requested Seasons', 'value': '1, 2'}]}
 # Webhook received: {'notification_type': 'MEDIA_AUTO_APPROVED', 'event': 'Movie Request Automatically Approved', 'subject': 'Another Show Requesting All Seasons (2000)', 'message': 'This show was requested without specifying individual seasons.', 'image': 'https://image.tmdb.org/image.jpg', 'media': {'media_type': 'movie', 'tmdbId': '00000', 'tvdbId': '', 'status': 'PENDING', 'status4k': 'UNKNOWN'}, 'request': {'request_id': '18', 'requestedBy_email': 'jellyseerr_user3', 'requestedBy_username': 'jellyseerr_user3', 'requestedBy_avatar': '/avatarproxy/431d1460d295ecdac033410e7b52b020?v=1234567890321', 'requestedBy_settings_discordId': '', 'requestedBy_settings_telegramChatId': ''}, 'issue': None, 'comment': None, 'extra': []}

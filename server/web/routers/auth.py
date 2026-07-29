@@ -11,14 +11,14 @@ from urllib.parse import parse_qs
 # Import modules
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, TITLE, ID_NAME, navigation, page_template
+from server.web.common import LOGGER, ID_NAME, Yorznab, navigation, page_template
 
 dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
 
 # Constants
 SESSION_MAX_AGE = int(timedelta(hours=24).total_seconds())
 CSRF_MAX_AGE = int(timedelta(hours=1).total_seconds())
-MAX_CSRF_TOKENS = 1000  # Max tokens to store per session
+MAX_CSRF_TOKENS = 10000  # Max tokens to store per session
 CSRF_TOKEN_SIZE = 16  # Size of the CSRF token in bytes
 
 # Helpers
@@ -170,7 +170,7 @@ async def login_page(request: Request):
     content = f'''
         <div class="login-container">
             {navigation('')}
-            <h1>Welcome to {TITLE}</h1>
+            <h1>Welcome to {Yorznab()}</h1>
             {get_started}
             <form id="loginForm" autocomplete="off" method="POST" action="{RouteHandler.AUTH}/login">
                 <input type="hidden" name="csrf_token" value="{csrf_token}">

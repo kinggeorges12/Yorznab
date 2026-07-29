@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 # Import modules
 from server.terminal.factory import WebSetup
 from server.routers.handler import RouteHandler
-from server.web.common import TITLE, navigation, page_template
+from server.web.common import Yorznab, navigation, page_template
 from server.web.routers.auth import authenticate
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schema=False)
@@ -17,7 +17,7 @@ async def setup(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/terminal')}
-            <h1>{TITLE} 🖥️ Interactive Terminal</h1>
+            <h1>{Yorznab()} 🖥️ Interactive Terminal</h1>
             
             <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.DASHBOARD}/terminal/ws">
                 <div class="terminal-header">

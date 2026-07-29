@@ -1,15 +1,99 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
+import json
 import os
-from typing import Optional
+from typing import Any, List, Optional
 
-from dacite import MissingValueError, from_dict
+from dacite import Config, MissingValueError, from_dict
+import httpx
 
 # Import classes
 from server import PROJECT_ROOT
+from server.routers.handler import RouteHandler
 from server.rss.AppClient import AppClient
+from server.rss.ArrClient import ArrType
 from server.utils.customlogger import CustomLogger
+from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
+@dataclass
+class NotificationType(Enum):
+    NONE = 0,
+    MEDIA_PENDING = 2,
+    MEDIA_APPROVED = 4,
+    MEDIA_AVAILABLE = 8,
+    MEDIA_FAILED = 16,
+    TEST_NOTIFICATION = 32,
+    MEDIA_DECLINED = 64,
+    MEDIA_AUTO_APPROVED = 128,
+    ISSUE_CREATED = 256,
+    ISSUE_COMMENT = 512,
+    ISSUE_RESOLVED = 1024,
+    ISSUE_REOPENED = 2048,
+    MEDIA_AUTO_REQUESTED = 4096,
+
+@dataclass
+class WebhookPayload:
+    notification_type: str
+    media: Optional[dict] = None
+    extra: List[dict] = None
+    request: Optional[dict] = None
+    
+    @property
+    def is_movie(self) -> bool:
+        return self.media is not None and self.media.get("media_type") == "movie"
+    
+    @property
+    def is_tv(self) -> bool:
+        return self.media is not None and self.media.get("media_type") == "tv"
+    
+    @property
+    def arr_type(self) -> Optional[ArrType]:
+        if self.is_movie:
+            return ArrType.Radarr
+        elif self.is_tv:
+            return ArrType.Sonarr
+        return None
+    
+    @property
+    def external_id(self) -> Optional[str]:
+        if self.is_movie:
+            return self.media.get("tmdbId")
+        if self.is_tv:
+            return self.media.get("tvdbId")
+        return None
+
+    @property
+    def requested_seasons(self) -> List[int]:
+        """Parse requested seasons from extra field."""
+        if not self.extra:
+            return []
+        for item in self.extra:
+            if item.get("name") == "Requested Seasons":
+                value = item.get("value", "")
+                if value:
+                    return [int(s.strip()) for s in value.split(",") if s.strip()]
+        return []
+
+    @property
+    def is_valid(self) -> Optional[str]:
+        return self.notification_type in [NotificationType.MEDIA_AUTO_APPROVED.name, NotificationType.MEDIA_APPROVED.name]
+
+    @property
+    def is_test(self) -> Optional[str]:
+        return self.notification_type in [NotificationType.TEST_NOTIFICATION.name]
+
+    @property
+    def external_param(self) -> Optional[str]:
+        """Build external_id:seasons format for Sonarr, or just external_id for Radarr."""
+        if not self.external_id:
+            return None
+        
+        if self.is_tv:
+            seasons = self.requested_seasons
+            if seasons:
+                return f"{self.external_id}:{','.join(str(s) for s in seasons)}"
+        return self.external_id
 
 @dataclass
 class SeerrConfig:
@@ -23,21 +107,148 @@ class SeerrConfig:
 class SeerrClient(AppClient):
     
     def __init__(self):
-        # Initialize qBittorrent client defaults
+        # Initialize Seerr client defaults
         self._name: str = "Seerr"
-        self._config_file = "settings.yaml"
         self._config: SeerrConfig = None
 
-        self.LOGGER = CustomLogger(name=self.Name)
+        self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            config_raw = AppSettings(filename=self._config_file).exists(name=self.Name).get(key=self.Name, exists=True)
+            self._config_file = f"applications/{self._name}.yaml"
+            config_raw = AppSettings(filename=self._config_file).get()
         except AppSettingsUndefined as e:
-            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self.Name}.")
+            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
             raise Exception(e)
-        config_raw["ServerType"] = self.Name # Required field
+        config_raw["ServerType"] = self._name # Required field
         try:
             self._config = from_dict(data_class=SeerrConfig, data=config_raw)
         except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "Url"
-            self.LOGGER.error(f"☠️ Trouble parsing field for {self.Name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
+            self.LOGGER.error(f"☠️ Trouble parsing field for {self._name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
             raise Exception(e)
+
+    class EndpointType(Enum):
+        status = '/status'
+        webhook = '/settings/notifications/webhook'
+        
+        def __str__(self):
+            return self.value
+    
+    @property
+    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self._config.ApiKey}
+
+    @property
+    def ServerName(self) -> str: return self.ServerType
+    
+    @property
+    def ServerType(self) -> str: return self._config.ServerType
+    
+    @property
+    def ApiVersion(self) -> str: return '/api/v1'
+    
+    @property
+    def Url(self) -> str: return self._config.Url
+    
+    @property
+    def UrlPath(self) -> str: return self.Url + self.ApiVersion
+    
+    @property
+    def UrlFrom(self) -> str: return self._config.UrlFrom
+
+    def GetEndpoint(self, endpoint: SeerrClient.EndpointType) -> str:
+        return self.UrlPath + str(endpoint)
+
+    @staticmethod
+    def parse_payload(raw_payload: dict) -> WebhookPayload:
+        """Parse raw webhook into dataclass."""
+        return from_dict(
+            data_class=WebhookPayload,
+            data=raw_payload,
+            config=Config(cast=[str])
+        )
+
+    @property
+    def session(self) -> httpx.Client:
+        """Get the session, always using singleton"""
+        return self._get_session()
+
+    def status(self) -> dict[str, Any]:
+        self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=30)
+        resp.raise_for_status()
+        result = resp.json()
+        self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
+        return result
+
+    def configure_webhook(self) -> bool:
+        webhook_url = self.UrlFrom + RouteHandler.WEBHOOK
+        auth_header = KeyStore.get_key('WEBHOOK_KEY')
+
+        # The exact JSON template with formatting preserved
+        json_payload_str = """{
+  "notification_type": "{{notification_type}}",
+  "event": "{{event}}",
+  "subject": "{{subject}}",
+  "message": "{{message}}",
+  "image": "{{image}}",
+  "{{media}}": {
+    "media_type": "{{media_type}}",
+    "tmdbId": "{{media_tmdbid}}",
+    "tvdbId": "{{media_tvdbid}}",
+    "status": "{{media_status}}",
+    "status4k": "{{media_status4k}}"
+  },
+  "{{request}}": {
+    "request_id": "{{request_id}}",
+    "requestedBy_email": "{{requestedBy_email}}",
+    "requestedBy_username": "{{requestedBy_username}}",
+    "requestedBy_avatar": "{{requestedBy_avatar}}",
+    "requestedBy_settings_discordId": "{{requestedBy_settings_discordId}}",
+    "requestedBy_settings_telegramChatId": "{{requestedBy_settings_telegramChatId}}"
+  },
+  "{{issue}}": {
+    "issue_id": "{{issue_id}}",
+    "issue_type": "{{issue_type}}",
+    "issue_status": "{{issue_status}}",
+    "reportedBy_email": "{{reportedBy_email}}",
+    "reportedBy_username": "{{reportedBy_username}}",
+    "reportedBy_avatar": "{{reportedBy_avatar}}",
+    "reportedBy_settings_discordId": "{{reportedBy_settings_discordId}}",
+    "reportedBy_settings_telegramChatId": "{{reportedBy_settings_telegramChatId}}"
+  },
+  "{{comment}}": {
+    "comment_message": "{{comment_message}}",
+    "commentedBy_email": "{{commentedBy_email}}",
+    "commentedBy_username": "{{commentedBy_username}}",
+    "commentedBy_avatar": "{{commentedBy_avatar}}",
+    "commentedBy_settings_discordId": "{{commentedBy_settings_discordId}}",
+    "commentedBy_settings_telegramChatId": "{{commentedBy_settings_telegramChatId}}"
+  },
+  "{{extra}}": []
+}"""
+
+        payload = {
+            "enabled": True,
+            "types": NotificationType.MEDIA_APPROVED.value + NotificationType.MEDIA_AUTO_APPROVED.value,
+            "options": {
+                "webhookUrl": webhook_url,
+                "authHeader": auth_header,
+                "jsonPayload": json_payload_str,
+            }
+        }
+
+        try:
+            self.LOGGER.info(f"🔧 Configuring webhook for {self.ServerName} Seerr server")
+            resp = self.session.post(
+                f"{self.UrlPath}{self.EndpointType.webhook}",
+                json=payload,
+                headers=self.Headers,
+                timeout=30
+            )
+            resp.raise_for_status()
+            self.LOGGER.info(f"✅ Webhook configured successfully")
+            return True
+        except Exception as e:
+            self.LOGGER.error(f"❌ Failed to configure webhook: {e}")
+            if hasattr(e, 'response') and e.response:
+                self.LOGGER.error(f"Response: {e.response.text}")
+            return False

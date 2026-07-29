@@ -38,6 +38,23 @@ class AppSettings:
 
         self._data = {}
     
+    def save(self) -> None:
+        """Save the current data back to the YAML file."""
+        path = self._config_file.path
+        with open(path, "w") as f:
+            yaml.dump(self._data, f, default_flow_style=False, allow_unicode=True)
+    
+    def set(self, key_path: str, value: any) -> None:
+        """Set a value using colon notation. Usage: set('Seerr: Url', 'http://...')"""
+        keys = [k.strip() for k in key_path.split(':')]
+        data = self._data
+        for key in keys[:-1]:
+            if key not in data or not isinstance(data[key], dict):
+                data[key] = {}
+            data = data[key]
+        data[keys[-1]] = value
+        self.save()
+            
     def get(self, key: str = None, sub: str = None, exists: bool = False) -> dict | None:
         if key is not None and sub is not None:
             return self._data.get(key, {}).get(sub, None)
@@ -46,6 +63,7 @@ class AppSettings:
             if data is None and exists:
                 raise AppSettingsUndefined(f"The configuration section for {key} is undefined or misconfigured.")
             return data
+        print(self._data)
         return self._data
         
     def __str__(self) -> str:

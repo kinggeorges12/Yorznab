@@ -9,7 +9,7 @@ from server.routers.handler import RouteHandler
 from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, TITLE, navigation, page_template
+from server.web.common import LOGGER, Yorznab, navigation, page_template
 from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
 from server.web.routers.cache import download_and_cache
 
@@ -69,7 +69,7 @@ async def feeds(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/feed')}
-            <h1>{TITLE} 📻 Feeds</h1>
+            <h1>{Yorznab()} 📻 Feeds</h1>
             
             <div id="main-page">
                 <div class="text-container">
@@ -101,7 +101,7 @@ async def feeds(request: Request):
                         <h2>🗃️ Indexers</h2>
                         <a href="https://github.com/kinggeorges12/Yorznab#feeds" title="Help" target="_blank" rel="noopener noreferrer">📖❓</a>
                         <button type="button" class="create-btn" onclick="newYAML('feed-yaml-new'); showEditor();">
-                            <span class="" name="new_feed" title="Create New Feed">
+                            <span name="new-feed" title="Create New Feed">
                                 🆕 Feed
                             </span>
                         </button>

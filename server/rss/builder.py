@@ -84,7 +84,7 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
     Args:
         server_type: Server type ("Radarr" or "Sonarr")
         feed_config: Feed configuration
-        external_id: External ID for the library item (TMDB/TVDB ID) to process a specific video
+        external_id: External ID for the library item (TMDB/TVDB ID) suffixed with a colon and comma-separated season numbers if applicable
         retention_days: Number of days to retain records in published JSON
         do_torrent: Whether to send top result directly to qBittorrent
         whatif: Dry-run mode (simulates execution without making changes)
@@ -106,17 +106,28 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
     LOGGER.info(f"💡 Loading configuration file for feed: {feed_config.config_path}")
     feedGenerator = FeedGenerator(feed_config=feed_config)
 
-    # Fetch all wanted items
-    wanted = arr.wanted_missing(page_size=250)
-    # Fetch queued videos
-    queue = arr.queue(page_size=250)
-    queued = queue.get("records", [])
-
     # Collect all search requests
     search_requests: list[dict[str, Any]] = []
+    wanted = []
+    queued = []
+
+    # Filter by external ID if initiated from webhook
+    if external_id:
+        external_params = external_id.split(":")
+        externaldb_id = str(external_params[0])
+        if arr.ServerType is ArrType.Radarr:
+            wanted = [arr.get_video(external_id=externaldb_id)]
+        elif arr.ServerType is ArrType.Sonarr:
+            seasons = external_params[1].split(",") if len(external_params) > 1 and external_params[1] else None
+            wanted = arr.get_episodes(external_id=externaldb_id, season_numbers=seasons)
+    else:
+        # Fetch all wanted items
+        wanted = arr.wanted_missing()
+        # Fetch queued videos
+        queued = arr.queue()
 
     if arr and arr.ServerType is ArrType.Radarr:
-        for rec in wanted.get("records", []):
+        for rec in wanted:
             if queued and rec.get("id") in [q.get("movieId") for q in queued if q.get("status") != "completed"]:
                 LOGGER.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {rec.get('title')}")
                 continue
@@ -131,10 +142,10 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
     elif arr and arr.ServerType is ArrType.Sonarr:
         # Group by seriesId
         by_series: dict[Any, list[dict[str, Any]]] = {}
-        for rec in wanted.get("records", []):
+        for rec in wanted:
             by_series.setdefault(rec.get("seriesId"), []).append(rec)
         for series_id, episodes in by_series.items():
-            series = arr.get_video(item_id=str(series_id))
+            series = arr.get_video(external_id=str(series_id))
             # Filter missing episodes not already queued
             episodes_missing = []
             queued_eps = {q.get("episodeId") for q in queued if q.get("status") != "completed"}
@@ -175,13 +186,6 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
                             "meta": {"type": arr.TypeName, "tvdbid": series.get("tvdbId"), "season": ep.get("seasonNumber"), "ep": ep.get("episodeNumber")},
                             "series": series,
                         })
-
-    # Filter by external ID if initiated from webhook
-    if external_id:
-        if arr.ServerType is ArrType.Radarr:
-            search_requests = [item for item in search_requests if item.get("meta", {}).get("imdbId") == external_id]
-        if arr.ServerType is ArrType.Sonarr:
-            search_requests = [item for item in search_requests if item.get("meta", {}).get("tvdbId") == external_id]
     
     # Execute searches, optimize, optionally add top torrent
     all_top: list[dict[str, Any]] = []
@@ -285,7 +289,6 @@ def main(argv: list[str] | None = None) -> int:
             - When specified, only searches for this specific item instead of processing the entire wanted list
             - Uses TMDB ID for movies or TVDB ID for TV shows
             - Bypasses the normal wanted list processing workflow
-            - Not implemented
 
         --retention: Number of days to retain records in published JSON
             - Default: 365 days

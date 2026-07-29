@@ -8,6 +8,9 @@ class AppClient(ABC):
     _session: httpx.Client | None = None
     
     @property
+    def Version(self) -> str: return self.status().get("version", '?')
+    
+    @property
     @abstractmethod
     def ServerName(self) -> str:
         """Client name"""

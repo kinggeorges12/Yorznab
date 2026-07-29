@@ -23,8 +23,6 @@ class QBitConfig:
     Password: Optional[str] = None
     SearchTimeout: Optional[int] = 60
     SearchLimit: Optional[int] = 0
-    SearchPing: Optional[int] = 10
-    ServerName: Optional[str] = None
 
 @dataclass
 class QBitClient(AppClient):
@@ -32,7 +30,6 @@ class QBitClient(AppClient):
     def __init__(self):
         # Initialize qBittorrent client defaults
         self._name: str = "qBittorrent"
-        self._config_file = "settings.yaml"
         self._config: QBitConfig = None
         self._headers: dict[str, str] = None
         self._authenticated: bool = False
@@ -41,7 +38,8 @@ class QBitClient(AppClient):
         self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            config_raw = AppSettings(filename=self._config_file).exists(name=self._name).get(key=self._name, exists=True)
+            self._config_file = f"applications/{self._name}.yaml"
+            config_raw = AppSettings(filename=self._config_file).get()
         except AppSettingsUndefined as e:
             self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
             raise Exception(e)
@@ -117,14 +115,14 @@ class QBitClient(AppClient):
         """Reset authentication state to force re-login"""
         self._authenticated = False
 
-    def status(self) -> str:
+    def status(self) -> dict[str, Any] | str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
         url = f"{self.UrlPath}/app/version"
         resp = self.session.post(url, headers=self._headers, timeout=30)
         resp.raise_for_status()
-        result = resp.text.strip()
+        version = resp.text.strip()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
-        return result
+        return {"version": version}
 
     def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
@@ -190,7 +188,8 @@ class QBitClient(AppClient):
         job_id = self.search_start(query)
         # Set lower timeout for whatif mode
         timeout = 5 if whatif else self.SearchTimeout
-        found = self.wait_search(job_id, limit=self.SearchLimit, ping=self.SearchPing, timeout=timeout)
+        search_ping = max(3, min(10, self.SearchTimeout / 2)) if self.SearchTimeout else 10
+        found = self.wait_search(job_id, limit=self.SearchLimit, ping=search_ping, timeout=timeout)
         if not found:
             return []
         return self.search_results(job_id)

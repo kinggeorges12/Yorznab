@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 # Import modules
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, TITLE, navigation, page_template
+from server.web.common import LOGGER, Yorznab, navigation, page_template
 from server.web.routers.auth import authenticate, logout, validate_csrf, add_csrf_token, gen_csrf_token
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD)
@@ -21,7 +21,7 @@ async def keys(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/keys')}
-            <h1>{TITLE} 🔐 Credentials</h1>
+            <h1>{Yorznab()} 🔐 Credentials</h1>
             <div class="text-container">
                 <div class="key-label">🔑 Indexer Key for Radarr &amp; Sonarr</div>
                 <div class="key-value" id="apiKey">{indexer_key}</div>

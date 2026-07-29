@@ -10,6 +10,8 @@ import httpx
 
 # Import classes
 from server import PROJECT_ROOT
+from server.routers.handler import RouteHandler
+from server.routers.torznab import CAT_LOOKUP, CATEGORIES
 from server.rss.AppClient import AppClient
 from server.utils.customlogger import CustomLogger
 from server.utils.keystore import KeyStore
@@ -25,7 +27,6 @@ class ArrConfig:
     Url: str
     ApiKey: str
     UrlFrom: Optional[str] = None
-    TypeName: Optional[str] = None
 
 @dataclass
 class ArrClient(AppClient):
@@ -33,13 +34,13 @@ class ArrClient(AppClient):
     def __init__(self, server_type: ArrType):
         # Initialize ArrClient client defaults
         self._name: str = server_type.value
-        self._config_file = "settings.yaml"
         self._config: ArrConfig = None
 
         self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            config_raw = AppSettings(filename=self._config_file).exists(name=self._name).get(key=self._name, exists=True)
+            self._config_file = f"applications/{self._name}.yaml"
+            config_raw = AppSettings(filename=self._config_file).get()
         except AppSettingsUndefined as e:
             self.LOGGER.warning(f"🚩 Server has bad configuration for {self._name}. Continuing without this app.")
             raise Exception(e)
@@ -52,13 +53,15 @@ class ArrClient(AppClient):
 
     class EndpointType(Enum):
         api = ''
+        episode = '/episode' # Sonarr only
         command = '/command'
         indexer = '/indexer'
         queue = '/queue'
         status = '/system/status'
         wanted = '/wanted/missing'
+
         def __str__(self):
-                return self.value
+            return self.value
 
     @dataclass
     class Mapper:
@@ -74,16 +77,6 @@ class ArrClient(AppClient):
                 return mapper.Sonarr
             case _:
                 raise ValueError(f"Unknown library server: {self.ServerName}")
-
-    @classmethod
-    def init_jellyseerr(cls, type_name: str) -> ArrClient: 
-        match type_name:
-            case "movie":
-                return cls(ArrType.Radarr)
-            case "tv":
-                return cls(ArrType.Sonarr)
-            case _:
-                raise ValueError(f"Unknown library type: {type_name}")
     
     @property
     def ServerName(self) -> str: return self.ServerType.value
@@ -95,6 +88,9 @@ class ArrClient(AppClient):
     def TypeName(self) -> str: return self.serve(self.Mapper(Radarr="Movies", Sonarr="TV"))
     
     @property
+    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self._config.ApiKey}
+    
+    @property
     def ApiVersion(self) -> str: return '/api/v3'
     
     @property
@@ -102,6 +98,9 @@ class ArrClient(AppClient):
     
     @property
     def UrlPath(self) -> str: return self.Url + self.ApiVersion
+    
+    @property
+    def UrlFrom(self) -> str: return self._config.UrlFrom
 
     def GetEndpoint(self, endpoint: ArrClient.EndpointType) -> str:
         if endpoint == self.__class__.EndpointType.api:
@@ -128,82 +127,109 @@ class ArrClient(AppClient):
 
     def status(self) -> dict[str, Any]:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} Arr server")
-        headers = {"X-Api-Key": self._config.ApiKey}
-        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=headers, timeout=30)
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=30)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} Arr server")
         return result
+    
+    def _paginate(self, endpoint: EndpointType, page_size: int = 250) -> list[dict[str, Any]]:
+        """Generic pagination helper that returns all records."""
+        page = 1
+        records = []
+        
+        while True:
+            params = {"page": page, "pageSize": page_size}
+            resp = self.session.get(
+                self.GetEndpoint(endpoint),
+                headers=self.Headers,
+                params=params,
+                timeout=30
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            
+            total_records = result.get("totalRecords", 0)
+            new_records = result.get("records", [])
+            records.extend(new_records)
+            
+            if len(records) >= total_records or not new_records:
+                break
+            
+            page += 1
+        
+        return records
 
-    def wanted_missing(self, page_size: int = 250) -> dict[str, Any]:
+    def wanted_missing(self) -> list[dict[str, Any]]:
         self.LOGGER.info(f"🔍 Searching for missing videos.")
-        headers = {"X-Api-Key": self._config.ApiKey}
-        params = {"page": 1, "pageSize": page_size}
-        resp = self.session.get(self.GetEndpoint(self.EndpointType.wanted), headers=headers, params=params, timeout=60)
-        resp.raise_for_status()
-        result = resp.json()
-        self.LOGGER.info(f"📺 Found {len(result.get('records', []))} missing {self.ProperNames.lower()}.")
-        return result
+        records = self._paginate(self.EndpointType.wanted)
+        self.LOGGER.info(f"📺 Found {len(records)} missing {self.ProperNames.lower()}.")
+        return records
 
-    def queue(self, page_size: int = 250) -> dict[str, Any]:
+    def queue(self) -> list[dict[str, Any]]:
         self.LOGGER.info(f"🔍 Searching for queued videos.")
-        headers = {"X-Api-Key": self._config.ApiKey}
-        params = {"page": 1, "pageSize": page_size}
-        resp = self.session.get(self.GetEndpoint(self.EndpointType.queue), headers=headers, params=params, timeout=60)
-        resp.raise_for_status()
-        result = resp.json()
-        self.LOGGER.info(f"📺 Found {len(result.get('records', []))} queued {self.ProperNames.lower()}.")
-        return result
+        records = self._paginate(self.EndpointType.queue)
+        self.LOGGER.info(f"📺 Found {len(records)} queued {self.ProperNames.lower()}.")
+        return records
 
-    # TODO: Why is this unused?
-    def lookup_video(self, external_id: str) -> dict[str, Any]:
-        external_db = self.ExternalDb
-        self.LOGGER.info(f"🔍 Looking for {self.ProperName} using database {external_db}.")
-        url = f"{self.GetEndpoint(self.EndpointType.api)}?{external_db}Id={external_id}"
-        headers = {"X-Api-Key": self._config.ApiKey}
-        resp = self.session.get(url, headers=headers, timeout=60)
-        resp.raise_for_status()
-        self.LOGGER.info(f"📺 Looked up {self.ProperName} from {self.ServerName} server: {resp.get('title')}")
-        return resp.json()
+    def get_episodes(self, external_id: str, season_numbers: list[str] = None) -> list[dict[str, Any]]:
+        self.LOGGER.info(f"🔍 Fetching episodes from {self.ServerName} server.")
+        all_episodes = []
+        if season_numbers is None:
+            season_numbers = ['0']
+        for season_number in season_numbers:
+            season_filter = ""
+            if season_number != '0':
+                season_filter = f"&seasonNumber={season_number}"
+            url = f"{self.GetEndpoint(self.EndpointType.episode)}?seriesId={external_id}{season_filter}"
+            resp = self.session.get(url, headers=self.Headers, timeout=30)
+            resp.raise_for_status()
+            season = resp.json()
+            all_episodes.append(season)
+        self.LOGGER.info(f"📺 Fetched {len(all_episodes)} episodes from {'all' if season_numbers == ['0'] else len(season_numbers)} seasons for {self.ExternalId}: {external_id}")
+        return all_episodes
 
-    def get_video(self, item_id: str) -> dict[str, Any]:
+    def get_video(self, external_id: str) -> dict[str, Any]:
         self.LOGGER.info(f"🔍 Fetching {self.ProperName} from {self.ServerName} server.")
-        url = f"{self.GetEndpoint(self.EndpointType.api)}/{item_id}"
-        headers = {"X-Api-Key": self._config.ApiKey}
-        resp = self.session.get(url, headers=headers, timeout=60)
+        url = f"{self.GetEndpoint(self.EndpointType.api)}/{external_id}"
+        resp = self.session.get(url, headers=self.Headers, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         self.LOGGER.info(f"📺 Fetched {self.ProperName} from {self.ServerName} server: {data.get('title')}")
         return data
 
     def update_rss(self) -> dict[str, Any]:
-        headers = {"X-Api-Key": self._config.ApiKey}
         body = {
             "name": "RssSync"
         }
         self.LOGGER.info(f"🌐 Sending RSS sync command to {self.ServerName} server.")
-        resp = self.session.post(self.GetEndpoint(self.EndpointType.command), headers=headers, json=body, timeout=60)
+        resp = self.session.post(self.GetEndpoint(self.EndpointType.command), headers=self.Headers, json=body, timeout=30)
         resp.raise_for_status()
         return resp.json()
 
-    def add_torznab_indexer(self):
+    def add_torznab_indexer(self, feed: str) -> dict[str, Any]:
         YORZNAB = AppSettings(filename='yorznab.yaml')
+
+        # Get cat_ids like: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]
+        root_id = next(c["id"] for c in CATEGORIES if c["label"] == "Movies")
+        category_ids = [c["id"] for c in CATEGORIES if CAT_LOOKUP.get(c["id"]) == root_id]
+
         payload = {
             "name": YORZNAB.get('feed', 'title'),
             "implementation": "Torznab",
             "implementationName": "Torznab",
             "configContract": "TorznabSettings",
-            "infoLink": YORZNAB.get('feed', 'link'),
+            "infoLink": self.UrlFrom,
             "enableRss": True,
             "enableAutomaticSearch": True,
             "enableInteractiveSearch": True,
             "priority": 25,
             "tags": [],
             "fields": [
-                {"name": "baseUrl", "value": YORZNAB.get('feed', 'link')},
+                {"name": "baseUrl", "value": self.UrlFrom},
                 {"name": "apiKey", "value": KeyStore.get_key('INDEXER_KEY')},
-                {"name": "apiPath", "value": YORZNAB.get('server', 'api_endpoint')},
-                {"name": "categories", "value": [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]},
+                {"name": "apiPath", "value": self.UrlFrom + RouteHandler.INDEXER + '/' + feed},
+                {"name": "categories", "value": category_ids},
                 {"name": "minimumSeeders", "value": 1},
                 {"name": "seedCriteria.seedTime", "value": 0},
                 {"name": "seedCriteria.seedRatio", "value": 0.0},
@@ -211,13 +237,12 @@ class ArrClient(AppClient):
             ]
         }
         
-        response = requests.post(
-            self.GetEndpoint(self.EndpointType.indexer),
-            headers={
-                "Content-Type": "application/json",
-                "X-Api-Key": self._config.ApiKey
-            },
-            json=payload
+        response = self.session.post(
+            f"{self.UrlPath}{self.EndpointType.indexer}",
+            json=payload,
+            headers=self.Headers,
+            timeout=30
         )
+        response.raise_for_status()
         
         return response.json()

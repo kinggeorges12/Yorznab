@@ -6,7 +6,7 @@ from server.routers.handler import RouteHandler
 from server.rss.ArrClient import ArrClient, ArrType
 from server.rss.QBitClient import QBitClient
 from server.rss.SeerrClient import SeerrClient
-from server.web.common import LOGGER, TITLE, navigation, page_template
+from server.web.common import LOGGER, Yorznab, navigation, page_template
 from server.web.routers.auth import authenticate
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schema=False)
@@ -19,7 +19,7 @@ async def applications_page(request: Request):
     exceptions = []
     try:
         radarr_client = ArrClient(ArrType.Radarr)
-        radarr_status = radarr_client.status() if radarr_client else ""
+        radarr_status = radarr_client.Version if radarr_client else ""
         LOGGER.debug(f"Radarr Status: {radarr_status}")
     except Exception as e:
         exceptions.append(f"Radarr: {e}")
@@ -27,7 +27,7 @@ async def applications_page(request: Request):
         radarr_status = ""
     try:
         sonarr_client = ArrClient(ArrType.Sonarr)
-        sonarr_status = sonarr_client.status() if sonarr_client else ""
+        sonarr_status = sonarr_client.Version if sonarr_client else ""
         LOGGER.debug(f"Sonarr Status: {sonarr_status}")
     except Exception as e:
         exceptions.append(f"Sonarr: {e}")
@@ -35,7 +35,7 @@ async def applications_page(request: Request):
         sonarr_status = ""
     try:
         seerr_client = SeerrClient()
-        seerr_status = seerr_client.status() if seerr_client else ""
+        seerr_status = seerr_client.Version if seerr_client else ""
         LOGGER.debug(f"Seerr Status: {seerr_status}")
     except Exception as e:
         exceptions.append(f"Seerr: {e}")
@@ -43,7 +43,7 @@ async def applications_page(request: Request):
         seerr_status = ""
     try:
         qbittorrent_client = QBitClient()
-        qbittorrent_status = qbittorrent_client.status() if qbittorrent_client else ""
+        qbittorrent_status = qbittorrent_client.Version if qbittorrent_client else ""
         LOGGER.debug(f"qBittorrent Status: {qbittorrent_status}")
     except Exception as e:
         exceptions.append(f"qBittorrent: {e}")
@@ -85,11 +85,11 @@ async def applications_page(request: Request):
     html_apps += '<div class="app-icons-container">'
     html_apps += build_apps_html(name = radarr_client.ServerName if radarr_client and radarr_client.ServerName else 'Radarr',
                                 url = radarr_client.Url if radarr_client and hasattr(radarr_client, 'Url') and radarr_client.Url else None,
-                                status = radarr_status['version'] if radarr_status and 'version' in radarr_status else None,
+                                status = radarr_status if radarr_status else None,
                                 icon_url = 'https://avatars.githubusercontent.com/u/25025331')
     html_apps += build_apps_html(name = sonarr_client.ServerName if sonarr_client and sonarr_client.ServerName else 'Sonarr',
                                 url = sonarr_client.Url if sonarr_client and hasattr(sonarr_client, 'Url') and sonarr_client.Url else None,
-                                status = sonarr_status['version'] if sonarr_status and 'version' in sonarr_status else None,
+                                status = sonarr_status if sonarr_status else None,
                                 icon_url = 'https://avatars.githubusercontent.com/u/1082903')
     html_apps += '</div>'
     html_apps += '<div class="app-icons-container">'
@@ -106,13 +106,13 @@ async def applications_page(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/setup')}
-            <h1>{TITLE} ⚙️ Configuration</h1>
+            <h1>{Yorznab()} ⚙️ Configuration</h1>
 
             <div id="appIconsContainer" class="text-container">
                 <h2>Connected Apps</h2>
                 
                 {html_apps}
-                <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not qbittorrent_status else 'none'};">
+                <div class="error-container" style="display: {'flex' if not radarr_status or not sonarr_status or not seerr_status or not qbittorrent_status else 'none'};">
                     {html_exceptions}
                 </div>
             </div>

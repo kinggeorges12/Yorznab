@@ -4,7 +4,6 @@ from threading import Lock
 
 # Import modules
 import server
-from server.utils.settings import AppSettings
 
 class RouteHandler:
     
@@ -20,6 +19,7 @@ class RouteHandler:
     AUTH = API_v1 + "/auth"
     ROUTES = API_v1 + "/routes"
     STATUS = API_v1 + "/status"
+    SETTINGS = API_v1 + "/settings"
     WEBHOOK = API_v1 + "/webhook"
     API_DEFAULT = INDEXER
     DASHBOARD = ""

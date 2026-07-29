@@ -10,7 +10,10 @@ from server.utils.settings import AppSettings
 
 LOGGER = CustomLogger(name="LoginService")
 ID_NAME = "LOGIN_PASSKEY"
-TITLE = AppSettings(filename='yorznab.yaml').get('feed', 'title') or "Yorznab"
+
+def Yorznab() -> str:
+    """Get the title from the settings file, defaulting to 'Yorznab' if not set."""
+    return AppSettings(filename='yorznab.yaml').get('feed', 'title') or "Yorznab"
 
 def get_cache_token() -> str:
     return secrets.token_hex(16)
@@ -49,7 +52,7 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
     return f'''<!DOCTYPE html>
 <html>
     <head>
-        <title>{TITLE} {title}</title>
+        <title>{Yorznab()} {title}</title>
         <script src="{RouteHandler.get_static_url('js/theme.js')}?token={token}"></script>
         <link rel="preload" href="{RouteHandler.get_static_url('css/web.css')}?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.get_static_url('css/web.css')}?token={token}">
@@ -65,9 +68,9 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
 def navigation(current_route: str = '') -> str:
     nav_items = [
         (f"{RouteHandler.DASHBOARD}/home", "🏠", "Home", "home-btn"),
-        (f"{RouteHandler.DASHBOARD}/keys", "🔐", "Credentials", "creds-btn"),
         (f"{RouteHandler.DASHBOARD}/applications", "📲", "Applications", "config-btn"),
         (f"{RouteHandler.DASHBOARD}/feeds", "📻", "Feeds", "feed-btn"),
+        (f"{RouteHandler.DASHBOARD}/keys", "🔐", "Credentials", "creds-btn"),
     ]
     
     buttons = ""

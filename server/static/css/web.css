@@ -256,6 +256,7 @@ button.logout-btn.active {
     cursor: pointer;
     transition: all .3s ease;
     margin-left: auto;
+    font-weight:700;
 }
 .create-btn:hover {
     background: var(--btn-primary-hover);
@@ -647,4 +648,49 @@ a:hover::after{width:100%}
     pre.ascii-line span.ascii-spacer {
         display: none;
     }
+}
+
+/* Home Renamer Styles */
+.home-renamer {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    vertical-align: top;
+}
+.home-renamer #YorznabTitle {
+    padding-left: 26px;
+    font-size: inherit;
+    font-weight: inherit;
+}
+.home-renamer input[type="text"] {
+    padding: 0 4px 0 24px;
+    font-size: inherit;
+    font-weight: inherit;
+    font-family: inherit;
+    border: 2px solid var(--input-border, #ccc);
+    border-radius: 4px;
+    background: var(--input-bg, #fff);
+    color: var(--text-primary, #333);
+    display: none;
+    width: auto;
+}
+.home-renamer input[type="text"]:focus {
+    outline: none;
+    border-color: var(--input-focus, #22c55e);
+}
+.home-renamer .edit-btn {
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    color: var(--text-primary, #333);
+    z-index: 1;
+}
+.home-renamer .edit-btn:hover {
+    opacity: 0.7;
 }
