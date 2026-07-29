@@ -138,6 +138,6 @@ async def rename_yorznab(request: Request, yorznab_name: str,
     except HTTPException:
         raise
     except Exception as e:
-        LOGGER.error(f"Error saving file: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save yaml for feed: {feed_name}")
+        LOGGER.error(f"Unknown error occurred while renaming yorznab: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to rename yorznab: {yorznab_name}")
 
