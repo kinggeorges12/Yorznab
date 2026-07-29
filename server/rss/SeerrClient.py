@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
+from __future__ import annotations
+from dataclasses import dataclass
 from enum import Enum
-import json
 import os
 from typing import Any, List, Optional
 

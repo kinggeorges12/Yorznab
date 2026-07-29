@@ -1,11 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import os
 from typing import Any, Optional
 from dacite import Config, from_dict
 from dacite.exceptions import MissingValueError
-from fastapi import requests
 import httpx
 
 # Import classes
