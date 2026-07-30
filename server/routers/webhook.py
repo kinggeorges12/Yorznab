@@ -5,9 +5,9 @@ from fastapi.responses import JSONResponse
 import asyncio
 
 # Import classes
-from server.rss.SeerrClient import SeerrClient
+from server.entities.SeerrClient import SeerrClient
 from server.utils.settings import AppSettings
-from server.rss.ArrClient import ArrClient, ArrType
+from server.entities.ArrClient import ArrClient, ArrType
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig

@@ -3,17 +3,11 @@ import secrets
 from typing import List, Union
 
 # Import modules
+from server.entities.Yorznab import YorznabConfig
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
-from server.utils.settings import AppSettings
-
 
 LOGGER = CustomLogger(name="LoginService")
-ID_NAME = "LOGIN_PASSKEY"
-
-def Yorznab() -> str:
-    """Get the title from the settings file, defaulting to 'Yorznab' if not set."""
-    return AppSettings(filename='yorznab.yaml').get('feed', 'title') or "Yorznab"
 
 def get_cache_token() -> str:
     return secrets.token_hex(16)
@@ -22,6 +16,7 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
                   css: Union[str, List[str]] = None,
                   module: dict[str,tuple[str,str]] = None,
                   js: Union[str, List[str]] = None) -> str:
+    # Reload Yorznab config every time a page loads
     # Convert single string to list for consistent handling
     css = ([css] if isinstance(css, str) else css) if css is not None else []
     module = module if module is not None else {}
@@ -52,7 +47,7 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
     return f'''<!DOCTYPE html>
 <html>
     <head>
-        <title>{Yorznab()} {title}</title>
+        <title>{YorznabConfig().Indexer.Title} {title}</title>
         <script src="{RouteHandler.get_static_url('js/theme.js')}?token={token}"></script>
         <link rel="preload" href="{RouteHandler.get_static_url('css/web.css')}?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.get_static_url('css/web.css')}?token={token}">
@@ -68,9 +63,9 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
 def navigation(current_route: str = '') -> str:
     nav_items = [
         (f"{RouteHandler.DASHBOARD}/home", "🏠", "Home", "home-btn"),
-        (f"{RouteHandler.DASHBOARD}/applications", "📲", "Applications", "config-btn"),
+        (f"{RouteHandler.DASHBOARD}/configuration", "⚙️", "Configuration", "config-btn"),
+        (f"{RouteHandler.DASHBOARD}/applications", "📲", "Applications", "creds-btn"),
         (f"{RouteHandler.DASHBOARD}/feeds", "📻", "Feeds", "feed-btn"),
-        (f"{RouteHandler.DASHBOARD}/keys", "🔐", "Credentials", "creds-btn"),
     ]
     
     buttons = ""

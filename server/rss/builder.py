@@ -8,8 +8,8 @@ from threading import Lock
 
 # Import classes
 from server.rss.FeedGenerator import FeedGenerator
-from server.rss.QBitClient import QBitClient
-from server.rss.ArrClient import ArrClient, ArrType
+from server.entities.QBitClient import QBitClient
+from server.entities.ArrClient import ArrClient, ArrType
 
 # Import utilities
 from server.utils.feedconfig import FeedConfig

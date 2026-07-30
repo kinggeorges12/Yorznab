@@ -5,11 +5,12 @@ from fastapi.responses import FileResponse, RedirectResponse
 import yaml
 
 # Import modules
+from server.entities.Yorznab import YorznabConfig
 from server.routers.handler import RouteHandler
 from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, Yorznab, navigation, page_template
+from server.web.common import LOGGER, navigation, page_template
 from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
 from server.web.routers.cache import download_and_cache
 
@@ -69,33 +70,9 @@ async def feeds(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/feed')}
-            <h1>{Yorznab()} 📻 Feeds</h1>
+            <h1>{YorznabConfig().Indexer.Title} 📻 Feeds</h1>
             
             <div id="main-page">
-                <div class="text-container">
-                    <h2 class="status-container">
-                        <span class="status-dot" id="status-dot"></span>
-                        Cron Status: <span id="status-label">⏳ Loading...</span>
-                    </h2>
-                    <div class="info-item">
-                        <span class="info-label">Refresh starts in:</span>
-                        <span class="info-value countdown-display" id="countdown" data-status="{RouteHandler.STATUS}" title="Refresh starts in">
-                            <span class="hours"></span>
-                            <span class="separator">:</span>
-                            <span class="minutes"></span>
-                            <span class="separator">:</span>
-                            <span class="seconds"></span>
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Scheduled:</span>
-                        <span class="info-value" id="scheduled" title="Scheduled"></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Server time:</span>
-                        <span class="info-value" id="server-time" title="Server time"></span>
-                    </div>
-                </div>
                 <div class="text-container">
                     <div class="header-container">
                         <h2>🗃️ Indexers</h2>

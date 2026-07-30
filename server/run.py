@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response, status as http_status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
@@ -41,16 +41,19 @@ app.include_router(web_routers)
 
 # Mount default routes for API to v1
 @app.api_route(RouteHandler.API, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def redirect_to_v1(request: Request):
+async def base_redirect(request: Request):
     url = request.url
     new_path = f"{RouteHandler.INDEXER}"
-    return RedirectResponse(url=url.replace(path=new_path), status_code=307)
+    print(f"Redirecting request from {url.path} to v1")
+    return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
 
 @app.api_route(RouteHandler.API + "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def redirect_to_v1(path: str, request: Request):
     url = request.url
+    print(f"Redirecting request from {url.path} to v1")
+    if url.path.startswith(RouteHandler.API_v1): return Response(status_code=http_status.HTTP_404_NOT_FOUND)
     new_path = f"{RouteHandler.API_v1}/{path}"
-    return RedirectResponse(url=url.replace(path=new_path), status_code=307)
+    return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
 
 # Setup docs
 app.openapi_schema = create_openapi(app)

@@ -63,7 +63,6 @@ class AppSettings:
             if data is None and exists:
                 raise AppSettingsUndefined(f"The configuration section for {key} is undefined or misconfigured.")
             return data
-        print(self._data)
         return self._data
         
     def __str__(self) -> str:

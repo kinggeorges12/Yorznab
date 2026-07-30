@@ -5,31 +5,66 @@ from typing import Any, Optional
 from dacite import from_dict
 from dacite.exceptions import MissingValueError
 import httpx
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Import classes
 from server import PROJECT_ROOT
-from server.rss.AppClient import AppClient
+from server.entities.AppClient import AppClient
+from server.entities.Yorznab import YorznabConfig
 from server.utils.customlogger import CustomLogger
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
 @dataclass
 class QBitConfig:
     ServerType: str
-    Url: str
-    UrlFrom: Optional[str] = None
-    ApiKey: Optional[str] = None
-    Username: Optional[str] = None
-    Password: Optional[str] = None
-    SearchTimeout: Optional[int] = 60
-    SearchLimit: Optional[int] = 0
+    Url: str = field(
+        metadata={
+            "name": "qBittorrent Server",
+            "description": "URL used to connect to the qBittorrent server, including http(s)://, port, and urlbase if required"
+        }
+    )
+    ApiKey: str = field(
+        metadata={
+            "name": "API Key",
+            "description": "Find API key in new versions of qBittorrent > Tools > Options > WebUI"
+        }
+    )
+    Username: Optional[str] = field(
+        default=None,
+        metadata={
+            "name": "Username",
+            "description": "Find Username in qBittorrent > Tools > Options > WebUI"
+        }
+    )
+    Password: Optional[str] = field(
+        default=None,
+        metadata={
+            "name": "Password",
+            "description": "Leave the ApiKey blank if using username/password authentication"
+        }
+    )
+    SearchTimeout: Optional[int] = field(
+        default=60,
+        metadata={
+            "name": "Search Timeout",
+            "description": "Time to wait for search to complete (in seconds)"
+        }
+    )
+    SearchLimit: Optional[int] = field(
+        default=0,
+        metadata={
+            "name": "Search Limit",
+            "description": "Maximum number of results to wait for before returning, or 0 for unlimited"
+        }
+    )
 
 @dataclass
 class QBitClient(AppClient):
     
     def __init__(self):
+        # Initialize _name and _config_file
+        super().__init__(name="qBittorrent")
         # Initialize qBittorrent client defaults
-        self._name: str = "qBittorrent"
         self._config: QBitConfig = None
         self._headers: dict[str, str] = None
         self._authenticated: bool = False
@@ -38,7 +73,6 @@ class QBitClient(AppClient):
         self.LOGGER = CustomLogger(name=self._name)
         # Resolve config file settings.yaml
         try:
-            self._config_file = f"applications/{self._name}.yaml"
             config_raw = AppSettings(filename=self._config_file).get()
         except AppSettingsUndefined as e:
             self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
@@ -52,6 +86,9 @@ class QBitClient(AppClient):
 
     @property
     def ServerName(self) -> str: return self.ServerType
+    
+    @property
+    def DefaultUrl(self) -> str: return "http://localhost:8080"
     
     @property
     def ServerType(self) -> str: return self._config.ServerType

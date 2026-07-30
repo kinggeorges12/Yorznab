@@ -4,14 +4,16 @@ import hashlib
 import hmac
 import json
 import secrets
-from fastapi import APIRouter, Form, HTTPException, Header, Query, Request, status
+from fastapi import APIRouter, Form, Header, Request, status
 from fastapi.responses import JSONResponse, Response, RedirectResponse
 from urllib.parse import parse_qs
 
 # Import modules
+from server.entities.Yorznab import YorznabConfig
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
-from server.web.common import LOGGER, ID_NAME, Yorznab, navigation, page_template
+from server.web.common import LOGGER, navigation, page_template
+ID_NAME = "LOGIN_PASSKEY"
 
 dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
 
@@ -170,7 +172,7 @@ async def login_page(request: Request):
     content = f'''
         <div class="login-container">
             {navigation('')}
-            <h1>Welcome to {Yorznab()}</h1>
+            <h1>Welcome to {YorznabConfig().Indexer.Title}</h1>
             {get_started}
             <form id="loginForm" autocomplete="off" method="POST" action="{RouteHandler.AUTH}/login">
                 <input type="hidden" name="csrf_token" value="{csrf_token}">
@@ -183,6 +185,7 @@ async def login_page(request: Request):
                         </button>
                     </div>
                 </div>
+                <br>
                 {login_button}
             </form>
             {error}

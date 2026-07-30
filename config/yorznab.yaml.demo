@@ -13,28 +13,17 @@ cron:
 # Customizable feed information for Torznab tags
 # More info here: https://nzbdrone.readthedocs.io/Implementing-a-Torznab-indexer/
 # Use FEED_DIR environment variable to change location; feeds are stored in the /app/server/feeds directory by default
-feed:
+indexer:
   # Used in logs and on the web dashboard
   title: Yorznab
   # The information below is used to advertise capabilities on the API.
   # The address should (untested) match the address when Radarr and Sonarr ping this server.
   # The link port should (untested) match the server port used in Docker.
+  url: http://localhost
+  port: 9116
   link: http://localhost:9116
   # Radarr and Sonarr do not implement the features below
   image: http://localhost:9116/static/banner.jpg
   email: admin@example.com
   description: Get yo feed on!
   language: en
-
-# Setup custom endpoints for your server
-server:
-  # Location of endpoint for Sonarr, Radarr, and browser access (default: /api)
-  api_endpoint: /api
-  # Location of endpoint for login requests (default: /login)
-  login_endpoint: /login
-  # Location of endpoint for static files (default: /static)
-  static_endpoint: /static
-  # Location of endpoint for status requests (default: /status)
-  status_endpoint: /status
-  # Location of endpoint for webhook requests (default: /webhook)
-  webhook_endpoint: /webhook

@@ -1,23 +1,5 @@
 /* ===== FEEDS.CSS ===== */
 
-.countdown-display span {
-    display: inline-block;
-    background: var(--input-bg);
-    transition: all .3s ease;
-}
-
-.countdown-display span.short {
-    color: #ef4444;
-}
-
-.countdown-display span.mid {
-    color: #f59e0b;
-}
-
-.countdown-display span.long {
-    color: #4CAF50;
-}
-
 .clickable {
     cursor: pointer;
 }

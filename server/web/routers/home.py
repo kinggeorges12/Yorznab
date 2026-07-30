@@ -6,9 +6,10 @@ from fastapi.responses import RedirectResponse
 import yaml
 
 # Import modules
+from server.entities.Yorznab import YorznabConfig
 from server.routers.handler import RouteHandler
 from server.utils.settings import AppSettings
-from server.web.common import LOGGER, Yorznab, navigation, page_template
+from server.web.common import LOGGER, navigation, page_template
 from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schema=False)
@@ -39,15 +40,14 @@ async def home(request: Request):
 ╿<span class="ascii-spacer">      </span>                                                                  <span class="ascii-spacer">      </span>╿</pre><pre class="ascii-line fade-in" style="animation-delay: {animation_timer.pop()}s">
 ╰<span class="ascii-spacer">╼╾╼╾╼╾</span>╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾<span class="ascii-spacer">╼╾╼╾╼╾</span>╯</pre>
 '''
-    
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/home')}
-            <h1>{Yorznab()} 🏠 Home</h1>
+            <h1>{YorznabConfig().Indexer.Title} 🏠 Home</h1>
             <div class="text-container">
                 <h2>Welcome to
                     <div id="YorznabEditContainer" class="home-renamer" data-save="{RouteHandler.SETTINGS}/rename/" data-csrf="{csrf_token}">
-                        <span id="YorznabTitle">{Yorznab()}</span>
+                        <span id="YorznabTitle">{YorznabConfig().Indexer.Title}</span>
                         <input id="YorznabInput" type="text" placeholder="Yorznab" />
                         <button class="edit-btn">✏️</button>
                     </div>
@@ -84,7 +84,7 @@ async def home(request: Request):
             </form>
         </div>'''
     
-    response = Response(content=page_template(title="Home", content=content, css="cache/css/dejavu-sans-mono", js="js/home.js"), media_type="text/html")
+    response = Response(content=page_template(title="Home", content=content, css=["cache/css/dejavu-sans-mono", "css/home.css"], js="js/home.js"), media_type="text/html")
     add_csrf_token(request, response, csrf_token)
     return response
 

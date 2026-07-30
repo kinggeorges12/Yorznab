@@ -24,3 +24,22 @@
 .app-version{font-size:10px;color:var(--app-version-color);background:var(--app-version-bg);padding:1px 5px;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--border-color);transition:all .3s ease}
 .icon-wrapper a::after{background:blue}
 .icon-wrapper a:hover::after{width:100%;background:blue}
+
+.info-label {
+  width: 20%;
+}
+
+.info-value {
+  width: 80%;
+  margin-left: 10px;
+
+}
+
+.info-value > input {
+  font-family: 'DejaVuSansMonoBook', monospace;
+  width: 100%;
+}
+
+.info-value > input[data-type="password"] {
+  width: calc(100% - 30px);
+}

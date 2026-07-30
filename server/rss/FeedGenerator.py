@@ -4,7 +4,7 @@ from typing import Any, Optional
 from dataclasses import dataclass, fields
 
 # Import classes
-from server.rss.ArrClient import ArrType
+from server.entities.ArrClient import ArrType
 from server.utils.feedconfig import FeedConfig, FeedFilter, FilterApp, FilterTags, FilterWeights
 from server.utils.timeformatter import IsoTimeFormatter
 

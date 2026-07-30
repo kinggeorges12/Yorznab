@@ -100,3 +100,47 @@
         border-radius: 6px;
     }
 }
+
+/* Countdown display styling */
+
+.countdown-display span {
+    display: inline-block;
+    background: var(--input-bg);
+    transition: all .3s ease;
+}
+
+.countdown-display span.short {
+    color: #ef4444;
+}
+
+.countdown-display span.mid {
+    color: #f59e0b;
+}
+
+.countdown-display span.long {
+    color: #4CAF50;
+}
+
+/* Info item hints */
+
+.info-hint .hint-message {
+    transform: translateY(-10px);
+    transition: all 0.5s ease;
+}
+.info-hint:focus-within .hint-message {
+    display: block !important;
+    animation: slideDown 1.0s ease forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+    }
+}
