@@ -122,7 +122,7 @@ def generate_rss(items, offset=0, limit=0):
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
-    fg.title(YorznabConfig().Indexer.Title)
+    fg.title(YorznabConfig().ServerName)
     fg.link(href=YorznabConfig().Link)
     fg.description(YorznabConfig().Description)
     fg.language(YorznabConfig().Language)
@@ -200,7 +200,7 @@ async def torznab_api(
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{YorznabConfig().Indexer.Title}</title>
+    <title>{YorznabConfig().ServerName}</title>
     <link>{YorznabConfig().Link}</link>
     <description>Indexer Error</description>
     <error code="1001" description="Missing or invalid API key"/>
@@ -218,7 +218,7 @@ async def torznab_api(
         feed_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{YorznabConfig().Indexer.Title}</title>
+    <title>{YorznabConfig().ServerName}</title>
     <link>{YorznabConfig().Link}</link>
     <description>Feed Error</description>
     <error code="2" description="No feeds found"/>
@@ -230,7 +230,7 @@ async def torznab_api(
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <caps xmlns:torrent="{NS['torznab']}">
-  <server version="1.0" title="{YorznabConfig().Indexer.Title}" strapline="Yorznab Indexer"
+  <server version="1.0" title="{YorznabConfig().ServerName}" strapline="Yorznab Indexer"
       email="{YorznabConfig().Email}" url="{YorznabConfig().Link}"
       image="{YorznabConfig().Image}" />
   <limits max="0" default="0" />

@@ -172,12 +172,12 @@ async def login_page(request: Request):
     content = f'''
         <div class="login-container">
             {navigation('')}
-            <h1>Welcome to {YorznabConfig().Indexer.Title}</h1>
+            <h1>Welcome to {YorznabConfig().ServerName}</h1>
             {get_started}
             <form id="loginForm" autocomplete="off" method="POST" action="{RouteHandler.AUTH}/login">
                 <input type="hidden" name="csrf_token" value="{csrf_token}">
+                <input type="text" value="yorznab" autocomplete="off" name="username" style="display:none">
                 <div class="form-group">
-                    <input type="text" value="yorznab" autocomplete="off" name="username" style="display:none">
                     <div class="password-wrapper">
                         <input type="password" value="{temp_passkey}" autocomplete="off" id="{ID_NAME}" name="passkey" placeholder="{ID_NAME}" required>
                         <button type="button" class="toggle-btn" {"onload" if first_time else ""} id="toggleBtn" aria-label="Toggle password visibility">
@@ -276,6 +276,7 @@ async def logout(request: Request,
     
     # Always logout regardless of CSRF (but CSRF protects against forged requests)
     response.delete_cookie("session")
+    response.delete_cookie("csrf_tokens")
     set_csrf_tokens(request, response, [])  # Clear all CSRF tokens
     
     return response

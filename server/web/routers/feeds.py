@@ -70,7 +70,7 @@ async def feeds(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/feed')}
-            <h1>{YorznabConfig().Indexer.Title} 📻 Feeds</h1>
+            <h1>{YorznabConfig().ServerName} 📻 Feeds</h1>
             
             <div id="main-page">
                 <div class="text-container">

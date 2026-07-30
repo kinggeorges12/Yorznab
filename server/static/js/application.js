@@ -22,6 +22,19 @@ function togglePasswordVisibility(input, toggleBtn) {
     });
 }
 
+function toggleSettings(settingsId) {
+    const settings = document.getElementById(settingsId);
+    const mainMenu = document.getElementById('main-menu');
+    
+    if (settings.style.display === 'none') {
+        settings.style.display = 'block';
+        mainMenu.style.display = 'none';
+    } else {
+        settings.style.display = 'none';
+        mainMenu.style.display = 'block';
+    }
+}
+
 // ====== DOM READY EXECUTION ======
 
 document.addEventListener('DOMContentLoaded', function() {

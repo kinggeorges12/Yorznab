@@ -243,7 +243,7 @@ class ArrClient(AppClient):
         category_ids = [c["id"] for c in CATEGORIES if CAT_LOOKUP.get(c["id"]) == root_id]
 
         payload = {
-            "name": YorznabConfig().Indexer.Title,
+            "name": YorznabConfig().ServerName,
             "implementation": "Torznab",
             "implementationName": "Torznab",
             "configContract": "TorznabSettings",

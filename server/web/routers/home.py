@@ -43,11 +43,11 @@ async def home(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/home')}
-            <h1>{YorznabConfig().Indexer.Title} 🏠 Home</h1>
+            <h1>{YorznabConfig().ServerName} 🏠 Home</h1>
             <div class="text-container">
                 <h2>Welcome to
                     <div id="YorznabEditContainer" class="home-renamer" data-save="{RouteHandler.SETTINGS}/rename/" data-csrf="{csrf_token}">
-                        <span id="YorznabTitle">{YorznabConfig().Indexer.Title}</span>
+                        <span id="YorznabTitle">{YorznabConfig().ServerName}</span>
                         <input id="YorznabInput" type="text" placeholder="Yorznab" />
                         <button class="edit-btn">✏️</button>
                     </div>

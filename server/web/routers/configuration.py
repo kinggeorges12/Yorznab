@@ -32,40 +32,43 @@ async def configuration(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/configuration')}
-            <h1>{YorznabConfig().Indexer.Title} ⚙️ Configuration</h1>
+            <h1>{YorznabConfig().ServerName} ⚙️ Configuration</h1>
             {html_settings}
             
-            <div class="text-container">
-                <h2 class="status-container">
-                    <span class="status-dot" id="status-dot"></span>
-                    Cron Status: <span id="status-label">⏳ Loading...</span>
-                </h2>
-                <div class="info-item">
-                    <span class="info-label">
-                        <label for="countdown">Refresh starts in:</label>
-                    </span>
-                    <span class="info-value countdown-display" id="countdown" data-status="{RouteHandler.STATUS}" title="Refresh starts in">
-                        <span class="hours"></span>
-                        <span class="separator">:</span>
-                        <span class="minutes"></span>
-                        <span class="separator">:</span>
-                        <span class="seconds"></span>
-                    </span>
+            <div id="main-menu">
+                <div class="text-container">
+                    <h2 class="status-container">
+                        <span class="status-dot" id="status-dot"></span>
+                        Cron Status: <span id="status-label">⏳ Loading...</span>
+                    </h2>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <label for="countdown">Job starts in:</label>
+                        </span>
+                        <span class="info-value countdown-display" id="countdown" data-status="{RouteHandler.STATUS}" title="Job starts in">
+                            <span class="hours"></span>
+                            <span class="separator">:</span>
+                            <span class="minutes"></span>
+                            <span class="separator">:</span>
+                            <span class="seconds"></span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <label for="scheduled">Scheduled:</label>
+                        </span>
+                        <span class="info-value" id="scheduled" title="Scheduled"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <label for="server-time">Server time:</label>
+                        </span>
+                        <span class="info-value" id="server-time" title="Server time"></span>
+                    </div>
+                    <button class="full-btn action-btn config-btn" type="button" onclick="toggleSettings('Cron-settings')">⏱️ Edit Cron</button>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">
-                        <label for="scheduled">Scheduled:</label>
-                    </span>
-                    <span class="info-value" id="scheduled" title="Scheduled"></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">
-                        <label for="server-time">Server time:</label>
-                    </span>
-                    <span class="info-value" id="server-time" title="Server time"></span>
-                </div>
-            </div>
-            <div>
+                <button class="full-btn action-btn home-btn" type="button" onclick="toggleSettings('Indexer-settings')">🗃️ Edit Indexer</button>
+                <br>
                 <button id="resetBtn" class="reset-btn" data-reset="{RouteHandler.AUTH}/reset" data-csrf="{reset_csrf_token}" onclick="confirmReset()">
                     🔄 Reset All Keys
                 </button>

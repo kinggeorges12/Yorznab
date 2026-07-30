@@ -2,11 +2,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import os
 from threading import Lock
-from typing import Optional
+from typing import Any, Optional
 
 from dacite import MissingValueError, from_dict
+import httpx
 
+# Import modules
 from server import PROJECT_ROOT
+from server.entities.AppClient import AppClient
+from server.routers.handler import RouteHandler
 from server.utils.settings import AppSettings, AppSettingsUndefined
 
 
@@ -35,10 +39,11 @@ class Cron:
 
 @dataclass
 class Indexer:
-    Title: Optional[str] = field(
+    ServerName: Optional[str] = field(
         default='Yorznab',
         metadata={
-            "description": "Title of the indexer"
+            "name": "Name",
+            "description": "Name of the application and indexer"
         }
     )
     Url: Optional[str] = field(
@@ -48,7 +53,7 @@ class Indexer:
         }
     )
 
-class YorznabConfig:
+class YorznabConfig(AppClient):
 
     _instance: YorznabConfig = None
     _lock = Lock()
@@ -87,3 +92,22 @@ class YorznabConfig:
     
     @classmethod
     def Reset(cls) -> None: cls._initialized = False
+
+    @property
+    def ServerName(self) -> str:
+        """Client name"""
+        return self.Indexer.ServerName
+    
+    @property
+    def Url(self) -> str:
+        """Base URL"""
+        return RouteHandler.API_v1
+    
+    @property
+    def ApiVersion(self) -> str:
+        """API version path"""
+        return RouteHandler.API_v1
+
+    # Unimplemented methods for AppClient interface
+    def session(self) -> httpx.Client: pass
+    def status(self) -> dict[str, Any] | str: pass

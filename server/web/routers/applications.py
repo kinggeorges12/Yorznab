@@ -26,7 +26,7 @@ def build_html_input(csrf_token: str, client: Optional[AppClient] = None, config
         raise ValueError("Client must be provided to build HTML input.")
     html_input = ''
     html_input += f'''
-        <div class="text-container" id="{setting_name}-settings">
+        <div class="text-container" id="{setting_name}-settings" style="display: none;">
         <form class="settings-form" method="post" action="{RouteHandler.SETTINGS}/save?config={setting_name}" data-csrf="{csrf_token}">
         <h2>{setting_name} Settings</h2>'''
     for field in fields(config):
@@ -66,7 +66,7 @@ def build_html_input(csrf_token: str, client: Optional[AppClient] = None, config
             </span>''' # Info value
         html_input += f'''
             </div>
-            <div class="hint-message" style="display: none">{hint}</div>
+            <div class="hint-message">{hint}</div>
             </div>''' # Info item
     html_input += f'''
             <br>
@@ -93,10 +93,11 @@ async def applications_page(request: Request):
     def init_app(name: str, fn_client: Callable[..., AppClient], icon_url: str) -> ClientResult:
         # Build app items html
         def build_html_app(name: str, status: str, client_url: str, icon_url: str) -> str:
-            placeholder_image = f'style="background-image: url(\'{RouteHandler.get_static_url("favicon.ico")}\')"' if client_url else ''
+            onclick_action = f''' onclick="toggleSettings('{name}-settings')"'''
+            placeholder_image = f' style="background-image: url(\'{RouteHandler.get_static_url("favicon.ico")}\')"' if client_url else ''
             return f'''<!-- {name} -->
                 <div class="app-item">
-                    <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }"{placeholder_image}>
+                    <div class="icon-wrapper { 'green-border-shadow' if status else 'red-border-shadow' }"{placeholder_image}{onclick_action if status else ''}>
                         <img class="app-icon" alt="{name}"
                             src="{icon_url}"
                             onerror="this.onerror=null; this.parentElement.querySelector('.warning-badge').classList.add('visible')"
@@ -175,16 +176,18 @@ async def applications_page(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/setup')}
-            <h1>{YorznabConfig().Indexer.Title} 📲 Applications</h1>
+            <h1>{YorznabConfig().ServerName} 📲 Applications</h1>
 
             {html_inputs}
 
-            <div id="appIconsContainer" class="text-container">
-                <h2>Connected Apps</h2>
-                
-                {html_apps}
-                <div class="error-container" style="display: {'flex' if html_exceptions else 'none'};">
-                    {html_exceptions}
+            <div id="main-menu">
+                <div id="appIconsContainer" class="text-container">
+                    <h2>Connected Apps</h2>
+                    
+                    {html_apps}
+                    <div class="error-container" style="display: {'flex' if html_exceptions else 'none'};">
+                        {html_exceptions}
+                    </div>
                 </div>
             </div>
         </div>'''

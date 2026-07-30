@@ -47,7 +47,7 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
     return f'''<!DOCTYPE html>
 <html>
     <head>
-        <title>{YorznabConfig().Indexer.Title} {title}</title>
+        <title>{YorznabConfig().ServerName} {title}</title>
         <script src="{RouteHandler.get_static_url('js/theme.js')}?token={token}"></script>
         <link rel="preload" href="{RouteHandler.get_static_url('css/web.css')}?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.get_static_url('css/web.css')}?token={token}">
@@ -72,14 +72,14 @@ def navigation(current_route: str = '') -> str:
     for route, emoji, label, cls in nav_items:
         active = " active" if current_route == route or current_route in route else ""
         buttons += f'''
-            <button class="{cls}{active}" onclick="window.location.href='{route}'">
+            <button class="action-btn {cls}{active}" onclick="window.location.href='{route}'">
                 {emoji} <span class="btn-label">{label}</span>
             </button>'''
     
     return f'''
         <div class="nav-actions">
             {buttons if current_route else ''}
-            <button class="theme-toggle-btn" onclick="toggleTheme()">
+            <button class="action-btn theme-toggle-btn" onclick="toggleTheme()">
                 <span class="btn-icon">🌙</span>
                 <span class="btn-label">Dark</span>
             </button>

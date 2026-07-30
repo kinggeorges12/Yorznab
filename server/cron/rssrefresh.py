@@ -62,6 +62,7 @@ class CronRunner:
             self.refresh_schedule:str = refresh_schedule
             self.download:bool = download
             self._next_run:Optional[datetime] = next_run
+            self._wakeup_event = asyncio.Event()
             self.__class__._status = "Started"
             self.__class__._initialized = True
 
@@ -79,6 +80,15 @@ class CronRunner:
     def feed_configs(cls) -> list[FeedConfig]:
         """Get the list of feed configurations."""
         return FeedConfig.feeds(values=cls._instance._feed_configs)
+    
+    @classmethod
+    def send_wakeup(cls):
+        """Wake up the RSS refresh cron job early."""
+        if hasattr(cls._instance, '_wakeup_event'):
+            cls._instance._wakeup_event.set()
+            LOGGER.info("🔔 RSS refresh wakeup signal sent")
+        else:
+            LOGGER.warning("⚠️ RSS refresh wakeup event not initialized")
 
     @classmethod
     async def refresh_rss(cls, feed_configs: list[FeedConfig] | None = None) -> bool:
@@ -199,7 +209,25 @@ class CronRunner:
                     log_time = next_run.strftime('%Y-%m-%d %H:%M:%S %Z')
                     LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {log_time}")
                     with cls._instance._lock: cls._instance._status =  "Sleeping"
-                    await asyncio.sleep(seconds_until_next)
+
+                    try:
+                        # Reset the event before waiting
+                        cls._instance._wakeup_event.clear()
+                        
+                        # Wait with timeout using the event
+                        await asyncio.wait_for(
+                            cls._instance._wakeup_event.wait(),
+                            timeout=seconds_until_next
+                        )
+                        
+                        # If we get here, we were woken up early
+                        LOGGER.info("🔔 RSS refresh woken up early - recalculating schedule")
+                        # Continue loop to recalculate the time
+                        continue
+                        
+                    except asyncio.TimeoutError:
+                        LOGGER.debug("⏰ Sleep completed - time to refresh RSS")
+                        pass
                 else:
                     LOGGER.warning("🔔 Missed an RSS refresh on the schedule - running immediate refresh")
 

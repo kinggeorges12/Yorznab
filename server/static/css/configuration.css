@@ -120,27 +120,3 @@
 .countdown-display span.long {
     color: #4CAF50;
 }
-
-/* Info item hints */
-
-.info-hint .hint-message {
-    transform: translateY(-10px);
-    transition: all 0.5s ease;
-}
-.info-hint:focus-within .hint-message {
-    display: block !important;
-    animation: slideDown 1.0s ease forwards;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-        max-height: 0;
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-        max-height: 200px;
-    }
-}

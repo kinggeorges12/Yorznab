@@ -18,7 +18,7 @@ async def setup(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/terminal')}
-            <h1>{YorznabConfig().Indexer.Title} 🖥️ Interactive Terminal</h1>
+            <h1>{YorznabConfig().ServerName} 🖥️ Interactive Terminal</h1>
             
             <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.DASHBOARD}/terminal/ws">
                 <div class="terminal-header">
