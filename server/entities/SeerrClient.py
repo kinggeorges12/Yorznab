@@ -229,7 +229,7 @@ class SeerrClient(BaseClient[SeerrConfig]):
         }
 
         self.LOGGER.info(f"🔧 Configuring the webhook for {self.ServerName}")
-        response = self.session.post(
+        response = await self.session.post(
             f"{self.UrlPath}{self.EndpointType.webhook}",
             json=payload,
             headers=self.Headers,

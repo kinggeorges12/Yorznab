@@ -67,7 +67,6 @@ class QBitClient(BaseClient[QBitConfig]):
         # Initialize _name and _config_file
         self._server_type = "qBittorrent"
         super().__init__(name=self.ServerType)
-        self._login()
 
     class EndpointType(Enum):
         login = '/auth/login'
@@ -144,73 +143,69 @@ class QBitClient(BaseClient[QBitConfig]):
         version = resp.text.strip()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
         return {"version": version}
-
-    def search_start(self, pattern: str) -> int:
+    
+    async def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
         url = self.GetEndpoint(self.EndpointType.start)
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
-        resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
+        resp = await self.session.post(url, data=data, headers=(await self.headers()), timeout=60)
         resp.raise_for_status()
         payload = resp.json()
         return int(payload.get("id"))
 
-    def search_status(self, job_id: int) -> dict[str, Any]:
+    async def search_status(self, job_id: int) -> dict[str, Any]:
         url = self.GetEndpoint(self.EndpointType.status)
         params = {"id": str(job_id)}
-        resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
+        resp = await self.session.get(url, headers=(await self.headers()), params=params, timeout=60)
         resp.raise_for_status()
         status_data = resp.json()[0]
         self.LOGGER.debug(f"🔍 Search job {job_id} reports {status_data.get('status', 'Unknown')} status with {status_data.get('total', 0)} results...")
         return status_data
 
-    def search_results(self, job_id: int) -> list[dict[str, Any]]:
+    async def search_results(self, job_id: int) -> list[dict[str, Any]]:
         url = self.GetEndpoint(self.EndpointType.results)
-        params = {"id": str(job_id)} # Optional limit parameter
-        resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
+        params = {"id": str(job_id)}
+        resp = await self.session.get(url, headers=(await self.headers()), params=params, timeout=60)
         resp.raise_for_status()
         payload = resp.json()
         self.LOGGER.info(f"📥 Received {len(payload.get('results', []))} search results from {self.ServerName} server.")
         return list(payload.get("results", []))
 
-    def search_stop(self, job_id: int) -> None:
+    async def search_stop(self, job_id: int) -> None:
         url = self.GetEndpoint(self.EndpointType.stop)
         data = {"id": str(job_id)}
-        resp = self.session.post(url, data=data, headers=self._headers, timeout=self.ResponseTimeout)
+        resp = await self.session.post(url, data=data, headers=(await self.headers()), timeout=self.ResponseTimeout)
         resp.raise_for_status()
 
-    def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
+    async def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
         url = self.GetEndpoint(self.EndpointType.add)
         form = {"urls": torrent_url, "rename": rename or "", "tags": tags or "", "category": category}
-        resp = self.session.post(url, data=form, headers=self._headers, timeout=self.ResponseTimeout)
+        resp = await self.session.post(url, data=form, headers=(await self.headers()), timeout=self.ResponseTimeout)
         resp.raise_for_status()
     
-    def wait_search(self, job_id: int, limit: int, ping: int, timeout: int) -> int:
-        """Wait for search to complete and return the number of results found"""
+    async def wait_search(self, job_id: int, limit: int, ping: int, timeout: int) -> int:
         elapsed = 0
-        status = None
         while True:
-            status = self.search_status(job_id)
+            status = await self.search_status(job_id)
             num_results = int(status.get("total", 0))
             if status.get("status") == "Stopped":
                 return num_results
             if elapsed >= timeout or (limit and num_results >= limit):
                 with contextlib.suppress(Exception):
-                    self.search_stop(job_id)
+                    await self.search_stop(job_id)
             sleep_for = min(ping, max(0, timeout - elapsed))
             if sleep_for <= 0:
                 break
-            time.sleep(sleep_for)
+            await asyncio.sleep(sleep_for)
             elapsed += sleep_for
-        status = self.search_status(job_id)
+        status = await self.search_status(job_id)
         return int(status.get("total", 0))
     
-    def run_search(self, query: str, whatif: bool = False) -> list[dict[str, Any]]:
-        """Start a search, wait for it to complete, and return the results"""
-        job_id = self.search_start(query)
-        # Set lower timeout for whatif mode
+    async def run_search(self, query: str, whatif: bool = False) -> list[dict[str, Any]]:
+        job_id = await self.search_start(query)
         timeout = 5 if whatif else self.SearchTimeout
         search_ping = max(3, min(10, self.SearchTimeout / 2)) if self.SearchTimeout else 10
-        found = self.wait_search(job_id, limit=self.SearchLimit, ping=search_ping, timeout=timeout)
+        found = await self.wait_search(job_id, limit=self.SearchLimit, ping=search_ping, timeout=timeout)
         if not found:
             return []
-        return self.search_results(job_id)
+        return await self.search_results(job_id)

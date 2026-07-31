@@ -143,14 +143,14 @@ class ArrClient(BaseClient):
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} Arr server")
         return result
     
-    def _paginate(self, endpoint, page_size: int = 250) -> list[dict[str, Any]]:
+    async def _paginate(self, endpoint, page_size: int = 250) -> list[dict[str, Any]]:
         """Generic pagination helper that returns all records."""
         page = 1
         records = []
         
         while True:
             params = {"page": page, "pageSize": page_size}
-            resp = self.session.get(
+            resp = await self.session.get(
                 self.GetEndpoint(endpoint),
                 headers=self.Headers,
                 params=params,
@@ -170,19 +170,19 @@ class ArrClient(BaseClient):
         
         return records
 
-    def wanted_missing(self) -> list[dict[str, Any]]:
+    async def wanted_missing(self) -> list[dict[str, Any]]:
         self.LOGGER.info(f"🔍 Searching for missing videos.")
-        records = self._paginate(self.EndpointType.wanted)
+        records = await self._paginate(self.EndpointType.wanted)
         self.LOGGER.info(f"📺 Found {len(records)} missing {self.ProperNames.lower()}.")
         return records
 
-    def queue(self) -> list[dict[str, Any]]:
+    async def queue(self) -> list[dict[str, Any]]:
         self.LOGGER.info(f"🔍 Searching for queued videos.")
-        records = self._paginate(self.EndpointType.queue)
+        records = await self._paginate(self.EndpointType.queue)
         self.LOGGER.info(f"📺 Found {len(records)} queued {self.ProperNames.lower()}.")
         return records
 
-    def get_episodes(self, external_id: str, season_numbers: list[str] = None) -> list[dict[str, Any]]:
+    async def get_episodes(self, external_id: str, season_numbers: list[str] = None) -> list[dict[str, Any]]:
         self.LOGGER.info(f"🔍 Fetching episodes from {self.ServerName} server.")
         all_episodes = []
         if season_numbers is None:
@@ -192,28 +192,28 @@ class ArrClient(BaseClient):
             if season_number != '0':
                 season_filter = f"&seasonNumber={season_number}"
             url = f"{self.GetEndpoint(self.EndpointType.episode)}?seriesId={external_id}{season_filter}"
-            resp = self.session.get(url, headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
+            resp = await self.session.get(url, headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
             resp.raise_for_status()
             season = resp.json()
             all_episodes.append(season)
         self.LOGGER.info(f"📺 Fetched {len(all_episodes)} episodes from {'all' if season_numbers == ['0'] else len(season_numbers)} seasons for {self.ExternalId}: {external_id}")
         return all_episodes
 
-    def get_video(self, external_id: str) -> dict[str, Any]:
+    async def get_video(self, external_id: str) -> dict[str, Any]:
         self.LOGGER.info(f"🔍 Fetching {self.ProperName} from {self.ServerName} server.")
         url = f"{self.GetEndpoint(self.EndpointType.api)}/{external_id}"
-        resp = self.session.get(url, headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
+        resp = await self.session.get(url, headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         data = resp.json()
         self.LOGGER.info(f"📺 Fetched {self.ProperName} from {self.ServerName} server: {data.get('title')}")
         return data
 
-    def update_rss(self) -> dict[str, Any]:
+    async def update_rss(self) -> dict[str, Any]:
         body = {
             "name": "RssSync"
         }
         self.LOGGER.info(f"🌐 Sending RSS sync command to {self.ServerName} server.")
-        resp = self.session.post(self.GetEndpoint(self.EndpointType.command), headers=self.Headers, json=body, timeout=self.TIMEOUT_DEFAULT)
+        resp = await self.session.post(self.GetEndpoint(self.EndpointType.command), headers=self.Headers, json=body, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         return resp.json()
 
@@ -248,21 +248,20 @@ class ArrClient(BaseClient):
         }
         
         self.LOGGER.info(f"🔧 Configuring the indexer for {self.ServerName}: {feed_name}")
-        response = self.session.post(
+        response = await self.session.post(
             f"{self.UrlPath}{self.EndpointType.indexer}",
             json=payload,
             headers=self.Headers,
             timeout=self.TIMEOUT_DEFAULT
         )
-        print(f"Response from {self.ServerName} server: {response.status_code} - {response.text}")
         response.raise_for_status()
         self.LOGGER.info(f"✅ Configured the indexer successfully")
         
         return response.json()
 
-    def delete_torznab_indexer(self, feed: str) -> dict[str, Any]:
+    async def delete_torznab_indexer(self, feed: str) -> dict[str, Any]:
         self.LOGGER.info(f"🗑️ Deleting Torznab indexer '{feed}' from {self.ServerName} server.")
-        response = self.session.delete(
+        response = await self.session.delete(
             f"{self.UrlPath}{self.EndpointType.indexer}/{feed}",
             headers=self.Headers,
             timeout=self.TIMEOUT_DEFAULT

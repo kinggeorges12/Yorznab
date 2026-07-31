@@ -54,28 +54,28 @@ def publish_results(feed_config: FeedConfig, retention_days: int, results: list[
 # -----------------------------
 
 
-def test_connection(name, url, fn_status, pause: int = 10, timeout: int = 10) -> bool:
+async def test_connection(name, url, fn_status, pause: int = 10, timeout: int = 10) -> bool:
     """Check client connection"""
     LOGGER.info(f"💡 Using {name} server: {url}")
 
     waited = 0
     while True:
         try:
-            fn_status()
+            await fn_status()
             return True
         except Exception as e:
             if waited >= timeout:
                 LOGGER.error(f"❌ Failed to connect to {name} server after {timeout}s: {e}")
                 return False
             LOGGER.warning(f"⏳ Waiting for {name} server to start for {waited}s. Pausing for {pause}s...")
-            time.sleep(pause)
+            asyncio.sleep(pause)
             waited += pause
 
 # -----------------------------
 # Job Runner
 # -----------------------------
 
-def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: str, retention_days: int, do_download: bool, whatif: bool) -> None:
+async def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: str, retention_days: int, do_download: bool, whatif: bool) -> None:
     """
     Main processing function for a specific library (Movies or TV).
     
@@ -93,13 +93,13 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
     LOGGER.info(f"💡 Loading configuration file for {QBitClient.ServerName} and {server_type.value}")
     try:
         qBit = QBitClient()
-        test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: asyncio.run(qBit.status()))
+        await test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: qBit.status())
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return
     try:
         arr = ArrClient(server_type=server_type)
-        test_connection(name=arr.ServerName, url=arr.Url, fn_status=lambda: asyncio.run(arr.status()))
+        await test_connection(name=arr.ServerName, url=arr.Url, fn_status=lambda: arr.status())
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return # TODO: run with Jellyseerr info if ArrClient fails
@@ -123,9 +123,9 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
             wanted = arr.get_episodes(external_id=externaldb_id, season_numbers=seasons)
     else:
         # Fetch all wanted items
-        wanted = arr.wanted_missing()
+        wanted = await arr.wanted_missing()
         # Fetch queued videos
-        queued = arr.queue()
+        queued = await arr.queue()
 
     if arr and arr.ServerType is ArrType.Radarr:
         for rec in wanted:
@@ -197,7 +197,7 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
         request_obj = item.get("request")
         meta = item.get("meta", {})
 
-        results = qBit.run_search(query=query, whatif=whatif)
+        results = await qBit.run_search(query=query, whatif=whatif)
         
         # Filter
         filtered: list[dict[str, Any]] = []
@@ -263,7 +263,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 # Entrypoint
 # -----------------------------
 
-def main(argv: list[str] | None = None) -> int:
+async def main(argv: list[str] | None = None) -> int:
     """
     Main entry point for the library requests script.
     
@@ -342,10 +342,10 @@ def main(argv: list[str] | None = None) -> int:
                 LOGGER.info("🔒 Acquired builder lock")
                 feed_config = FeedConfig(feed_name)
                 if args.server == "Both":
-                    run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
-                    run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                    await run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                    await run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
                 else:
-                    run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                    await run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
         except Exception as e:
             LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
         finally:
@@ -355,7 +355,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
-
-
+    sys.exit(asyncio.run(main()))
 

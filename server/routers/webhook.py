@@ -45,8 +45,7 @@ async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type
             args.extend(["--download"])
         
         # Run the blocking rssbuilder.main() in a thread pool
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, rssbuilder.main, args)
+        result = await rssbuilder.main(args)
         return result
         
     except Exception as e:

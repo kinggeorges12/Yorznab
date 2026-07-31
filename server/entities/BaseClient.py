@@ -3,7 +3,7 @@ import asyncio
 from dataclasses import dataclass, fields
 import html
 import os
-from typing import Any, Generic, Optional, TypeVar, get_args
+from typing import Any, Generic, Optional, TypeVar, Union, get_args, get_origin
 from dacite import MissingValueError, from_dict
 import httpx
 
@@ -78,7 +78,16 @@ class BaseClient(ABC, Generic[D]):
         # Get the field from the dataclass
         for field in fields(self.Config):
             if field.name == name:
-                return field.type
+                field_type = field.type
+                # If it's a Union (like Optional[str]), extract the non-None type
+                if get_origin(field_type) is Union:
+                    args = get_args(field_type)
+                    # Get the first non-None type
+                    non_none_types = [t for t in args if t is not type(None)]
+                    if non_none_types:
+                        return non_none_types[0]
+                    return None
+                return field_type
         return None
 
     @property
