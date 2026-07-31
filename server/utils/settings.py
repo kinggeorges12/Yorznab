@@ -9,10 +9,10 @@ class AppSettingsUndefined(Exception):
     pass
 
 class AppSettings:
-    _instances: dict[str, AppSettings] = {}
+    _instances: dict[str, Any] = {}
     _lock = Lock()
 
-    def __new__(cls, filename: str, *args, **kwargs) -> AppSettings:
+    def __new__(cls, filename: str, *args, **kwargs):
         with cls._lock:
             if filename not in cls._instances:
                 instance = super().__new__(cls)
