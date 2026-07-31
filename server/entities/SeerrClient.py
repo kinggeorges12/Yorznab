@@ -130,6 +130,9 @@ class SeerrClient(BaseClient[SeerrConfig]):
         
         def __str__(self):
             return self.value
+
+    def GetEndpoint(self, endpoint) -> str:
+        return self.UrlPath + str(endpoint)
     
     @property
     def Headers(self) -> dict[str, str]: return {"X-Api-Key": self.Config.ApiKey}
@@ -145,9 +148,6 @@ class SeerrClient(BaseClient[SeerrConfig]):
     
     @property
     def UrlPath(self) -> str: return self.Url + self.ApiVersion
-
-    def GetEndpoint(self, endpoint: SeerrClient.EndpointType) -> str:
-        return self.UrlPath + str(endpoint)
 
     @staticmethod
     def parse_payload(raw_payload: dict) -> WebhookPayload:

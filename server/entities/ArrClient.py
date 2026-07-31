@@ -1,4 +1,3 @@
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional, Type, TypeVar
@@ -56,18 +55,6 @@ class ArrClient(BaseClient[ArrConfig]):
         self._server_type = server_type
         super().__init__(name=self.ServerType.value)
 
-    class EndpointType(Enum):
-        api = ''
-        episode = '/episode' # Sonarr only
-        command = '/command'
-        indexer = '/indexer'
-        queue = '/queue'
-        status = '/system/status'
-        wanted = '/wanted/missing'
-
-        def __str__(self):
-            return self.value
-
     @dataclass
     class Mapper:
         Radarr: Any
@@ -83,6 +70,24 @@ class ArrClient(BaseClient[ArrConfig]):
                 return mapper.Sonarr
             case _:
                 raise ValueError(f"Unknown library server: {self.ServerName}")
+
+    class EndpointType(Enum):
+        api = ''
+        episode = '/episode' # Sonarr only
+        command = '/command'
+        indexer = '/indexer'
+        queue = '/queue'
+        status = '/system/status'
+        wanted = '/wanted/missing'
+
+        def __str__(self):
+            return self.value
+
+    def GetEndpoint(self, endpoint) -> str:
+        if endpoint == self.EndpointType.api:
+            return self.UrlPath + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
+        else:
+            return self.UrlPath + str(endpoint)
     
     @property
     def DefaultUrl(self) -> str: return self.serve(self.Mapper(Radarr="http://localhost:7878", Sonarr="http://localhost:8989"))
@@ -98,12 +103,6 @@ class ArrClient(BaseClient[ArrConfig]):
     
     @property
     def ApiVersion(self) -> str: return '/api/v3'
-
-    def GetEndpoint(self, endpoint: ArrClient.EndpointType) -> str:
-        if endpoint == self.__class__.EndpointType.api:
-            return self.UrlPath + self.serve(self.Mapper(Radarr="/movie", Sonarr="/series"))
-        else:
-            return self.UrlPath + str(endpoint)
     
     @property
     def ProperName(self) -> str: return self.serve(self.Mapper(Radarr="Movie", Sonarr="Show"))
@@ -130,7 +129,7 @@ class ArrClient(BaseClient[ArrConfig]):
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} Arr server")
         return result
     
-    def _paginate(self, endpoint: EndpointType, page_size: int = 250) -> list[dict[str, Any]]:
+    def _paginate(self, endpoint, page_size: int = 250) -> list[dict[str, Any]]:
         """Generic pagination helper that returns all records."""
         page = 1
         records = []

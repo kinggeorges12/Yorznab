@@ -1,4 +1,5 @@
 import contextlib
+from enum import Enum
 import time
 from typing import Any, Optional
 import httpx
@@ -64,6 +65,21 @@ class QBitClient(BaseClient[QBitConfig]):
         # Initialize _name and _config_file
         self._server_type = "qBittorrent"
         super().__init__(name=self.ServerType)
+
+    class EndpointType(Enum):
+        login = '/auth/login'
+        version = '/app/version'
+        start = '/search/start'
+        status = '/search/status'
+        stop = '/search/stop'
+        results = '/search/results'
+        add = '/torrents/add'
+
+        def __str__(self):
+            return self.value
+
+    def GetEndpoint(self, endpoint) -> str:
+        return self.UrlPath + str(endpoint)
     
     @property
     def DefaultUrl(self) -> str: return "http://localhost:8080"
@@ -97,7 +113,7 @@ class QBitClient(BaseClient[QBitConfig]):
     def _login(self) -> None:
         """Private login function"""
         self.LOGGER.info(f"🛜 Authenticating {self.ServerName} server")
-        url = f"{self.UrlPath}/auth/login"
+        url = self.GetEndpoint(self.EndpointType.login)
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
         session = self._get_session()
         data = {}
@@ -125,7 +141,7 @@ class QBitClient(BaseClient[QBitConfig]):
 
     def status(self) -> dict[str, Any] | str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
-        url = f"{self.UrlPath}/app/version"
+        url = self.GetEndpoint(self.EndpointType.version)
         resp = self.session.post(url, headers=self._headers, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         version = resp.text.strip()
@@ -134,7 +150,7 @@ class QBitClient(BaseClient[QBitConfig]):
 
     def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
-        url = f"{self.UrlPath}/search/start"
+        url = self.GetEndpoint(self.EndpointType.search_start)
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
         resp.raise_for_status()
@@ -142,7 +158,7 @@ class QBitClient(BaseClient[QBitConfig]):
         return int(payload.get("id"))
 
     def search_status(self, job_id: int) -> dict[str, Any]:
-        url = f"{self.UrlPath}/search/status"
+        url = self.GetEndpoint(self.EndpointType.status)
         params = {"id": str(job_id)}
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -151,7 +167,7 @@ class QBitClient(BaseClient[QBitConfig]):
         return status_data
 
     def search_results(self, job_id: int) -> list[dict[str, Any]]:
-        url = f"{self.UrlPath}/search/results"
+        url = self.GetEndpoint(self.EndpointType.results)
         params = {"id": str(job_id)} # Optional limit parameter
         resp = self.session.get(url, headers=self._headers, params=params, timeout=60)
         resp.raise_for_status()
@@ -160,13 +176,13 @@ class QBitClient(BaseClient[QBitConfig]):
         return list(payload.get("results", []))
 
     def search_stop(self, job_id: int) -> None:
-        url = f"{self.UrlPath}/search/stop"
+        url = self.GetEndpoint(self.EndpointType.stop)
         data = {"id": str(job_id)}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=self.ResponseTimeout)
         resp.raise_for_status()
 
     def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
-        url = f"{self.UrlPath}/torrents/add"
+        url = self.GetEndpoint(self.EndpointType.add)
         form = {"urls": torrent_url, "rename": rename or "", "tags": tags or "", "category": category}
         resp = self.session.post(url, data=form, headers=self._headers, timeout=self.ResponseTimeout)
         resp.raise_for_status()
