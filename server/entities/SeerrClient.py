@@ -12,6 +12,8 @@ from server.entities.BaseClient import BaseClient
 from server.entities.ArrClient import ArrType
 from server.utils.keystore import KeyStore
 
+DEFAULT_SEERR_URL = "http://localhost:5055"
+
 @dataclass
 class NotificationType(Enum):
     NONE = 0
@@ -138,7 +140,7 @@ class SeerrClient(BaseClient[SeerrConfig]):
     def Headers(self) -> dict[str, str]: return {"X-Api-Key": self.Config.ApiKey}
     
     @property
-    def DefaultUrl(self) -> str: return "http://localhost:5055"
+    def DefaultUrl(self) -> str: return DEFAULT_SEERR_URL
     
     @property
     def ServerType(self) -> str: return self._server_type

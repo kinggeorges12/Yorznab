@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import html
 import os
 from typing import Any, Generic, Optional, TypeVar, get_args
@@ -72,8 +72,12 @@ class BaseClient(ABC, Generic[D]):
 
     def get_property_type(self, name: str) -> type | None:
         """Get the type of a property in the config"""
-        if self.Config is not None and hasattr(self.Config, name):
-            return type(getattr(self.Config, name))
+        if self.Config is None:
+            return None
+        # Get the field from the dataclass
+        for field in fields(self.Config):
+            if field.name == name:
+                return field.type
         return None
 
     @property
