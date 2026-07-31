@@ -52,7 +52,7 @@ class YorznabConfig:
 
 class YorznabClient(BaseClient[YorznabConfig]):
 
-    _instance: YorznabClient = None
+    _instance = None
     _lock = Lock()
     _initialized = False
 
