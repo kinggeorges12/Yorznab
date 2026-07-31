@@ -1,8 +1,10 @@
 import tomllib
 from fastapi.openapi.utils import get_openapi
+HOST_URL = None
 
 def load_app_info():
     """Load FastAPI info from pyproject.toml."""
+    global HOST_URL
     try:
         with open("pyproject.toml", "rb") as f:
             data = tomllib.load(f)
@@ -10,6 +12,7 @@ def load_app_info():
         project = data.get("project", {})
         fastapi_conf = data.get("tool", {}).get("fastapi", {})
         urls = data.get("project", {}).get("urls", {})
+        HOST_URL = urls.get('host')
         
         # Get author info
         authors = project.get("authors", [{}])
@@ -25,7 +28,7 @@ def load_app_info():
                     "description": "API Server",
                     "variables": {
                         "server": {
-                            "default": "http://localhost:9116",
+                            "default": HOST_URL,
                             "description": "Server URL"
                         }
                     }
@@ -53,7 +56,7 @@ def load_app_info():
 
 
 # Load config once
-project_info = load_app_info()
+PROJECT_INFO = load_app_info()
 
 
 def create_openapi(app):
@@ -62,14 +65,14 @@ def create_openapi(app):
         if app.openapi_schema:
             return app.openapi_schema
         
-        # Pass all project_info to get_openapi
+        # Pass all project info to the constructor, except api_prefix which is handled separately
         openapi_schema = get_openapi(
             routes=app.routes,
-            **{k: v for k, v in project_info.items() if k != "api_prefix"}
+            **{k: v for k, v in PROJECT_INFO.items() if k != "api_prefix"}
         )
         
         # Handle API prefix removal
-        api_prefix = project_info.get("api_prefix", "/api/v1")
+        api_prefix = PROJECT_INFO.get("api_prefix", "/api/v1")
         if api_prefix:
             new_paths = {}
             for path, item in openapi_schema["paths"].items():

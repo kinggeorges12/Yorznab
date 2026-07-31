@@ -224,7 +224,7 @@ class IWebSetup:
         
         if return_code == 0:
             LOGGER.info("🔄 Reloading configuration after setup")
-            AppSettings(filename='settings.yaml').load()
+            AppSettings.reset()
 
     async def _cancel_tasks(self):
         """Cancel all running tasks."""

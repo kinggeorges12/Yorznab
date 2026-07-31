@@ -31,6 +31,9 @@ async function checkStatus(statusEndpoint) {
         // Update server time
         updateServerTime(data);
         
+        // Update server version
+        updateServerVersion(data);
+        
         return data;
     } catch (error) {
         console.error('Error checking status:', error);
@@ -91,6 +94,21 @@ function updateServerTime(data) {
     const date = new Date(serverTime);
     serverTimeEl.textContent = formatDateTime(date);
     serverTimeEl.title = `Server time: ${date.toLocaleString()}`;
+}
+
+function updateServerVersion(data) {
+    const versionEl = document.getElementById('server-version');
+    if (!versionEl) return;
+    
+    const serverVersion = data.version;
+    if (!serverVersion) {
+        versionEl.textContent = 'Unknown version';
+        versionEl.title = 'Server version not available';
+        return;
+    }
+    
+    versionEl.textContent = serverVersion;
+    versionEl.title = `Server version: ${serverVersion}`;
 }
 
 function formatDateTime(date) {

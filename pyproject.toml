@@ -29,6 +29,7 @@ dependencies = [
 ]
 
 [project.urls]
+host = "http://localhost:9116"
 repository = "https://github.com/kinggeorges12/Yorznab"
 documentation = "http://localhost:9116/docs"
 support = "https://github.com/kinggeorges12/Yorznab/issues"

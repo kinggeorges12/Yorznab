@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Response, WebSocket, status
 from fastapi.responses import RedirectResponse
 
 # Import modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.terminal.factory import WebSetup
 from server.routers.handler import RouteHandler
 from server.web.common import navigation, page_template
@@ -18,7 +18,7 @@ async def setup(request: Request):
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/terminal')}
-            <h1>{YorznabConfig().ServerName} 🖥️ Interactive Terminal</h1>
+            <h1>{YorznabClient().ServerNameHtml} 🖥️ Interactive Terminal</h1>
             
             <div class="terminal-container" id="terminalConfig" data-ws="{RouteHandler.DASHBOARD}/terminal/ws">
                 <div class="terminal-header">

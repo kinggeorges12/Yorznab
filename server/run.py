@@ -5,6 +5,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 # Start cron job first
+DEFAULT_YORZNAB_URL = 'http://localhost:9116'
 import server.cron.rssrefresh
 
 # Import routers after cron
@@ -13,7 +14,7 @@ from server.web.routers import web_routers
 from server.routers.handler import RouteHandler
 
 # Import docs
-from server.utils.docs import create_openapi, project_info
+from server.utils.docs import create_openapi
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

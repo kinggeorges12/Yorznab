@@ -245,6 +245,11 @@ button.logout-btn.active {
 .copy-btn:hover{background:var(--copy-btn-hover);transform:translateY(-2px);box-shadow:0 10px 25px var(--copy-btn-shadow)}
 .copy-btn:active{transform:translateY(0)}
 
+button:disabled {
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
 
 .header-container {
     display: flex;
@@ -322,6 +327,11 @@ a::before {
 a:hover{color:var(--link-hover)}
 a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--link-underline);transition:width .3s ease}
 a:hover::after{width:100%}
+
+/* Reset .plain class - remove all decorators */
+a.plain, a.plain::before, a.plain::after, a.plain:hover, a.plain:hover::after {
+    all: unset;
+}
 
 .ascii-line{
     font-size:clamp(0rem, 1.50vw, 0.75rem);

@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(res => {
                     if (!res.ok) {
-                        throw new Error('Network response was not ok');
+                        throw new Error('Error renaming instance');
                     }
                     // 204 No Content - no JSON to parse
                     span.textContent = newValue;

@@ -1,31 +1,26 @@
 import contextlib
-import os
 import time
 from typing import Any, Optional
-from dacite import from_dict
-from dacite.exceptions import MissingValueError
 import httpx
 from dataclasses import dataclass, field
 
 # Import classes
-from server import PROJECT_ROOT
-from server.entities.AppClient import AppClient
-from server.entities.Yorznab import YorznabConfig
-from server.utils.customlogger import CustomLogger
-from server.utils.settings import AppSettings, AppSettingsUndefined
+from server.entities.BaseClient import BaseClient
 
 @dataclass
 class QBitConfig:
-    ServerType: str
-    Url: str = field(
+    Url: Optional[str] = field(
+        default=None,
         metadata={
             "name": "qBittorrent Server",
             "description": "URL used to connect to the qBittorrent server, including http(s)://, port, and urlbase if required"
         }
     )
-    ApiKey: str = field(
+    ApiKey: Optional[str] = field(
+        default=None,
         metadata={
             "name": "API Key",
+            "password": True,
             "description": "Find API key in new versions of qBittorrent > Tools > Options > WebUI"
         }
     )
@@ -40,6 +35,7 @@ class QBitConfig:
         default=None,
         metadata={
             "name": "Password",
+            "password": True,
             "description": "Leave the ApiKey blank if using username/password authentication"
         }
     )
@@ -47,72 +43,51 @@ class QBitConfig:
         default=60,
         metadata={
             "name": "Search Timeout",
-            "description": "Time to wait for search to complete (in seconds)"
+            "description": "Time to wait for search to complete (in seconds)",
+            "min": 1,
+            "max": 3600
         }
     )
     SearchLimit: Optional[int] = field(
         default=0,
         metadata={
             "name": "Search Limit",
-            "description": "Maximum number of results to wait for before returning, or 0 for unlimited"
+            "description": "Maximum number of results to wait for before returning, or 0 for unlimited",
+            "min": 0
         }
     )
 
 @dataclass
-class QBitClient(AppClient):
+class QBitClient(BaseClient[QBitConfig]):
     
     def __init__(self):
         # Initialize _name and _config_file
-        super().__init__(name="qBittorrent")
-        # Initialize qBittorrent client defaults
-        self._config: QBitConfig = None
-        self._headers: dict[str, str] = None
-        self._authenticated: bool = False
-        self._response_timeout: int = 60
-
-        self.LOGGER = CustomLogger(name=self._name)
-        # Resolve config file settings.yaml
-        try:
-            config_raw = AppSettings(filename=self._config_file).get()
-        except AppSettingsUndefined as e:
-            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
-            raise Exception(e)
-        config_raw["ServerType"] = self._name # Required field
-        try:
-            self._config = from_dict(data_class=QBitConfig, data=config_raw)
-        except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "Url"
-            self.LOGGER.error(f"☠️ Trouble parsing field for {self._name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
-            raise Exception(e)
-
-    @property
-    def ServerName(self) -> str: return self.ServerType
+        self._server_type = "qBittorrent"
+        super().__init__(name=self.ServerType)
     
     @property
     def DefaultUrl(self) -> str: return "http://localhost:8080"
     
     @property
-    def ServerType(self) -> str: return self._config.ServerType
+    def ServerType(self) -> str: return self._server_type
     
     @property
     def ApiVersion(self) -> str: return '/api/v2'
     
     @property
-    def Url(self) -> str: return self._config.Url
+    def Filters(self) -> bool | None: return self.Config.Filters
     
     @property
-    def UrlPath(self) -> str: return self.Url + self.ApiVersion
+    def SearchTimeout(self) -> int | None: return self.Config.SearchTimeout if self.Config.SearchTimeout else 60
     
     @property
-    def Filters(self) -> bool | None: return self._config.Filters
+    def SearchLimit(self) -> int | None: return self.Config.SearchLimit if self.Config.SearchLimit else 0
     
     @property
-    def SearchTimeout(self) -> int | None: return self._config.SearchTimeout if self._config.SearchTimeout else 60
+    def SearchPing(self) -> int | None: return self.Config.SearchPing if self.Config.SearchPing else 10
     
     @property
-    def SearchLimit(self) -> int | None: return self._config.SearchLimit if self._config.SearchLimit else 0
-    
-    @property
-    def SearchPing(self) -> int | None: return self._config.SearchPing if self._config.SearchPing else 10
+    def ResponseTimeout(self) -> int | None: return 60
     
     def _set_session_header(self, headers: dict) -> httpx.Client:
         """Get or create singleton qBittorrent session"""
@@ -126,11 +101,11 @@ class QBitClient(AppClient):
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
         session = self._get_session()
         data = {}
-        if self._config.ApiKey:
-            headers["Authorization"] = f"Bearer {self._config.ApiKey}"
+        if self.Config.ApiKey:
+            headers["Authorization"] = f"Bearer {self.Config.ApiKey}"
         else:
-            data = {"username": self._config.Username, "password": self._config.Password}
-            resp = session.post(url, data=data, headers=headers, timeout=30)
+            data = {"username": self.Config.Username, "password": self.Config.Password}
+            resp = session.post(url, data=data, headers=headers, timeout=self.TIMEOUT_DEFAULT)
             resp.raise_for_status()
         self._set_session_header(headers)
         self.LOGGER.info(f"✅ Received authentication session from {self.ServerName} server")
@@ -139,23 +114,19 @@ class QBitClient(AppClient):
     def session(self) -> httpx.Client:
         """Get the session, always using singleton and ensuring login"""
         session = self._get_session()
-        if not self._authenticated:
+        if not self._initialized:
             self._login()
-            self._authenticated = True
+            self._initialized = True
         return session
 
     def login(self) -> None:
         """Public login function that calls the private _login"""
         self._login()
-    
-    def reset_auth(self) -> None:
-        """Reset authentication state to force re-login"""
-        self._authenticated = False
 
     def status(self) -> dict[str, Any] | str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
         url = f"{self.UrlPath}/app/version"
-        resp = self.session.post(url, headers=self._headers, timeout=30)
+        resp = self.session.post(url, headers=self._headers, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         version = resp.text.strip()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
@@ -191,13 +162,13 @@ class QBitClient(AppClient):
     def search_stop(self, job_id: int) -> None:
         url = f"{self.UrlPath}/search/stop"
         data = {"id": str(job_id)}
-        resp = self.session.post(url, data=data, headers=self._headers, timeout=self._response_timeout)
+        resp = self.session.post(url, data=data, headers=self._headers, timeout=self.ResponseTimeout)
         resp.raise_for_status()
 
     def add_torrent(self, torrent_url: str, rename: str | None, tags: str, category: str) -> None:
         url = f"{self.UrlPath}/torrents/add"
         form = {"urls": torrent_url, "rename": rename or "", "tags": tags or "", "category": category}
-        resp = self.session.post(url, data=form, headers=self._headers, timeout=self._response_timeout)
+        resp = self.session.post(url, data=form, headers=self._headers, timeout=self.ResponseTimeout)
         resp.raise_for_status()
     
     def wait_search(self, job_id: int, limit: int, ping: int, timeout: int) -> int:

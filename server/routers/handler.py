@@ -16,6 +16,7 @@ class RouteHandler:
     FEED = API_v1 + "/feed"
     FEEDS = API_v1 + "/feeds"
     INDEXER = API_v1 + "/indexer"
+    PUBLISH = API_v1 + "/publish"
     AUTH = API_v1 + "/auth"
     ROUTES = API_v1 + "/routes"
     STATUS = API_v1 + "/status"

@@ -6,8 +6,8 @@ import asyncio
 
 # Import classes
 from server.entities.SeerrClient import SeerrClient
-from server.utils.settings import AppSettings
-from server.entities.ArrClient import ArrClient, ArrType
+from server.entities.YorznabClient import YorznabClient
+from server.entities.ArrClient import ArrType
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
@@ -16,18 +16,15 @@ import server.rss.builder as rssbuilder
 
 router = APIRouter(prefix=RouteHandler.WEBHOOK, tags=["webhook"])
 
-# Export config vars to globals
-SETTINGS = AppSettings(filename='yorznab.yaml')
-
 # Create logger
 LOGGER = CustomLogger(name="webhook")
 
 async def run_requests(feed_configs: list[FeedConfig] | None = None, server_type: ArrType | None = None, external_id: str = None) -> int:
     """Run the rssbuilder script to search for torrents and write them to the feed file"""
-    global LOGGER, SETTINGS
+    global LOGGER
     try:
         # Build command arguments
-        args = ["--log", "--retention", str(SETTINGS.get('cron', 'retention_days'))]
+        args = ["--log", "--retention", str(YorznabClient().Config.RetentionDays)]
         
         # Add server parameter if specified
         if feed_configs:
@@ -100,13 +97,13 @@ async def webhook(request: Request, authorization: str = Header(None)):
 
     if parsed_payload.is_valid:
 
-        LOGGER.info(f"Webhook received, processing {parsed_payload.arr_type} requests in background after {SETTINGS.get('cron', 'webhook_wait')} seconds: {payload}")
+        LOGGER.info(f"Webhook received, processing {parsed_payload.arr_type} requests in background after {YorznabClient().Config.WebhookWait} seconds: {payload}")
         
         # Define the background processing function
         async def process_request():
             try:
                 # Wait x seconds before processing
-                await asyncio.sleep(SETTINGS.get('cron', 'webhook_wait'))
+                await asyncio.sleep(YorznabClient().Config.WebhookWait)
                 
                 # Call the shared run_requests function
                 result = await run_requests(server_type=parsed_payload.arr_type, external_id=parsed_payload.external_param)

@@ -1,13 +1,18 @@
-from fastapi import APIRouter, HTTPException, Header, Request, Response, requests, status
+import json
+import traceback
+
+from fastapi import APIRouter, Form, HTTPException, Header, Request, Response, requests, status
 from fastapi.responses import RedirectResponse
+import yaml
 
 # Import modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
+from server.utils.settings import AppSettings, AppSettingsUndefined
 from server.web.common import LOGGER, navigation, page_template
-from server.web.routers.applications import build_html_input
-from server.web.routers.auth import authenticate, logout, validate_csrf, add_csrf_token, gen_csrf_token
+from server.web.routers.applications import build_input_template
+from server.web.routers.auth import authenticate, consume_csrf_token, logout, validate_csrf, add_csrf_token, gen_csrf_token
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD)
 
@@ -15,25 +20,21 @@ router = APIRouter(prefix=RouteHandler.DASHBOARD)
 async def configuration(request: Request):
     if not authenticate(request):
         return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
-    
-    indexer_key = KeyStore.get_key('INDEXER_KEY')
-    webhook_key = KeyStore.get_key('WEBHOOK_KEY')
 
     config_csrf_tokens = []
-    indexer_csrf_token = gen_csrf_token()
-    cron_csrf_token = gen_csrf_token()
+    yorznab_csrf_token = gen_csrf_token()
     reset_csrf_token = gen_csrf_token()
-    config_csrf_tokens.extend([indexer_csrf_token, cron_csrf_token, reset_csrf_token])
+    config_csrf_tokens.extend([yorznab_csrf_token, reset_csrf_token])
 
-    html_settings = ''
-    html_settings += build_html_input(csrf_token=indexer_csrf_token, config=YorznabConfig().Indexer)
-    html_settings += build_html_input(csrf_token=cron_csrf_token, config=YorznabConfig().Cron)
+    input_template = build_input_template(csrf_token=yorznab_csrf_token, client=YorznabClient())
 
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/configuration')}
-            <h1>{YorznabConfig().ServerName} ⚙️ Configuration</h1>
-            {html_settings}
+            <h1>{YorznabClient().ServerNameHtml} ⚙️ Configuration</h1>
+
+            {input_template}
+            <div id="settings" class="text-container" style="display: none;"></div>
             
             <div id="main-menu">
                 <div class="text-container">
@@ -65,9 +66,14 @@ async def configuration(request: Request):
                         </span>
                         <span class="info-value" id="server-time" title="Server time"></span>
                     </div>
-                    <button class="full-btn action-btn config-btn" type="button" onclick="toggleSettings('Cron-settings')">⏱️ Edit Cron</button>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <label for="server-version">Server version:</label>
+                        </span>
+                        <span class="info-value" id="server-version" title="Server version"></span>
+                    </div>
+                    <button class="full-btn action-btn config-btn" type="button" onclick="toggleSettings('template-{YorznabClient().ServerConfigHtml}')">⚙️ Edit Configuration</button>
                 </div>
-                <button class="full-btn action-btn home-btn" type="button" onclick="toggleSettings('Indexer-settings')">🗃️ Edit Indexer</button>
                 <br>
                 <button id="resetBtn" class="reset-btn" data-reset="{RouteHandler.AUTH}/reset" data-csrf="{reset_csrf_token}" onclick="confirmReset()">
                     🔄 Reset All Keys
@@ -77,22 +83,27 @@ async def configuration(request: Request):
     
     
     response = Response(content=page_template(title="Credentials", content=content, css=["css/applications.css", "css/configuration.css"], js=["js/credentials.js", "js/cron.js", "js/application.js"]), media_type="text/html")
-    for csrf_token in config_csrf_tokens:
-        add_csrf_token(request, response, csrf_token)
+    add_csrf_token(request, response, config_csrf_tokens)
     return response
 
-@router.post(f"{RouteHandler.AUTH}/reset", tags=["auth"])
-async def reset_config(request: Request,
-                       x_csrf_token: str = Header(..., alias="X-CSRF-Token")):
+# ===== CREDENTIALS ENDPOINT =====
+
+resetRouter = APIRouter(prefix=RouteHandler.AUTH)
+
+@resetRouter.post(f"/reset", tags=["auth"])
+async def reset_config(
+    request: Request,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
     """Reset configuration to default state"""
     if not authenticate(request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     
-    # Get CSRF token from header (since this is a JSON API)
-    csrf_token_header = x_csrf_token
-    
     # Validate CSRF token
-    if not validate_csrf(request, csrf_token_header):
+    if not validate_csrf(request, csrf_token_form):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
     
     try:
@@ -108,6 +119,61 @@ async def reset_config(request: Request,
         return response
     
     except Exception as e:
-        LOGGER.error(f"Reset failed: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reset failed")
+        LOGGER.error(f"Failed to reset keys: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to reset keys")
+
+# ===== SETTINGS ENDPOINT =====
+
+settingsRouter = APIRouter(prefix=RouteHandler.SETTINGS)
+
+@settingsRouter.post(f"/save", tags=["settings"])
+async def set_config(
+    request: Request,
+    config: str,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
+    """Save configuration"""
+    if not authenticate(request):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     
+    # Validate CSRF token
+    if not validate_csrf(request, csrf_token_form):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+    
+    try:
+        form_data = await request.form()
+        
+        # Remove csrf_token if present
+        config_data = {k: v for k, v in form_data.items() if k != 'csrf_token'}
+
+        # Check if config is valid
+        app_settings = AppSettings(filename=config + '.yaml').exists()
+        app_settings.set(config_data)
+
+    except AppSettingsUndefined as e:
+        LOGGER.error(f"❌ Configuration file does not exist: {e}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"❌ Configuration file does not exist: {str(e)}")
+    except ValueError as e:
+        LOGGER.error(f"❌ Failed to parse settings: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse settings: {str(e)}")
+    except yaml.YAMLError as e:
+        LOGGER.error(f"❌ Failed to save invalid content: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to save invalid content: {str(e)}")
+    except OSError as e:
+        LOGGER.error(f"❌ Failed to save settings: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"❌ Failed to save settings: {str(e)}")
+    except Exception as e:
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error(f"❌ Unknown error occurred while saving settings: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Unknown error occurred while saving settings: {str(e)}")
+    
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    consume_csrf_token(request, response, csrf_token_form)
+    # Allow multiple save forms
+    csrf_token = gen_csrf_token()
+    add_csrf_token(request, response, csrf_token)
+    response.headers["X-CSRF-Token"] = csrf_token
+    return response

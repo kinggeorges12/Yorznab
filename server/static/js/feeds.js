@@ -14,6 +14,96 @@ function showEditor() {
     mainPage.style.display = 'none';
 };
 
+async function publishFeed(event, feedName, url, iconId) {
+    event.preventDefault();
+    
+    const icon = document.getElementById(iconId);
+    if (!icon) {
+        console.error('Feed item not found:', feedName);
+        return;
+    }
+    
+    // Get CSRF token from the span element
+    const spanElement = event.currentTarget;
+    const csrfToken = spanElement.getAttribute('data-csrf');
+    
+    const originalText = icon.textContent;
+    
+    // Loading state
+    icon.textContent = '⏳';
+    let dots = 0;
+    const loadingInterval = setInterval(() => {
+        dots = (dots + 1) % 4;
+        icon.textContent = '⏳' + '.'.repeat(dots);
+    }, 500);
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        });
+        
+        // Handle 204 No Content (success with no body)
+        if (response.status === 204) {
+            clearInterval(loadingInterval);
+            icon.textContent = '✅';
+            
+            // Get new CSRF token from response headers
+            const newCsrfToken = response.headers.get('X-CSRF-Token');
+            if (newCsrfToken) {
+                spanElement.setAttribute('data-csrf', newCsrfToken);
+            }
+            
+            setTimeout(() => {
+                icon.textContent = originalText;
+            }, 10000);
+            
+            // Refresh status after feed publish
+            const countdownElement = document.getElementById('countdown');
+            if (countdownElement) {
+                const statusEndpoint = countdownElement.dataset.status;
+                checkStatus(statusEndpoint);
+            }
+            
+            return;
+        }
+        
+        // Handle other successful responses with JSON body
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        clearInterval(loadingInterval);
+        icon.textContent = '✅';
+        
+        setTimeout(() => {
+            icon.textContent = originalText;
+        }, 10000);
+        
+        // Refresh status after feed publish
+        const countdownElement = document.getElementById('countdown');
+        if (countdownElement) {
+            const statusEndpoint = countdownElement.dataset.status;
+            checkStatus(statusEndpoint);
+        }
+        
+    } catch (error) {
+        clearInterval(loadingInterval);
+        icon.textContent = '❌';
+        
+        setTimeout(() => {
+            icon.textContent = originalText;
+        }, 3000);
+        
+        console.error('Error publishing feed:', error);
+    }
+}
+
 async function refreshFeed(event, feedName, url, iconId) {
     event.preventDefault();
     
@@ -105,5 +195,61 @@ async function deleteFeed(event, feedName, url, itemId, csrfToken) {
     } catch (error) {
         alert("Failed to delete the feed: " + error.message);
         console.error('Error deleting feed: ', error);
+    }
+}
+
+/**
+ * Handle webhook enable/disable button clicks
+ */
+async function enableWebhook(button) {
+    const errorDivId = button.getAttribute('data-error');
+    const errorDiv = errorDivId ? document.getElementById(errorDivId) : null;
+    
+    // Clear previous error
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+    
+    const csrfToken = button.getAttribute('data-csrf');
+    const actionUrl = button.getAttribute('action');
+    
+    try {
+        const response = await fetch(actionUrl || window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': csrfToken || document.querySelector('input[name="csrf_token"]')?.value || ''
+            }
+        });
+        
+        // Handle 204 No Content (success with no body)
+        if (response.status === 204) {
+            button.disabled = true;
+            button.textContent = '✅ Webhook enabled successfully!';
+            return;
+        }
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            button.disabled = true;
+            button.textContent = '✅ Webhook enabled successfully!';
+        } else {
+            const errorMsg = result.detail || result.error || result.message || 'An unknown error occurred';
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = errorMsg.replace(/\n/g, '<br>');
+            } else {
+                alert(errorMsg);
+            }
+        }
+    } catch (error) {
+        console.error('Webhook action error:', error);
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'Network error. Please try again.';
+        } else {
+            alert('Network error. Please try again.');
+        }
     }
 }

@@ -8,11 +8,10 @@ from datetime import datetime, timezone
 import re
 
 # Import local modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
-from server.utils.settings import AppSettings
 from server.utils.keystore import KeyStore
 
 # Export config vars to globals
@@ -21,23 +20,23 @@ LOGGER = CustomLogger(name="torznab")
 
 # Set default categories
 CATEGORIES = [
-    {'id': '2000', 'label': 'Movies', 'parent': None},
-    {'id': '2010', 'label': 'Foreign', 'parent': '2000'},
-    {'id': '2020', 'label': 'Other', 'parent': '2000'},
-    {'id': '2030', 'label': 'SD', 'parent': '2000'},
-    {'id': '2040', 'label': 'HD', 'parent': '2000'},
-    {'id': '2045', 'label': 'UHD', 'parent': '2000'},
-    {'id': '2050', 'label': 'BluRay', 'parent': '2000'},
-    {'id': '2060', 'label': '3D', 'parent': '2000'},
-    {'id': '5000', 'label': 'TV', 'parent': None},
-    {'id': '5010', 'label': 'WEB-DL', 'parent': '5000'},
-    {'id': '5020', 'label': 'Foreign', 'parent': '5000'},
-    {'id': '5030', 'label': 'SD', 'parent': '5000'},
-    {'id': '5040', 'label': 'HD', 'parent': '5000'},
-    {'id': '5050', 'label': 'Other', 'parent': '5000'},
-    {'id': '5060', 'label': 'Sport', 'parent': '5000'},
-    {'id': '5070', 'label': 'Anime', 'parent': '5000'},
-    {'id': '5080', 'label': 'Documentary', 'parent': '5000'},
+    {'id': 2000, 'label': 'Movies', 'parent': None},
+    {'id': 2010, 'label': 'Foreign', 'parent': 2000},
+    {'id': 2020, 'label': 'Other', 'parent': 2000},
+    {'id': 2030, 'label': 'SD', 'parent': 2000},
+    {'id': 2040, 'label': 'HD', 'parent': 2000},
+    {'id': 2045, 'label': 'UHD', 'parent': 2000},
+    {'id': 2050, 'label': 'BluRay', 'parent': 2000},
+    {'id': 2060, 'label': '3D', 'parent': 2000},
+    {'id': 5000, 'label': 'TV', 'parent': None},
+    {'id': 5010, 'label': 'WEB-DL', 'parent': 5000},
+    {'id': 5020, 'label': 'Foreign', 'parent': 5000},
+    {'id': 5030, 'label': 'SD', 'parent': 5000},
+    {'id': 5040, 'label': 'HD', 'parent': 5000},
+    {'id': 5050, 'label': 'Other', 'parent': 5000},
+    {'id': 5060, 'label': 'Sport', 'parent': 5000},
+    {'id': 5070, 'label': 'Anime', 'parent': 5000},
+    {'id': 5080, 'label': 'Documentary', 'parent': 5000},
 ]
 def build_cats_tree(categories):
     """Build a mapping of category/subcategory IDs to their root parent category ID."""
@@ -101,7 +100,7 @@ def filter_items(torrents, q=None, cat=None, extra_filters=None):
         q_regex = re.compile(q_pattern, re.IGNORECASE)
         filters.append(lambda x, regex=q_regex: regex.search(x.get("fileName", "")))
     if cat:
-        cat_ids = [c.strip() for c in cat.split(",") if c.strip()]
+        cat_ids = [int(c.strip()) for c in cat.split(",") if c.strip()]
         filters.append(lambda x: any(
             (get_cat_id(x.get("type"), cat_label) in cat_ids) or
             (CAT_LOOKUP.get(get_cat_id(x.get("type"), cat_label)) in cat_ids)
@@ -122,10 +121,10 @@ def generate_rss(items, offset=0, limit=0):
     # Create feed using config
     fg = FeedGenerator()
     fg.load_extension('torrent')
-    fg.title(YorznabConfig().ServerName)
-    fg.link(href=YorznabConfig().Link)
-    fg.description(YorznabConfig().Description)
-    fg.language(YorznabConfig().Language)
+    fg.title(YorznabClient().ServerName)
+    fg.link(href=YorznabClient().Config.Url)
+    fg.description(YorznabClient().Description)
+    fg.language(YorznabClient().Language)
 
     # Sort items first, then apply pagination
     sorted_items = sorted(items, key=lambda x: (x.get("score"), x.get("pubDate")), reverse=True)
@@ -141,7 +140,7 @@ def generate_rss(items, offset=0, limit=0):
         # The relationship type (rel) must be enclosure for Sonarr to grab torrents.
         fe.link(href=t.get("fileUrl"))
         fe.enclosure(url=t.get("fileUrl"), length=t.get("fileSize", 0), type="application/x-bittorrent")
-        fe.guid(guid=f"{YorznabConfig().Link}/api?apikey={INDEXER_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
+        fe.guid(guid=f"{YorznabClient().Config.Url}/api?apikey={INDEXER_KEY}&t=details&q={t.get('descrLink')}", permalink=True)
         pub_date = datetime.fromtimestamp(t.get("pubDate"), tz=timezone.utc)
         fe.pubDate(pub_date)
         # Look for category field and handle strings, then parse as array
@@ -149,7 +148,7 @@ def generate_rss(items, offset=0, limit=0):
             fe.category(
                 term=cat_label,
                 scheme="http://torznab.com/categories",
-                label=get_cat_id(t.get("type"), cat_label),
+                label=str(get_cat_id(t.get("type"), cat_label)),
             )
 
         # Required Torznab attributes
@@ -200,8 +199,8 @@ async def torznab_api(
         apikey_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{YorznabConfig().ServerName}</title>
-    <link>{YorznabConfig().Link}</link>
+    <title>{YorznabClient().ServerName}</title>
+    <link>{YorznabClient().Config.Url}</link>
     <description>Indexer Error</description>
     <error code="1001" description="Missing or invalid API key"/>
   </channel>
@@ -218,8 +217,8 @@ async def torznab_api(
         feed_error = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="{NS['torznab']}">
   <channel>
-    <title>{YorznabConfig().ServerName}</title>
-    <link>{YorznabConfig().Link}</link>
+    <title>{YorznabClient().ServerName}</title>
+    <link>{YorznabClient().Config.Url}</link>
     <description>Feed Error</description>
     <error code="2" description="No feeds found"/>
   </channel>
@@ -230,11 +229,11 @@ async def torznab_api(
         # Minimal caps XML
         caps_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <caps xmlns:torrent="{NS['torznab']}">
-  <server version="1.0" title="{YorznabConfig().ServerName}" strapline="Yorznab Indexer"
-      email="{YorznabConfig().Email}" url="{YorznabConfig().Link}"
-      image="{YorznabConfig().Image}" />
+  <server version="1.0" title="{YorznabClient().ServerName}" strapline="Yorznab Indexer"
+      email="{YorznabClient().Email}" url="{YorznabClient().Config.Url}"
+      image="{YorznabClient().Image}" />
   <limits max="0" default="0" />
-  <retention>{YorznabConfig().Cron.RetentionDays}</retention>
+  <retention>{YorznabClient().Config.RetentionDays}</retention>
   <registration available="yes" open="yes" />
 
   <searching>

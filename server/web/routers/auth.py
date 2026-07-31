@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, Response, RedirectResponse
 from urllib.parse import parse_qs
 
 # Import modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
 from server.web.common import LOGGER, navigation, page_template
@@ -20,8 +20,9 @@ dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
 # Constants
 SESSION_MAX_AGE = int(timedelta(hours=24).total_seconds())
 CSRF_MAX_AGE = int(timedelta(hours=1).total_seconds())
-MAX_CSRF_TOKENS = 10000  # Max tokens to store per session
+MAX_CSRF_TOKENS = 50  # Max tokens to store per session
 CSRF_TOKEN_SIZE = 16  # Size of the CSRF token in bytes
+csrf_store = {}
 
 # Helpers
 def validate_passkey(passkey: str) -> bool:
@@ -32,7 +33,7 @@ def validate_passkey(passkey: str) -> bool:
     
 def authenticate(request: Request) -> bool:
     try:
-        session_token = request.cookies.get("session")
+        session_token = get_session_id(request)
         if not session_token:
             return False
         
@@ -83,43 +84,37 @@ def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request 
     
     response.set_cookie("session", session_token, httponly=True, secure=is_secure, samesite="lax", max_age=SESSION_MAX_AGE)
 
+def get_session_id(request: Request) -> str:
+    return request.cookies.get("session")
+
 def gen_csrf_token() -> str:
     """Generate a new CSRF token."""
     return secrets.token_hex(CSRF_TOKEN_SIZE)
 
 def get_csrf_tokens(request: Request) -> list:
-    """Get the list of valid CSRF tokens from cookie."""
-    tokens_json = request.cookies.get('csrf_tokens', '[]')
-    try:
-        return json.loads(tokens_json)
-    except json.JSONDecodeError:
+    session_id = get_session_id(request)
+    if not session_id:
         return []
+    return csrf_store.get(session_id, [])
 
 def set_csrf_tokens(request: Request, response: Response, tokens: list):
-    """Store the list of CSRF tokens in a cookie."""
-    is_secure = False
-    if request:
-        is_https = request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
-        is_secure = is_https
-    
-    # Limit token count to prevent cookie bloat
+    session_id = get_session_id(request)
+    if not session_id:
+        return
     if len(tokens) > MAX_CSRF_TOKENS:
         tokens = tokens[-MAX_CSRF_TOKENS:]
-    
-    response.set_cookie(
-        "csrf_tokens", 
-        json.dumps(tokens), 
-        httponly=True, 
-        secure=is_secure, 
-        samesite="lax", 
-        max_age=CSRF_MAX_AGE
-    )
+    csrf_store[session_id] = tokens
 
-def add_csrf_token(request: Request, response: Response, csrf_token: str):
+def add_csrf_token(request: Request, response: Response, csrf_token: list | str):
     """Add a new CSRF token to the session's token list."""
     tokens = get_csrf_tokens(request)
-    if csrf_token not in tokens:
-        tokens.append(csrf_token)
+    if isinstance(csrf_token, list):
+        for token in csrf_token:
+            if token not in tokens:
+                tokens.append(token)
+    elif isinstance(csrf_token, str):
+        if csrf_token not in tokens:
+            tokens.append(csrf_token)
     set_csrf_tokens(request, response, tokens)
 
 def validate_csrf(request: Request, csrf_token_form: str) -> bool:
@@ -172,7 +167,7 @@ async def login_page(request: Request):
     content = f'''
         <div class="login-container">
             {navigation('')}
-            <h1>Welcome to {YorznabConfig().ServerName}</h1>
+            <h1>Welcome to {YorznabClient().ServerNameHtml}</h1>
             {get_started}
             <form id="loginForm" autocomplete="off" method="POST" action="{RouteHandler.AUTH}/login">
                 <input type="hidden" name="csrf_token" value="{csrf_token}">
@@ -259,11 +254,12 @@ async def login_submit(
 
 
 @router.post(f"/logout")
-async def logout(request: Request,
-                 x_csrf_token: str = Header(None, alias="X-CSRF-Token")):
-    body = await request.body()
-    parsed = parse_qs(body.decode('utf-8'))
-    csrf_token_form = x_csrf_token or parsed.get('csrf_token', [''])[0]
+async def logout(
+    request: Request,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
     
     response = RedirectResponse(url=f"{RouteHandler.DASHBOARD}/", status_code=status.HTTP_303_SEE_OTHER)
     
@@ -272,11 +268,10 @@ async def logout(request: Request,
         LOGGER.debug("User logged out with valid CSRF")
     else:
         LOGGER.error("Logout CSRF validation failed")
-        return RedirectResponse(url=f"{RouteHandler.DASHBOARD}/", status_code=status.HTTP_303_SEE_OTHER)
+        return response
     
     # Always logout regardless of CSRF (but CSRF protects against forged requests)
     response.delete_cookie("session")
-    response.delete_cookie("csrf_tokens")
     set_csrf_tokens(request, response, [])  # Clear all CSRF tokens
     
     return response

@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from server.cron.rssrefresh import CronRunner
 from server.routers.handler import RouteHandler
 from server.utils.timeformatter import TimezoneAware
+from server.utils.docs import PROJECT_INFO
 
 router = APIRouter(prefix=RouteHandler.STATUS, tags=["system"])
 
@@ -28,14 +29,14 @@ async def cron_status():
     server_time = TimezoneAware.isoformat()
     match cron_status:
         case "Initializing":
-            return JSONResponse(content={"status": "healthy", "active": True, "label": "⏳ Initializing", "time": server_time, "next": cron_next}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"status": "healthy", "active": True, "label": "⏳ Initializing", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_200_OK)
         case "Started":
-            return JSONResponse(content={"status": "healthy", "active": True, "label": "🚀 Started", "time": server_time, "next": cron_next}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"status": "healthy", "active": True, "label": "🚀 Started", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_200_OK)
         case "Running":
-            return JSONResponse(content={"status": "healthy", "active": True, "label": "🤖 Running", "time": server_time, "next": cron_next}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"status": "healthy", "active": True, "label": "🤖 Running", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_200_OK)
         case "Sleeping":
-            return JSONResponse(content={"status": "healthy", "active": False, "label": "💤 Sleeping", "time": server_time, "next": cron_next}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"status": "healthy", "active": False, "label": "💤 Sleeping", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_200_OK)
         case "Failed":
-            return JSONResponse(content={"status": "unhealthy", "active": None, "label": "🔥 Failure", "time": server_time, "next": cron_next}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JSONResponse(content={"status": "unhealthy", "active": None, "label": "🔥 Failure", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    return JSONResponse(content={"status": "unhealthy", "active": None, "label": "❓ Unknown", "time": server_time, "next": cron_next}, status_code=status.HTTP_200_OK)
+    return JSONResponse(content={"status": "unhealthy", "active": None, "label": "❓ Unknown", "time": server_time, "next": cron_next, "version": PROJECT_INFO['version']}, status_code=status.HTTP_200_OK)

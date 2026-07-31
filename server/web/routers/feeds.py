@@ -1,11 +1,14 @@
 import json
+import traceback
 
-from fastapi import APIRouter, HTTPException, Header, Request, Response, status
+from fastapi import APIRouter, Form, HTTPException, Header, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
 import yaml
 
 # Import modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.ArrClient import ArrClient, ArrType
+from server.entities.SeerrClient import SeerrClient
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
@@ -20,8 +23,6 @@ dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"])
 async def feeds(request: Request):
     if not authenticate(request):
         return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
-    
-    page_csrf_token = gen_csrf_token()
 
     # Get timestamp for countdown
     ace_css = "cache/css/ace.min.css"
@@ -43,15 +44,16 @@ async def feeds(request: Request):
                       onclick="showEditor('{feed_config.feed_name}')">✏️
                         <span class="info-label">{feed_config.feed_name}</span>
                     </span>
-                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=caps" target="_blank">
-                        <span class="info-value" title="Capabilities">ℹ️</span>
+                    <a title="Movie Search" href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=movie" target="_blank">
+                        <span class="info-value">🎬</span>
                     </a>
-                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=movie" target="_blank">
-                        <span class="info-value" title="Movie Search">🎬</span>
+                    <a title="TV Search" href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=tvsearch" target="_blank">
+                        <span class="info-value">📺</span>
                     </a>
-                    <a href="{RouteHandler.INDEXER}/{feed_config.feed_name}?apikey={indexer_key}&t=tvsearch" target="_blank">
-                        <span class="info-value" title="TV Search">📺</span>
-                    </a>
+                    <span class="clickable" name="{feed_config.feed_name}" title="Publish Feed" data-csrf="{csrf_token}"
+                      onclick="publishFeed(event, '{feed_config.feed_name}', '{RouteHandler.PUBLISH}/{feed_config.feed_name}', 'publish-icon-{feed_config.feed_name}')">
+                        <span class="info-value" id="publish-icon-{feed_config.feed_name}">🚀</span>
+                    </span>
                     <span class="clickable" name="{feed_config.feed_name}" title="Refresh Feed"
                       onclick="refreshFeed(event, '{feed_config.feed_name}', '{RouteHandler.WEBHOOK}?feed={feed_config.feed_name}&apikey={webhook_key}', 'refresh-icon-{feed_config.feed_name}')">
                         <span class="info-value" id="refresh-icon-{feed_config.feed_name}">🔄</span>
@@ -62,15 +64,18 @@ async def feeds(request: Request):
                     </span>
                 </div>
                 <div class="info-row">
-                    <div class="info-btn")" onclick="copyKey('apiPath-{feed_config.feed_name}')">📋 API Path</div>
+                    <div class="info-btn" onclick="copyKey('apiPath-{feed_config.feed_name}')">📋 API Path</div>
                     <div class="key-value" id="apiPath-{feed_config.feed_name}">{f"{RouteHandler.INDEXER}/{feed_config.feed_name}"}</div>
                 </div>
             </div>'''
 
+    editor_csrf_token = gen_csrf_token()
+    webhook_csrf_token = gen_csrf_token()
+    feed_csrf_tokens.extend([editor_csrf_token, webhook_csrf_token])
     content = f'''
         <div class="app-container">
             {navigation(f'{RouteHandler.DASHBOARD}/feed')}
-            <h1>{YorznabConfig().ServerName} 📻 Feeds</h1>
+            <h1>{YorznabClient().ServerNameHtml} 📻 Feeds</h1>
             
             <div id="main-page">
                 <div class="text-container">
@@ -85,6 +90,9 @@ async def feeds(request: Request):
                     </div>
                     {feed_info}
                 </div>
+                <button type="submit" action="{RouteHandler.WEBHOOK}/enable" method="post" class="full-btn action-btn feed-btn" data-error="error-webhook" data-csrf="{webhook_csrf_token}" onclick="enableWebhook(this, event)">🪝 Enable Webhook in Jellyseerr</button>
+                <p id="error-webhook" class="error-message" style="display: none;">Webhook: Unknown error occurred</p>
+
             </div>
 
             <!-- Ace Editor container -->
@@ -93,7 +101,7 @@ async def feeds(request: Request):
                 data-list="{RouteHandler.FEEDS}/list"
                 data-load="{RouteHandler.FEED}"
                 data-save="{RouteHandler.FEED}"
-                data-csrf="{csrf_token}">
+                data-csrf="{editor_csrf_token}">
                 <textarea id="feed-yaml-new" style="display: none;">{JsonEditor.get_blank()}</textarea>
                 <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_template()}</textarea>
                 <div id="editor-header">
@@ -153,14 +161,114 @@ async def feeds(request: Request):
         </div>'''
     
     response = Response(content=page_template(title="Feeds", content=content, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")
-    add_csrf_token(request, response, page_csrf_token)
-    for csrf_token in feed_csrf_tokens:
-        add_csrf_token(request, response, csrf_token)
+    add_csrf_token(request, response, feed_csrf_tokens)
     return response
 
-feed_router = APIRouter(prefix=RouteHandler.FEED, tags=["feeds"])
+# ===== WEBHOOK ENDPOINT =====
+
+webhook_router = APIRouter(prefix=RouteHandler.WEBHOOK, tags=["feeds"])
+
+@webhook_router.post("/enable")
+async def enable_webhook(
+    request: Request,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
+    """
+    Save YAML content to a file - returns plain text response
+    """
+    if not authenticate(request):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+    
+    # Validate CSRF token
+    if not validate_csrf(request, csrf_token_form):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+    
+    try:
+
+        # Try to save the feed config
+        try:
+            seerr_config = await SeerrClient().configure_webhook()
+            LOGGER.info(f"🪝 Enabled Seerr webhook: {seerr_config}")
+        except Exception as e:
+            LOGGER.error(f"❌ Error enabling Seerr webhook: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Error enabling Seerr webhook: {str(e)}")
+        
+        # Create response and consume CSRF token
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        consume_csrf_token(request, response, csrf_token_form)
+        # Allow multiple save forms
+        csrf_token = gen_csrf_token()
+        add_csrf_token(request, response, csrf_token)
+        response.headers["X-CSRF-Token"] = csrf_token
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        LOGGER.error(f"Unknown error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown error: {str(e)}")
+
+
+# ===== PUBLISH ENDPOINT =====
+
+publishRouter = APIRouter(prefix=RouteHandler.PUBLISH)
+
+@publishRouter.post("/{feed_name:str}", tags=["publish"])
+async def set_config(
+    request: Request,
+    feed_name: str,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
+    """Save configuration"""
+    if not authenticate(request):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+    
+    # Validate CSRF token
+    if not validate_csrf(request, csrf_token_form):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+    
+    try:
+        form_data = await request.form()
+        
+        # Remove csrf_token if present
+        config_data = {k: v for k, v in form_data.items() if k != 'csrf_token'}
+
+        print("Configuration type:", feed_name)
+        print("Configuration data:", config_data)
+        await ArrClient(ArrType.Radarr).create_torznab_indexer(feed_name=feed_name)
+
+    except ValueError as e:
+        LOGGER.error(f"❌ Failed to parse settings: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse settings: {str(e)}")
+    except yaml.YAMLError as e:
+        LOGGER.error(f"❌ Failed to save invalid content: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to save invalid content: {str(e)}")
+    except OSError as e:
+        LOGGER.error(f"❌ Failed to save settings: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"❌ Failed to save settings: {str(e)}")
+    except Exception as e:
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error(f"❌ Unknown error occurred while saving settings: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Unknown error occurred while saving settings: {str(e)}")
+    
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    consume_csrf_token(request, response, csrf_token_form)
+    # Allow multiple save forms
+    csrf_token = gen_csrf_token()
+    add_csrf_token(request, response, csrf_token)
+    response.headers["X-CSRF-Token"] = csrf_token
+    return response
+
 
 # ===== YAML FILES ENDPOINT =====
+
+feed_router = APIRouter(prefix=RouteHandler.FEED, tags=["feeds"])
 
 @feed_router.get("/{feed_name:str}")
 async def load_yaml(request: Request, feed_name: str):
@@ -190,21 +298,25 @@ async def load_yaml(request: Request, feed_name: str):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error loading file: {str(e)}")
 
 @feed_router.post("/{feed_name:str}")
-async def save_yaml(request: Request, feed_name: str,
-                    x_csrf_token: str = Header(..., alias="X-CSRF-Token")):
+async def save_yaml(
+    request: Request,
+    feed_name: str,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
     """
     Save YAML content to a file - returns plain text response
     """
     if not authenticate(request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
     
+    # Validate CSRF token
+    if not validate_csrf(request, csrf_token_form):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+    
     try:
-        # Get CSRF token from header
-        csrf_token_header = x_csrf_token
-        
-        # Validate CSRF token
-        if not validate_csrf(request, csrf_token_header):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
         
         # Save yaml
         body_content = await request.body()
@@ -229,11 +341,11 @@ async def save_yaml(request: Request, feed_name: str,
             status_code=status.HTTP_200_OK,
             media_type="application/json"
         )
-        consume_csrf_token(request, response, csrf_token_header)
+        consume_csrf_token(request, response, csrf_token_form)
         # Allow multiple save forms
-        csrf_token = gen_csrf_token()
-        add_csrf_token(request, response, csrf_token)
-        response.headers["X-CSRF-Token"] = csrf_token
+        new_csrf_token = gen_csrf_token()
+        add_csrf_token(request, response, new_csrf_token)
+        response.headers["X-CSRF-Token"] = new_csrf_token
         return response
         
     except HTTPException:
@@ -244,8 +356,14 @@ async def save_yaml(request: Request, feed_name: str,
 
 
 @feed_router.delete("/{feed_name:str}")
-async def delete_feed(request: Request, feed_name: str,
-                      x_csrf_token: str = Header(..., alias="X-CSRF-Token")):
+async def delete_feed(
+    request: Request,
+    feed_name: str,
+    csrf_token: str = Form(""),
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+):
+    csrf_token_form = x_csrf_token or csrf_token
+
     """
     Delete a feed by name
     """
@@ -253,14 +371,11 @@ async def delete_feed(request: Request, feed_name: str,
     if not authenticate(request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
     
+    # Validate CSRF token
+    if not validate_csrf(request, csrf_token_form):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+        
     try:
-        # Get CSRF token from header
-        csrf_token_header = x_csrf_token
-        
-        # Validate CSRF token
-        if not validate_csrf(request, csrf_token_header):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
-        
         LOGGER.info(f"🗑️ Deleting feed '{feed_name}': {FeedConfig(feed_name=feed_name)}")
         exists = FeedConfig.delete(feed_name=feed_name)
         if not exists:
@@ -271,7 +386,7 @@ async def delete_feed(request: Request, feed_name: str,
 
         # Create response and consume CSRF token
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
-        consume_csrf_token(request, response, csrf_token_header)
+        consume_csrf_token(request, response, csrf_token_form)
         return response
         
     except HTTPException:

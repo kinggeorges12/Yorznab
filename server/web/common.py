@@ -3,7 +3,7 @@ import secrets
 from typing import List, Union
 
 # Import modules
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.customlogger import CustomLogger
 
@@ -47,7 +47,7 @@ def page_template(title: str, content: str, token: str = get_cache_token(),
     return f'''<!DOCTYPE html>
 <html>
     <head>
-        <title>{YorznabConfig().ServerName} {title}</title>
+        <title>{YorznabClient().ServerNameHtml} {title}</title>
         <script src="{RouteHandler.get_static_url('js/theme.js')}?token={token}"></script>
         <link rel="preload" href="{RouteHandler.get_static_url('css/web.css')}?token={token}" as="style">
         <link rel="stylesheet" href="{RouteHandler.get_static_url('css/web.css')}?token={token}">
@@ -72,8 +72,10 @@ def navigation(current_route: str = '') -> str:
     for route, emoji, label, cls in nav_items:
         active = " active" if current_route == route or current_route in route else ""
         buttons += f'''
-            <button class="action-btn {cls}{active}" onclick="window.location.href='{route}'">
-                {emoji} <span class="btn-label">{label}</span>
+            <button class="action-btn {cls}{active}">
+                <a class="plain" href="{route}">
+                    {emoji} <span class="btn-label">{label}</span>
+                </a>
             </button>'''
     
     return f'''

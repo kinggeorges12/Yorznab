@@ -1,37 +1,32 @@
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-import os
 from typing import Any, List, Optional
 
-from dacite import Config, MissingValueError, from_dict
+from dacite import Config, from_dict
 import httpx
 
 # Import classes
-from server import PROJECT_ROOT
-from server.entities.Yorznab import YorznabConfig
+from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
-from server.entities.AppClient import AppClient
+from server.entities.BaseClient import BaseClient
 from server.entities.ArrClient import ArrType
-from server.utils.customlogger import CustomLogger
 from server.utils.keystore import KeyStore
-from server.utils.settings import AppSettings, AppSettingsUndefined
 
 @dataclass
 class NotificationType(Enum):
-    NONE = 0,
-    MEDIA_PENDING = 2,
-    MEDIA_APPROVED = 4,
-    MEDIA_AVAILABLE = 8,
-    MEDIA_FAILED = 16,
-    TEST_NOTIFICATION = 32,
-    MEDIA_DECLINED = 64,
-    MEDIA_AUTO_APPROVED = 128,
-    ISSUE_CREATED = 256,
-    ISSUE_COMMENT = 512,
-    ISSUE_RESOLVED = 1024,
-    ISSUE_REOPENED = 2048,
-    MEDIA_AUTO_REQUESTED = 4096,
+    NONE = 0
+    MEDIA_PENDING = 2
+    MEDIA_APPROVED = 4
+    MEDIA_AVAILABLE = 8
+    MEDIA_FAILED = 16
+    TEST_NOTIFICATION = 32
+    MEDIA_DECLINED = 64
+    MEDIA_AUTO_APPROVED = 128
+    ISSUE_CREATED = 256
+    ISSUE_COMMENT = 512
+    ISSUE_RESOLVED = 1024
+    ISSUE_REOPENED = 2048
+    MEDIA_AUTO_REQUESTED = 4096
 
 @dataclass
 class WebhookPayload:
@@ -98,8 +93,7 @@ class WebhookPayload:
 
 @dataclass
 class SeerrConfig:
-    ServerType: str
-    Url: str = field(
+    Url: Optional[str] = field(
         default=None,
         metadata={
             "name": "Seerr Server",
@@ -107,13 +101,13 @@ class SeerrConfig:
         }
     )
     UrlFrom: Optional[str] = field(
-        default=YorznabConfig().Indexer.Url,
+        default_factory=lambda: YorznabClient().Url,
         metadata={
             "name": "Yorznab Server",
             "description": "Yorznab server URL as the Arr app sees it, including http(s)://, port, and urlbase if needed"
         }
     )
-    ApiKey: str = field(
+    ApiKey: Optional[str] = field(
         default=None,
         metadata={
             "required": True,
@@ -123,28 +117,12 @@ class SeerrConfig:
     )
 
 @dataclass
-class SeerrClient(AppClient):
+class SeerrClient(BaseClient[SeerrConfig]):
     
     def __init__(self):
         # Initialize _name and _config_file
-        super().__init__(name="Seerr")
-        # Initialize Seerr client defaults
-        self._config: SeerrConfig = None
-
-        self.LOGGER = CustomLogger(name=self._name)
-        # Resolve config file settings.yaml
-        try:
-            self._config_file = f"applications/{self._name}.yaml"
-            config_raw = AppSettings(filename=self._config_file).get()
-        except AppSettingsUndefined as e:
-            self.LOGGER.error(f"☠️ Critical error: unable to continue without {self._name}.")
-            raise Exception(e)
-        config_raw["ServerType"] = self._name # Required field
-        try:
-            self._config = from_dict(data_class=SeerrConfig, data=config_raw)
-        except MissingValueError as e: # dacite.exceptions.MissingValueError: missing value for field "Url"
-            self.LOGGER.error(f"☠️ Trouble parsing field for {self._name}, check file: {os.path.join(PROJECT_ROOT, self._config_file)}")
-            raise Exception(e)
+        self._server_type = "Seerr"
+        super().__init__(name=self.ServerType)
 
     class EndpointType(Enum):
         status = '/status'
@@ -154,28 +132,19 @@ class SeerrClient(AppClient):
             return self.value
     
     @property
-    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self._config.ApiKey}
-
-    @property
-    def ServerName(self) -> str: return self.ServerType
+    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self.Config.ApiKey}
     
     @property
     def DefaultUrl(self) -> str: return "http://localhost:5055"
     
     @property
-    def ServerType(self) -> str: return self._config.ServerType
+    def ServerType(self) -> str: return self._server_type
     
     @property
     def ApiVersion(self) -> str: return '/api/v1'
     
     @property
-    def Url(self) -> str: return self._config.Url
-    
-    @property
     def UrlPath(self) -> str: return self.Url + self.ApiVersion
-    
-    @property
-    def UrlFrom(self) -> str: return self._config.UrlFrom
 
     def GetEndpoint(self, endpoint: SeerrClient.EndpointType) -> str:
         return self.UrlPath + str(endpoint)
@@ -196,14 +165,14 @@ class SeerrClient(AppClient):
 
     def status(self) -> dict[str, Any]:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
-        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=30)
+        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
         return result
 
-    def configure_webhook(self) -> bool:
-        webhook_url = self.UrlFrom + RouteHandler.WEBHOOK
+    async def configure_webhook(self) -> bool:
+        webhook_url = self.Config.UrlFrom + RouteHandler.WEBHOOK
         auth_header = KeyStore.get_key('WEBHOOK_KEY')
 
         # The exact JSON template with formatting preserved
@@ -259,19 +228,14 @@ class SeerrClient(AppClient):
             }
         }
 
-        try:
-            self.LOGGER.info(f"🔧 Configuring webhook for {self.ServerName} Seerr server")
-            resp = self.session.post(
-                f"{self.UrlPath}{self.EndpointType.webhook}",
-                json=payload,
-                headers=self.Headers,
-                timeout=30
-            )
-            resp.raise_for_status()
-            self.LOGGER.info(f"✅ Webhook configured successfully")
-            return True
-        except Exception as e:
-            self.LOGGER.error(f"❌ Failed to configure webhook: {e}")
-            if hasattr(e, 'response') and e.response:
-                self.LOGGER.error(f"Response: {e.response.text}")
-            return False
+        self.LOGGER.info(f"🔧 Configuring the webhook for {self.ServerName}")
+        response = self.session.post(
+            f"{self.UrlPath}{self.EndpointType.webhook}",
+            json=payload,
+            headers=self.Headers,
+            timeout=self.TIMEOUT_DEFAULT
+        )
+        response.raise_for_status()
+        self.LOGGER.info(f"✅ Configured the webhook successfully")
+        return response.json()
+        
