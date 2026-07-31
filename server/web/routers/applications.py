@@ -1,4 +1,6 @@
+import asyncio
 from dataclasses import MISSING, dataclass, fields
+import traceback
 from typing import Callable, Dict, List, NamedTuple, Optional, Union, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter, Request, Response, status
@@ -111,7 +113,7 @@ async def applications_page(request: Request):
         csrf_token: str
         exceptions: List[str]
     
-    def init_app(name: str, fn_client: Callable[..., BaseClient], icon_url: str) -> ClientResult:
+    async def init_app(name: str, fn_client: Callable[..., BaseClient], icon_url: str) -> ClientResult:
         # Build app items html
         def build_html_app(name: str, status: str, client_url: str, icon_url: str) -> str:
             placeholder_image = f' style="background-image: url(\'{RouteHandler.get_static_url("favicon.ico")}\')"' if client_url else ''
@@ -144,10 +146,11 @@ async def applications_page(request: Request):
             client = fn_client()
             csrf_token = gen_csrf_token()
             input_template = build_input_template(csrf_token=csrf_token, client=client)
-            status = client.Version
+            status = await client.Version
             LOGGER.debug(f"{name} Status: {status}")
         except Exception as e:
             exceptions.append(f"{name}: {e}")
+            LOGGER.warning(traceback.format_exc())
             LOGGER.warning(f"Error occurred while initializing {name}: {e}")
             
         if client is not None and client.ServerNameHtml:
@@ -164,11 +167,33 @@ async def applications_page(request: Request):
             exceptions=exceptions
         )
     
-    clients: Dict[str, ClientResult] = {}
-    clients['Radarr'] = init_app('Radarr', lambda: ArrClient(ArrType.Radarr), 'https://avatars.githubusercontent.com/u/25025331')
-    clients['Sonarr'] = init_app('Sonarr', lambda: ArrClient(ArrType.Sonarr), 'https://avatars.githubusercontent.com/u/1082903')
-    clients['Seerr'] = init_app('Seerr', lambda: SeerrClient(), 'https://avatars.githubusercontent.com/u/101442446')
-    clients['qBittorrent'] = init_app('qBittorrent', lambda: QBitClient(), 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png')
+    # Create tasks with names
+    tasks = [
+        asyncio.create_task(
+            init_app('Radarr', lambda: ArrClient(ArrType.Radarr), 'https://avatars.githubusercontent.com/u/25025331'),
+            name='Radarr'
+        ),
+        asyncio.create_task(
+            init_app('Sonarr', lambda: ArrClient(ArrType.Sonarr), 'https://avatars.githubusercontent.com/u/1082903'),
+            name='Sonarr'
+        ),
+        asyncio.create_task(
+            init_app('Seerr', lambda: SeerrClient(), 'https://avatars.githubusercontent.com/u/101442446'),
+            name='Seerr'
+        ),
+        asyncio.create_task(
+            init_app('qBittorrent', lambda: QBitClient(), 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png'),
+            name='qBittorrent'
+        ),
+    ]    
+    # Wait for all
+    await asyncio.gather(*tasks, return_exceptions=False)
+    
+    # Build dict using the task's name attribute
+    clients = {}
+    for task in tasks:
+        name = task.get_name()  # Get the name we set in create_task
+        clients[name] = task.result()
 
     app_csrf_tokens = []
     input_templates = ""

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, fields
 import html
 import os
@@ -15,14 +16,14 @@ D = TypeVar('D', bound=dataclass)
 class BaseClient(ABC, Generic[D]):
     """Abstract base class for all API clients"""
     
-    _session: httpx.Client | None = None
+    _session: httpx.AsyncClient | None = None
     TIMEOUT_DEFAULT: int = 60  # Default timeout for requests in seconds
 
     def __init__(self, name: str = None):
         self._name = name
         self._config_file: str = f"{self._name}.yaml"
         self._config: Optional[D] = None
-        self._config_type = get_args(self.__class__.__orig_bases__[0])[0]
+        self._config_type = get_args(self.__class__.__orig_bases__[0])[0] if not hasattr(self, '_config_type') else self._config_type
         self.LOGGER = CustomLogger(name=self._name)
 
         # Load from file and initialize
@@ -34,7 +35,7 @@ class BaseClient(ABC, Generic[D]):
         pass
     
     @property
-    def Version(self) -> str: return self.status().get("version", '?')
+    async def Version(self) -> str: return (await self.status()).get("version", '?')
     
     @property
     def Config(self) -> Optional[D]: return self._config
@@ -103,18 +104,21 @@ class BaseClient(ABC, Generic[D]):
         return self.Url + self.ApiVersion
     
     @classmethod
-    def _get_session(cls) -> httpx.Client:
+    def _get_session(cls) -> httpx.AsyncClient:
         """Get or create singleton session"""
         if cls._session is None:
-            cls._session = httpx.Client()
+            cls._session = httpx.AsyncClient(
+                timeout=cls.TIMEOUT_DEFAULT,
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            )
         return cls._session
     
     @abstractmethod
-    def session(self) -> httpx.Client:
+    def session(self) -> httpx.AsyncClient:
         """Get the session"""
         pass
     
     @abstractmethod
-    def status(self) -> dict[str, Any] | str:
+    async def status(self) -> dict[str, Any] | str:
         """Check server status"""
         pass

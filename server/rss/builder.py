@@ -1,5 +1,6 @@
 # Libraries
 import argparse
+import asyncio
 import os
 import sys
 import time
@@ -53,7 +54,7 @@ def publish_results(feed_config: FeedConfig, retention_days: int, results: list[
 # -----------------------------
 
 
-def test_connection(name, url, fn_status, pause: int = 15, timeout: int = 15) -> bool:
+def test_connection(name, url, fn_status, pause: int = 10, timeout: int = 10) -> bool:
     """Check client connection"""
     LOGGER.info(f"💡 Using {name} server: {url}")
 
@@ -92,13 +93,13 @@ def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: 
     LOGGER.info(f"💡 Loading configuration file for {QBitClient.ServerName} and {server_type.value}")
     try:
         qBit = QBitClient()
-        test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: qBit.status())
+        test_connection(name=qBit.ServerName, url=qBit.Url, fn_status=lambda: asyncio.run(qBit.status()))
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return
     try:
         arr = ArrClient(server_type=server_type)
-        test_connection(name=arr.ServerName, url=arr.Url, fn_status=lambda: arr.status())
+        test_connection(name=arr.ServerName, url=arr.Url, fn_status=lambda: asyncio.run(arr.status()))
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return # TODO: run with Jellyseerr info if ArrClient fails

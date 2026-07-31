@@ -1,7 +1,9 @@
+import asyncio
 import contextlib
 from enum import Enum
 import time
 from typing import Any, Optional
+from fastapi import FastAPI
 import httpx
 from dataclasses import dataclass, field
 
@@ -11,7 +13,7 @@ from server.entities.BaseClient import BaseClient
 @dataclass
 class QBitConfig:
     Url: Optional[str] = field(
-        default=None,
+        default="http://localhost:8080",
         metadata={
             "name": "qBittorrent Server",
             "description": "URL used to connect to the qBittorrent server, including http(s)://, port, and urlbase if required"
@@ -65,6 +67,7 @@ class QBitClient(BaseClient[QBitConfig]):
         # Initialize _name and _config_file
         self._server_type = "qBittorrent"
         super().__init__(name=self.ServerType)
+        self._login()
 
     class EndpointType(Enum):
         login = '/auth/login'
@@ -105,44 +108,38 @@ class QBitClient(BaseClient[QBitConfig]):
     @property
     def ResponseTimeout(self) -> int | None: return 60
     
-    def _set_session_header(self, headers: dict) -> httpx.Client:
-        """Get or create singleton qBittorrent session"""
-        self._headers = headers
-        return self._session
+    @property
+    def session(self) -> httpx.AsyncClient:
+        """Get the session, always using singleton and ensuring login"""
+        return self._get_session()
+
+    async def headers(self) -> dict[str, str]:
+        """Get the headers for requests, ensuring login"""
+        if not self._initialized:
+            await self._login()
+        return self._headers
     
-    def _login(self) -> None:
+    async def _login(self) -> None:
         """Private login function"""
         self.LOGGER.info(f"🛜 Authenticating {self.ServerName} server")
         url = self.GetEndpoint(self.EndpointType.login)
         headers = {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "Referer": self.Url}
-        session = self._get_session()
+        login_session = self._get_session()
         data = {}
         if self.Config.ApiKey:
             headers["Authorization"] = f"Bearer {self.Config.ApiKey}"
         else:
             data = {"username": self.Config.Username, "password": self.Config.Password}
-            resp = session.post(url, data=data, headers=headers, timeout=self.TIMEOUT_DEFAULT)
+            resp = await login_session.post(url, data=data, headers=headers, timeout=self.TIMEOUT_DEFAULT)
             resp.raise_for_status()
-        self._set_session_header(headers)
+        self._headers = headers
         self.LOGGER.info(f"✅ Received authentication session from {self.ServerName} server")
-    
-    @property
-    def session(self) -> httpx.Client:
-        """Get the session, always using singleton and ensuring login"""
-        session = self._get_session()
-        if not self._initialized:
-            self._login()
-            self._initialized = True
-        return session
+        self._initialized = True
 
-    def login(self) -> None:
-        """Public login function that calls the private _login"""
-        self._login()
-
-    def status(self) -> dict[str, Any] | str:
+    async def status(self) -> dict[str, Any] | str:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
         url = self.GetEndpoint(self.EndpointType.version)
-        resp = self.session.post(url, headers=self._headers, timeout=self.TIMEOUT_DEFAULT)
+        resp = await self.session.post(url, headers=(await self.headers()), timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         version = resp.text.strip()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
@@ -150,7 +147,7 @@ class QBitClient(BaseClient[QBitConfig]):
 
     def search_start(self, pattern: str) -> int:
         self.LOGGER.info(f"🔍 Starting search query: {pattern}")
-        url = self.GetEndpoint(self.EndpointType.search_start)
+        url = self.GetEndpoint(self.EndpointType.start)
         data = {"pattern": pattern, "category": "all", "plugins": "enabled"}
         resp = self.session.post(url, data=data, headers=self._headers, timeout=60)
         resp.raise_for_status()

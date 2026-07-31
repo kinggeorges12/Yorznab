@@ -26,7 +26,7 @@ async def configuration(request: Request):
     reset_csrf_token = gen_csrf_token()
     config_csrf_tokens.extend([yorznab_csrf_token, reset_csrf_token])
 
-    input_template = build_input_template(csrf_token=yorznab_csrf_token, client=YorznabClient())
+    input_template = await build_input_template(csrf_token=yorznab_csrf_token, client=YorznabClient())
 
     content = f'''
         <div class="app-container">

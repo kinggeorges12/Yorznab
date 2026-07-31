@@ -88,7 +88,7 @@ class YorznabClient(BaseClient[YorznabConfig]):
         """API version path"""
         return RouteHandler.API_v1
     
-    def status(self) -> dict[str, Any] | str: return cron_status()
+    async def status(self) -> dict[str, Any] | str: return await cron_status()
 
     # Unimplemented methods for BaseClient interface
-    def session(self) -> httpx.Client: pass
+    async def session(self) -> httpx.AsyncClient: pass

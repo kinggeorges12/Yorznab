@@ -12,8 +12,6 @@ from server.entities.BaseClient import BaseClient
 from server.entities.ArrClient import ArrType
 from server.utils.keystore import KeyStore
 
-DEFAULT_SEERR_URL = "http://localhost:5055"
-
 @dataclass
 class NotificationType(Enum):
     NONE = 0
@@ -96,7 +94,7 @@ class WebhookPayload:
 @dataclass
 class SeerrConfig:
     Url: Optional[str] = field(
-        default=None,
+        default="http://localhost:5055",
         metadata={
             "name": "Seerr Server",
             "description": "URL used to connect to the Seerr server, including http(s)://, port, and urlbase if required"
@@ -137,10 +135,10 @@ class SeerrClient(BaseClient[SeerrConfig]):
         return self.UrlPath + str(endpoint)
     
     @property
-    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self.Config.ApiKey}
+    def Headers(self) -> dict[str, str]: return {"X-Api-Key": self.Config.ApiKey or ''}
     
     @property
-    def DefaultUrl(self) -> str: return DEFAULT_SEERR_URL
+    def DefaultUrl(self) -> str: return "http://localhost:5055"
     
     @property
     def ServerType(self) -> str: return self._server_type
@@ -161,13 +159,13 @@ class SeerrClient(BaseClient[SeerrConfig]):
         )
 
     @property
-    def session(self) -> httpx.Client:
+    def session(self) -> httpx.AsyncClient:
         """Get the session, always using singleton"""
         return self._get_session()
 
-    def status(self) -> dict[str, Any]:
+    async def status(self) -> dict[str, Any]:
         self.LOGGER.info(f"🛜 Pinging {self.ServerName} server")
-        resp = self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
+        resp = await self.session.get(self.GetEndpoint(self.EndpointType.status), headers=self.Headers, timeout=self.TIMEOUT_DEFAULT)
         resp.raise_for_status()
         result = resp.json()
         self.LOGGER.info(f"✅ Received ping response from {self.ServerName} server")
