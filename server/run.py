@@ -1,11 +1,14 @@
+import secrets
+
 from fastapi import FastAPI, Request, Response, status as http_status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
 from contextlib import asynccontextmanager
+from starsessions import CookieStore, SessionMiddleware
+from datetime import timedelta
 
 # Start cron job first
-DEFAULT_YORZNAB_URL = 'http://localhost:9116'
 import server.cron.rssrefresh
 
 # Import routers after cron
@@ -33,6 +36,14 @@ async def lifespan(app: FastAPI):
     print("🛑 Application shutting down")
 
 app = FastAPI(lifespan=lifespan)
+
+# Add starsessions middleware
+app.add_middleware(
+    SessionMiddleware,
+    store=CookieStore(secret_key=secrets.token_hex(32)),
+    lifetime=int(timedelta(hours=24).total_seconds()),
+    rolling=True,  # Extend session on every request
+)
 
 # Include routers
 app.include_router(status.router)

@@ -15,6 +15,7 @@ requires-python = ">=3.11"
 dependencies = [
     "feedgen",
     "fastapi",
+    "starsessions",
     "uvicorn",
     "psutil",
     "httpx",
@@ -29,7 +30,6 @@ dependencies = [
 ]
 
 [project.urls]
-host = "http://localhost:9116"
 repository = "https://github.com/kinggeorges12/Yorznab"
 documentation = "http://localhost:9116/docs"
 support = "https://github.com/kinggeorges12/Yorznab/issues"
@@ -38,6 +38,8 @@ license = "https://github.com/kinggeorges12/Yorznab?tab=MIT-1-ov-file"
 [tool.fastapi]
 api_version = "1.0.0"
 api_prefix = "/api/v1"
+user = "admin"
+host = "http://localhost:9116"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -47,4 +49,4 @@ include = ["server"]
 py-modules = ["app"]
 
 [project.scripts]
-yorznab = "app:start"
+yorznab = "yorznab:start"

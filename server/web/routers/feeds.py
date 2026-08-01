@@ -1,3 +1,4 @@
+import asyncio
 import json
 import traceback
 
@@ -241,7 +242,19 @@ async def set_config(
 
         print("Configuration type:", feed_name)
         print("Configuration data:", config_data)
-        await ArrClient(ArrType.Radarr).create_torznab_indexer(feed_name=feed_name)
+        # Create tasks with names
+        tasks = [
+            asyncio.create_task(
+                await ArrClient(ArrType.Radarr).create_torznab_indexer(feed_name=feed_name),
+                name='Radarr'
+            ),
+            asyncio.create_task(
+                await ArrClient(ArrType.Sonarr).create_torznab_indexer(feed_name=feed_name),
+                name='Sonarr'
+            ),
+        ]    
+        # Wait for all
+        await asyncio.gather(*tasks, return_exceptions=False)
 
     except ValueError as e:
         LOGGER.error(f"❌ Failed to parse settings: {e}")

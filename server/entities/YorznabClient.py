@@ -8,7 +8,7 @@ from server.cron.CronRunner import CronRunner
 from server.entities.BaseClient import BaseClient
 from server.routers.handler import RouteHandler
 from server.routers.status import cron_status
-from server.utils.docs import HOST_URL
+from server.utils.docs import FASTAPI_HOST
 
 @dataclass
 class YorznabConfig:
@@ -20,7 +20,7 @@ class YorznabConfig:
         }
     )
     Url: Optional[str] = field(
-        default=HOST_URL,
+        default=FASTAPI_HOST,
         metadata={
             "description": "External URL of the Yorznab instance"
         }
@@ -81,7 +81,7 @@ class YorznabClient(BaseClient[YorznabConfig]):
     def Language(self) -> str: return 'en'
     
     @property
-    def DefaultUrl(self) -> str: return HOST_URL
+    def DefaultUrl(self) -> str: return FASTAPI_HOST
     
     @property
     def ApiVersion(self) -> str:

@@ -1,10 +1,11 @@
 import tomllib
 from fastapi.openapi.utils import get_openapi
-HOST_URL = None
+FASTAPI_USER = None
+FASTAPI_HOST = None
 
 def load_app_info():
     """Load FastAPI info from pyproject.toml."""
-    global HOST_URL
+    global FASTAPI_USER, FASTAPI_HOST
     try:
         with open("pyproject.toml", "rb") as f:
             data = tomllib.load(f)
@@ -12,7 +13,8 @@ def load_app_info():
         project = data.get("project", {})
         fastapi_conf = data.get("tool", {}).get("fastapi", {})
         urls = data.get("project", {}).get("urls", {})
-        HOST_URL = urls.get('host')
+        FASTAPI_USER = fastapi_conf.get('user')
+        FASTAPI_HOST = fastapi_conf.get('host')
         
         # Get author info
         authors = project.get("authors", [{}])
@@ -28,7 +30,7 @@ def load_app_info():
                     "description": "API Server",
                     "variables": {
                         "server": {
-                            "default": HOST_URL,
+                            "default": FASTAPI_HOST,
                             "description": "Server URL"
                         }
                     }

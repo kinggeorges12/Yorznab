@@ -228,7 +228,6 @@ class ArrClient(BaseClient):
             "implementation": "Torznab",
             "implementationName": "Torznab",
             "configContract": "TorznabSettings",
-            "infoLink": self.Config.UrlFrom,
             "enableRss": True,
             "enableAutomaticSearch": True,
             "enableInteractiveSearch": True,

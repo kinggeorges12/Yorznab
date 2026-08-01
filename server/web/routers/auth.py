@@ -1,18 +1,14 @@
-import base64
 from datetime import datetime, timedelta
-import hashlib
-import hmac
-import json
 import secrets
 from fastapi import APIRouter, Form, Header, Request, status
 from fastapi.responses import JSONResponse, Response, RedirectResponse
-from urllib.parse import parse_qs
 
 # Import modules
 from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
 from server.web.common import LOGGER, navigation, page_template
+from server.utils.docs import FASTAPI_USER
 ID_NAME = "LOGIN_PASSKEY"
 
 dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
@@ -22,7 +18,6 @@ SESSION_MAX_AGE = int(timedelta(hours=24).total_seconds())
 CSRF_MAX_AGE = int(timedelta(hours=1).total_seconds())
 MAX_CSRF_TOKENS = 50  # Max tokens to store per session
 CSRF_TOKEN_SIZE = 16  # Size of the CSRF token in bytes
-csrf_store = {}
 
 # Helpers
 def validate_passkey(passkey: str) -> bool:
@@ -32,78 +27,59 @@ def validate_passkey(passkey: str) -> bool:
         return False
     
 def authenticate(request: Request) -> bool:
+    """Check if user is authenticated via starsessions."""
     try:
-        session_token = get_session_id(request)
-        if not session_token:
-            return False
-        
-        payload_b64, signature = session_token.split(".")
-        
-        expected = hmac.new(
-            KeyStore.get_key(ID_NAME).encode(),
-            payload_b64.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
-        if signature != expected:
-            return False
-        
-        json_str = base64.b64decode(payload_b64).decode()
-        payload = json.loads(json_str)
-        
-        if payload["expires_at"] < datetime.now().timestamp():
-            return False
-        
-        return True
-        
+        # Use request.session to trigger loading
+        session = request.session
+        return session.get("is_authenticated", False)
     except Exception:
         return False
 
 def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request = None):
-    payload = {
-        "user_id": passkey,
-        "issued_at": int(datetime.now().timestamp()),
-        "expires_at": int(datetime.now().timestamp()) + SESSION_MAX_AGE
-    }
-    
-    json_str = json.dumps(payload)
-    payload_b64 = base64.b64encode(json_str.encode()).decode()
-    
-    signature = hmac.new(
-        KeyStore.get_key(ID_NAME).encode(),
-        payload_b64.encode(),
-        hashlib.sha256
-    ).hexdigest()
-    
-    session_token = f"{payload_b64}.{signature}"
-    
-    is_secure = False
+    """Set authenticated session using starsessions."""
     if request:
-        is_https = request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
-        is_secure = is_https
-    
-    response.set_cookie("session", session_token, httponly=True, secure=is_secure, samesite="lax", max_age=SESSION_MAX_AGE)
+        try:
+            # Use request.session to set data
+            session = request.session
+            session["user_id"] = FASTAPI_USER
+            session["is_authenticated"] = True
+            session["issued_at"] = int(datetime.now().timestamp())
+        except Exception as e:
+            LOGGER.error(f"Failed to set auth session: {e}")
 
 def get_session_id(request: Request) -> str:
-    return request.cookies.get("session")
+    """Get session ID from starsessions."""
+    try:
+        # Use request.session to trigger loading
+        session = request.session
+        return session.get("user_id", "anonymous")
+    except Exception:
+        return "anonymous"
 
 def gen_csrf_token() -> str:
     """Generate a new CSRF token."""
     return secrets.token_hex(CSRF_TOKEN_SIZE)
 
 def get_csrf_tokens(request: Request) -> list:
-    session_id = get_session_id(request)
-    if not session_id:
+    """Get CSRF tokens from session."""
+    try:
+        # Use request.session to trigger loading
+        session = request.session
+        return session.get("csrf_tokens", [])
+    except Exception:
         return []
-    return csrf_store.get(session_id, [])
 
 def set_csrf_tokens(request: Request, response: Response, tokens: list):
-    session_id = get_session_id(request)
-    if not session_id:
-        return
-    if len(tokens) > MAX_CSRF_TOKENS:
-        tokens = tokens[-MAX_CSRF_TOKENS:]
-    csrf_store[session_id] = tokens
+    """Set CSRF tokens in session."""
+    try:
+        if len(tokens) > MAX_CSRF_TOKENS:
+            tokens = tokens[-MAX_CSRF_TOKENS:]
+        
+        # Use request.session to set data
+        session = request.session
+        session["csrf_tokens"] = tokens
+    except Exception as e:
+        LOGGER.error(f"Failed to set CSRF tokens: {e}")
 
 def add_csrf_token(request: Request, response: Response, csrf_token: list | str):
     """Add a new CSRF token to the session's token list."""
@@ -171,7 +147,7 @@ async def login_page(request: Request):
             {get_started}
             <form id="loginForm" autocomplete="off" method="POST" action="{RouteHandler.AUTH}/login">
                 <input type="hidden" name="csrf_token" value="{csrf_token}">
-                <input type="text" value="yorznab" autocomplete="off" name="username" style="display:none">
+                <input type="text" value="{FASTAPI_USER}" autocomplete="off" name="username" style="display:none">
                 <div class="form-group">
                     <div class="password-wrapper">
                         <input type="password" value="{temp_passkey}" autocomplete="off" id="{ID_NAME}" name="passkey" placeholder="{ID_NAME}" required>
@@ -186,7 +162,7 @@ async def login_page(request: Request):
             {error}
         </div>'''
     
-    response = Response(content=page_template(title="Login", content=content, token=csrf_token, js="js/auth.js"), status_code=status.HTTP_200_OK, media_type="text/html")
+    response = Response(content=page_template(title="Login", content=content, js="js/auth.js"), status_code=status.HTTP_200_OK, media_type="text/html")
     add_csrf_token(request, response, csrf_token)
     return response
 
@@ -196,6 +172,7 @@ router = APIRouter(prefix=RouteHandler.AUTH, tags=["auth"])
 @router.post(f"/login")
 async def login_submit(
     request: Request,
+    username: str = Form(...),
     passkey: str = Form(...),
     csrf_token: str = Form(""),
     x_csrf_token: str = Header(None, alias="X-CSRF-Token")
@@ -244,8 +221,14 @@ async def login_submit(
         }
     )
     
-    # Set auth cookies
-    set_auth_cookies(response, passkey, request)
+    # Set auth cookies using starsessions
+    try:
+        session = request.session
+        session["user_id"] = username
+        session["is_authenticated"] = True
+        session["issued_at"] = int(datetime.now().timestamp())
+    except Exception as e:
+        LOGGER.error(f"Failed to set session during login: {e}")
     
     # Clear all CSRF tokens after successful login
     set_csrf_tokens(request, response, [])
@@ -271,7 +254,13 @@ async def logout(
         return response
     
     # Always logout regardless of CSRF (but CSRF protects against forged requests)
-    response.delete_cookie("session")
-    set_csrf_tokens(request, response, [])  # Clear all CSRF tokens
+    # Clear session using starsessions
+    try:
+        session = request.session
+        session.clear()
+        response.delete_cookie("session")
+        set_csrf_tokens(request, response, [])  # Clear all CSRF tokens
+    except Exception as e:
+        LOGGER.error(f"Failed to clear session during logout: {e}")
     
     return response
