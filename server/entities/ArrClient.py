@@ -4,6 +4,7 @@ from typing import Any, Optional, Type, TypeVar
 import httpx
 
 # Import classes
+from server.entities.EndpointError import raise_endpoint_status
 from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.routers.torznab import CAT_LOOKUP, CATEGORIES
@@ -217,10 +218,11 @@ class ArrClient(BaseClient):
         resp.raise_for_status()
         return resp.json()
 
-    async def create_torznab_indexer(self, feed_name: str) -> dict[str, Any]:
+    # TODO: Implement this whenever a feed is created
+    async def create_torznab_indexer(self, feed_name: str, force_save: bool = True) -> dict[str, Any]:
 
         # Get cat_ids like: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]
-        root_id = next(c["id"] for c in CATEGORIES if c["label"] == "Movies")
+        root_id = next(c["id"] for c in CATEGORIES if c["label"] == self.serve(self.Mapper(Radarr="Movies", Sonarr="TV")))
         category_ids = [c["id"] for c in CATEGORIES if CAT_LOOKUP.get(c["id"]) == root_id]
         print(f"Creating Torznab indexer '{feed_name}' with categories: {category_ids}")
         payload = {
@@ -248,16 +250,18 @@ class ArrClient(BaseClient):
         
         self.LOGGER.info(f"🔧 Configuring the indexer for {self.ServerName}: {feed_name}")
         response = await self.session.post(
-            f"{self.UrlPath}{self.EndpointType.indexer}",
+            f"{self.UrlPath}{self.EndpointType.indexer}?forceSave={force_save}",
             json=payload,
             headers=self.Headers,
             timeout=self.TIMEOUT_DEFAULT
         )
-        response.raise_for_status()
+        print(f"Response status code: {response.status_code}, response body: {response.json()}")
+        raise_endpoint_status(response, self.ServerName)
         self.LOGGER.info(f"✅ Configured the indexer successfully")
         
         return response.json()
 
+    # TODO: Store the created ID, and then call this whenever a feed is deleted
     async def delete_torznab_indexer(self, feed: str) -> dict[str, Any]:
         self.LOGGER.info(f"🗑️ Deleting Torznab indexer '{feed}' from {self.ServerName} server.")
         response = await self.session.delete(
@@ -265,6 +269,6 @@ class ArrClient(BaseClient):
             headers=self.Headers,
             timeout=self.TIMEOUT_DEFAULT
         )
-        response.raise_for_status()
+        raise_endpoint_status(response, self.ServerName)
         return response.json()
     

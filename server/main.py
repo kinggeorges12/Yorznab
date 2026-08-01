@@ -1,11 +1,9 @@
-import secrets
-
 from fastapi import FastAPI, Request, Response, status as http_status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
 from contextlib import asynccontextmanager
-from starsessions import CookieStore, SessionMiddleware
+from starsessions import InMemoryStore, SessionAutoloadMiddleware, SessionMiddleware
 from datetime import timedelta
 
 # Start cron job first
@@ -37,12 +35,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Add starsessions middleware
+# Add the middleware with explicit settings
+app.add_middleware(SessionAutoloadMiddleware)
 app.add_middleware(
     SessionMiddleware,
-    store=CookieStore(secret_key=secrets.token_hex(32)),
+    store=InMemoryStore(),
     lifetime=int(timedelta(hours=24).total_seconds()),
-    rolling=True,  # Extend session on every request
+    rolling=True,
 )
 
 # Include routers
@@ -51,12 +50,20 @@ app.include_router(torznab.router)
 app.include_router(webhook.router)
 app.include_router(web_routers)
 
-# Mount default routes for API to v1
+# Mount default routes for default route to home
+@app.api_route('/', methods=["GET"])
+async def redirect_to_home(request: Request):
+    url = request.url
+    new_path = f"{RouteHandler.HOME}"
+    print(f"Redirecting request from {url.path} to v1")
+    return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
+
+# Mount default routes for API to indexer
 @app.api_route(RouteHandler.API, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def base_redirect(request: Request):
+async def redirect_to_indexer(request: Request):
     url = request.url
     new_path = f"{RouteHandler.INDEXER}"
-    print(f"Redirecting request from {url.path} to v1")
+    print(f"Redirecting request from {url.path} to indexer")
     return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
 
 @app.api_route(RouteHandler.API + "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])

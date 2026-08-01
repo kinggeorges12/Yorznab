@@ -1,13 +1,10 @@
 // ====== FUNCTION DEFINITIONS ======
 
 /**
- * Toggle password visibility for any password input with toggle button
+ * Toggle password visibility
  */
-function togglePasswordVisibility(input, toggleBtn) {
+function togglePasswordVisibility(input, toggleBtn, eyeIcon) {
     if (!input || !toggleBtn) return;
-    
-    const eyeIcon = toggleBtn.querySelector('.eye-icon');
-    if (!eyeIcon) return;
     
     toggleBtn.addEventListener('click', function() {
         if (input.type === 'password') {
@@ -21,6 +18,7 @@ function togglePasswordVisibility(input, toggleBtn) {
         }
     });
 }
+
 
 function toggleSettings(templateId) {
     const template = document.getElementById(templateId);
@@ -36,6 +34,11 @@ function toggleSettings(templateId) {
         // reattach after creating template
         document.querySelectorAll('form.app-settings-form').forEach(function(form) {
             form.addEventListener('submit', onSettingsFormSubmit);
+        });
+        document.querySelectorAll('.toggle-btn').forEach(function(button) {
+            const input = button.closest('.info-value').querySelector('input[type="password"]');
+            const eyeIcon = button.querySelector('.eye-icon');
+            togglePasswordVisibility(input, button, eyeIcon);
         });
     } else {
         settings.innerHTML = '';

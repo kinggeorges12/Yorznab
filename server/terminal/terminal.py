@@ -13,7 +13,7 @@ router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schem
 @router.get("/terminal")
 async def setup(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
 
     content = f'''
         <div class="app-container">

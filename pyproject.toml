@@ -46,7 +46,7 @@ where = ["."]
 include = ["server"]
 
 [tool.setuptools]
-py-modules = ["app"]
+py-modules = ["run"]
 
 [project.scripts]
-yorznab = "yorznab:start"
+yorznab = "run:server"

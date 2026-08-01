@@ -12,14 +12,14 @@ from server.utils.keystore import KeyStore
 from server.utils.settings import AppSettings, AppSettingsUndefined
 from server.web.common import LOGGER, navigation, page_template
 from server.web.routers.applications import build_input_template
-from server.web.routers.auth import authenticate, consume_csrf_token, logout, validate_csrf, add_csrf_token, gen_csrf_token
+from server.web.routers.auth import authenticate, consume_csrf_token, logout, update_csrf_headers, validate_csrf, add_csrf_tokens, gen_csrf_token
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD)
 
 @router.get("/configuration", include_in_schema=False)
 async def configuration(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
 
     config_csrf_tokens = []
     yorznab_csrf_token = gen_csrf_token()
@@ -83,7 +83,7 @@ async def configuration(request: Request):
     
     
     response = Response(content=page_template(title="Credentials", content=content, css=["css/applications.css", "css/configuration.css"], js=["js/credentials.js", "js/cron.js", "js/application.js"]), media_type="text/html")
-    add_csrf_token(request, response, config_csrf_tokens)
+    add_csrf_tokens(request, config_csrf_tokens)
     return response
 
 # ===== CREDENTIALS ENDPOINT =====
@@ -171,9 +171,6 @@ async def set_config(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Unknown error occurred while saving settings: {str(e)}")
     
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    consume_csrf_token(request, response, csrf_token_form)
+    consume_csrf_token(request, csrf_token_form)
     # Allow multiple save forms
-    csrf_token = gen_csrf_token()
-    add_csrf_token(request, response, csrf_token)
-    response.headers["X-CSRF-Token"] = csrf_token
-    return response
+    return update_csrf_headers(request, response)

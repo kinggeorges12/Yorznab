@@ -11,14 +11,14 @@ from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
 from server.utils.settings import AppSettings, AppSettingsUndefined
 from server.web.common import LOGGER, navigation, page_template
-from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
+from server.web.routers.auth import add_csrf_tokens, authenticate, consume_csrf_token, gen_csrf_token, update_csrf_headers, validate_csrf
 
 router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schema=False)
 
-@router.get("/home")
+@router.get(RouteHandler.HOME)
 async def home(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
 
     csrf_token = gen_csrf_token()
 
@@ -86,7 +86,7 @@ async def home(request: Request):
         </div>'''
     
     response = Response(content=page_template(title="Home", content=content, css=["cache/css/dejavu-sans-mono", "css/home.css"], js="js/home.js"), media_type="text/html")
-    add_csrf_token(request, response, csrf_token)
+    add_csrf_tokens(request, [csrf_token])
     return response
 
 settings_router = APIRouter(prefix=RouteHandler.SETTINGS, tags=["settings"])
@@ -140,9 +140,7 @@ async def rename_yorznab(
         status_code=status.HTTP_204_NO_CONTENT,
         media_type="application/json"
     )
-    consume_csrf_token(request, response, csrf_token_form)
+    consume_csrf_token(request, csrf_token_form)
     # Allow multiple save forms
-    csrf_token = gen_csrf_token()
-    add_csrf_token(request, response, csrf_token)
-    response.headers["X-CSRF-Token"] = csrf_token
+    update_csrf_headers(request, response)
     return response

@@ -27,6 +27,9 @@ async function publishFeed(event, feedName, url, iconId) {
     const spanElement = event.currentTarget;
     const csrfToken = spanElement.getAttribute('data-csrf');
     
+    // Get error div
+    const errorDiv = document.getElementById('publish-error');
+
     const originalText = icon.textContent;
     
     // Loading state
@@ -51,6 +54,12 @@ async function publishFeed(event, feedName, url, iconId) {
             clearInterval(loadingInterval);
             icon.textContent = '✅';
             
+            // Clear and hide error div on success
+            if (errorDiv) {
+                errorDiv.innerHTML = '';
+                errorDiv.style.display = 'none';
+            }
+            
             // Get new CSRF token from response headers
             const newCsrfToken = response.headers.get('X-CSRF-Token');
             if (newCsrfToken) {
@@ -73,13 +82,24 @@ async function publishFeed(event, feedName, url, iconId) {
         
         // Handle other successful responses with JSON body
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || JSON.stringify(errorData);
+            } catch (e) {}
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
         
         clearInterval(loadingInterval);
         icon.textContent = '✅';
+        
+        // Clear and hide error div on success
+        if (errorDiv) {
+            errorDiv.innerHTML = '';
+            errorDiv.style.display = 'none';
+        }
         
         setTimeout(() => {
             icon.textContent = originalText;
@@ -99,6 +119,13 @@ async function publishFeed(event, feedName, url, iconId) {
         setTimeout(() => {
             icon.textContent = originalText;
         }, 3000);
+        
+        // Append error to error div
+        if (errorDiv) {
+            const errorMsg = error.detail || error.message || 'An unknown error occurred';
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML += `<div style="word-break: break-all;white-space: pre-wrap;">${errorMsg.replace(/\n/g, '<br>')}</div>`;
+        }
         
         console.error('Error publishing feed:', error);
     }
@@ -127,7 +154,12 @@ async function refreshFeed(event, feedName, url, iconId) {
         const response = await fetch(url);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || JSON.stringify(errorData);
+            } catch (e) {}
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
@@ -180,7 +212,12 @@ async function deleteFeed(event, feedName, url, itemId, csrfToken) {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || JSON.stringify(errorData);
+            } catch (e) {}
+            throw new Error(errorMessage);
         }
         // fade to 100% transparent over 1 second
         for (let i = 0; i < 10; i++) {

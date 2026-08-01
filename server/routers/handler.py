@@ -24,6 +24,8 @@ class RouteHandler:
     WEBHOOK = API_v1 + "/webhook"
     API_DEFAULT = INDEXER
     DASHBOARD = ""
+    LOGIN = f"{DASHBOARD}/login"
+    HOME = f"{DASHBOARD}/home"
     STATIC = "/static"
     STATIC_DIR = os.path.join(SERVER_DIR, "static")
     

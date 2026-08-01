@@ -8,6 +8,7 @@ import yaml
 
 # Import modules
 from server.entities.ArrClient import ArrClient, ArrType
+from server.entities.EndpointError import EndpointStatusError
 from server.entities.SeerrClient import SeerrClient
 from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
@@ -15,7 +16,7 @@ from server.utils.feedconfig import FeedConfig, FeedFilter
 from server.utils.json_editor import JsonEditor
 from server.utils.keystore import KeyStore
 from server.web.common import LOGGER, navigation, page_template
-from server.web.routers.auth import add_csrf_token, authenticate, consume_csrf_token, gen_csrf_token, validate_csrf
+from server.web.routers.auth import add_csrf_tokens, authenticate, consume_csrf_token, gen_csrf_token, update_csrf_headers, update_csrf_headers, validate_csrf
 from server.web.routers.cache import download_and_cache
 
 dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"])
@@ -23,7 +24,7 @@ dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"])
 @dashboard_router.get("/feeds", include_in_schema=False)
 async def feeds(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
 
     # Get timestamp for countdown
     ace_css = "cache/css/ace.min.css"
@@ -90,6 +91,7 @@ async def feeds(request: Request):
                         </button>
                     </div>
                     {feed_info}
+                    <div id="publish-error" class="error-message" style="display: none;"></div>
                 </div>
                 <button type="submit" action="{RouteHandler.WEBHOOK}/enable" method="post" class="full-btn action-btn feed-btn" data-error="error-webhook" data-csrf="{webhook_csrf_token}" onclick="enableWebhook(this, event)">🪝 Enable Webhook in Jellyseerr</button>
                 <p id="error-webhook" class="error-message" style="display: none;">Webhook: Unknown error occurred</p>
@@ -162,7 +164,7 @@ async def feeds(request: Request):
         </div>'''
     
     response = Response(content=page_template(title="Feeds", content=content, css=["css/feeds.css"], js=["js/feeds.js", "js/editor.js", 'cache/ace/ace.js', 'cache/ace/ext-language_tools.js']), media_type="text/html")
-    add_csrf_token(request, response, feed_csrf_tokens)
+    add_csrf_tokens(request, feed_csrf_tokens)
     return response
 
 # ===== WEBHOOK ENDPOINT =====
@@ -199,12 +201,9 @@ async def enable_webhook(
         
         # Create response and consume CSRF token
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
-        consume_csrf_token(request, response, csrf_token_form)
+        consume_csrf_token(request, csrf_token_form)
         # Allow multiple save forms
-        csrf_token = gen_csrf_token()
-        add_csrf_token(request, response, csrf_token)
-        response.headers["X-CSRF-Token"] = csrf_token
-        return response
+        return update_csrf_headers(request, response)
         
     except HTTPException:
         raise
@@ -226,7 +225,7 @@ async def set_config(
 ):
     csrf_token_form = x_csrf_token or csrf_token
 
-    """Save configuration"""
+    """Publish indexer to Radarr and Sonarr via their API"""
     if not authenticate(request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     
@@ -245,38 +244,50 @@ async def set_config(
         # Create tasks with names
         tasks = [
             asyncio.create_task(
-                await ArrClient(ArrType.Radarr).create_torznab_indexer(feed_name=feed_name),
+                ArrClient(ArrType.Radarr).create_torznab_indexer(feed_name=feed_name),
                 name='Radarr'
             ),
             asyncio.create_task(
-                await ArrClient(ArrType.Sonarr).create_torznab_indexer(feed_name=feed_name),
+                ArrClient(ArrType.Sonarr).create_torznab_indexer(feed_name=feed_name),
                 name='Sonarr'
             ),
         ]    
         # Wait for all
-        await asyncio.gather(*tasks, return_exceptions=False)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        # Gather all exceptions as strings
+        error_messages = []
+        for task, result in zip(tasks, results):
+            if isinstance(result, Exception):
+                error_messages.append(f"{task.get_name()}: {str(result)}")
+                if hasattr(result, 'response_body') and result.response_body:
+                    error_messages.append(f"API Response: {result.response_body}")
+        # If there were errors, join them into a single string
+        if error_messages:
+            error_summary = "\n".join(error_messages)
+            LOGGER.error(f"❌ Endpoint errors: {error_summary}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"❌ Endpoint returned an error:\n{error_summary}"
+            )
     except ValueError as e:
-        LOGGER.error(f"❌ Failed to parse settings: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse settings: {str(e)}")
-    except yaml.YAMLError as e:
-        LOGGER.error(f"❌ Failed to save invalid content: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to save invalid content: {str(e)}")
-    except OSError as e:
-        LOGGER.error(f"❌ Failed to save settings: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"❌ Failed to save settings: {str(e)}")
+        LOGGER.error(f"❌ Failed to parse feed config: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Failed to parse feed config: {str(e)}")
+    except EndpointStatusError as e:
+        LOGGER.error(f"❌ Endpoint returned an error: {e}")
+        LOGGER.error(f"❌ Response: {e.response_body}")
+        raise HTTPException(status_code=e.status_code, detail=f"❌ Endpoint returned an error: {str(e)}")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         LOGGER.error(traceback.format_exc())
-        LOGGER.error(f"❌ Unknown error occurred while saving settings: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Unknown error occurred while saving settings: {str(e)}")
+        LOGGER.error(f"❌ Unknown error occurred while publishing feed: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"❌ Unknown error occurred while publishing feed: {str(e)}")
     
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    consume_csrf_token(request, response, csrf_token_form)
+    consume_csrf_token(request, csrf_token_form)
     # Allow multiple save forms
-    csrf_token = gen_csrf_token()
-    add_csrf_token(request, response, csrf_token)
-    response.headers["X-CSRF-Token"] = csrf_token
-    return response
+    return update_csrf_headers(request, response)
 
 
 # ===== YAML FILES ENDPOINT =====
@@ -354,12 +365,9 @@ async def save_yaml(
             status_code=status.HTTP_200_OK,
             media_type="application/json"
         )
-        consume_csrf_token(request, response, csrf_token_form)
+        consume_csrf_token(request, csrf_token_form)
         # Allow multiple save forms
-        new_csrf_token = gen_csrf_token()
-        add_csrf_token(request, response, new_csrf_token)
-        response.headers["X-CSRF-Token"] = new_csrf_token
-        return response
+        return update_csrf_headers(request, response)
         
     except HTTPException:
         raise
@@ -399,7 +407,7 @@ async def delete_feed(
 
         # Create response and consume CSRF token
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
-        consume_csrf_token(request, response, csrf_token_form)
+        consume_csrf_token(request, csrf_token_form)
         return response
         
     except HTTPException:

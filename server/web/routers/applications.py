@@ -14,7 +14,7 @@ from server.entities.ArrClient import ArrClient, ArrType
 from server.entities.QBitClient import QBitClient
 from server.entities.SeerrClient import SeerrClient
 from server.web.common import LOGGER, navigation, page_template
-from server.web.routers.auth import add_csrf_token, authenticate, gen_csrf_token
+from server.web.routers.auth import add_csrf_tokens, authenticate, gen_csrf_token
         
 def build_input_template(csrf_token: str, client: Optional[BaseClient] = None, config: Optional[dataclass] = None) -> str:
     def get_input_type(field_type) -> str:
@@ -46,8 +46,6 @@ def build_input_template(csrf_token: str, client: Optional[BaseClient] = None, c
         <h2>{setting_name} Settings</h2>'''
     type_hints = get_type_hints(type(config))
     for field in fields(config):
-        if (field.name == "ServerType"):
-            continue  # Skip ServerType field, it's not editable
         value = getattr(config, field.name)
         placeholder = ((
             placeholder_url if field.name == "Url"
@@ -77,11 +75,13 @@ def build_input_template(csrf_token: str, client: Optional[BaseClient] = None, c
             </span>
             <span class="info-value">'''
         html_input += f'''
+            <div class="password-wrapper">''' if is_password else ''
+        html_input += f'''
             <input {input_type} value="{value}" id="field-{setting_name}-{field.name}" name="{field.name}" placeholder="{placeholder}" {required_input}>'''
         html_input += f'''
-            <button type="button" class="toggle-btn" id="toggleBtn" aria-label="Toggle password visibility">
+            <button type="button" class="toggle-btn" id="toggleBtn-{setting_name}-{field.name}" aria-label="Toggle password visibility">
                 <span class="eye-icon">👁️</span>
-            </button>''' if is_password else ''
+            </button></div>''' if is_password else ''
         html_input += f'''
             </span>''' # Info value
         html_input += f'''
@@ -103,7 +103,7 @@ router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["web"], include_in_schem
 @router.get("/applications")
 async def applications_page(request: Request):
     if not authenticate(request):
-        return RedirectResponse(url=RouteHandler.DASHBOARD, status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=RouteHandler.LOGIN, status_code=status.HTTP_303_SEE_OTHER)
 
     class ClientResult(NamedTuple):
         client: BaseClient
@@ -240,6 +240,5 @@ async def applications_page(request: Request):
         </div>'''
     
     response = Response(content=page_template(title="Configuration", content=content, css="css/applications.css", js="js/application.js"), media_type="text/html")
-    add_csrf_token(request, response, app_csrf_tokens)
-
+    add_csrf_tokens(request, app_csrf_tokens)
     return response

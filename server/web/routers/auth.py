@@ -9,17 +9,16 @@ from server.routers.handler import RouteHandler
 from server.utils.keystore import KeyStore
 from server.web.common import LOGGER, navigation, page_template
 from server.utils.docs import FASTAPI_USER
-ID_NAME = "LOGIN_PASSKEY"
 
 dashboard_router = APIRouter(prefix=RouteHandler.DASHBOARD, tags=["auth"])
 
 # Constants
+ID_NAME = "LOGIN_PASSKEY"
 SESSION_MAX_AGE = int(timedelta(hours=24).total_seconds())
 CSRF_MAX_AGE = int(timedelta(hours=1).total_seconds())
-MAX_CSRF_TOKENS = 50  # Max tokens to store per session
-CSRF_TOKEN_SIZE = 16  # Size of the CSRF token in bytes
+MAX_CSRF_TOKENS = 50
+CSRF_TOKEN_SIZE = 16
 
-# Helpers
 def validate_passkey(passkey: str) -> bool:
     try:
         return passkey and passkey == KeyStore.get_key(ID_NAME)
@@ -29,95 +28,79 @@ def validate_passkey(passkey: str) -> bool:
 def authenticate(request: Request) -> bool:
     """Check if user is authenticated via starsessions."""
     try:
-        # Use request.session to trigger loading
-        session = request.session
-        return session.get("is_authenticated", False)
-    except Exception:
+        return request.session.get("is_authenticated", False)
+    except Exception as e:
+        LOGGER.error(f"Authentication check failed: {e}")
         return False
 
-def set_auth_cookies(response: RedirectResponse, passkey: str, request: Request = None):
-    """Set authenticated session using starsessions."""
-    if request:
-        try:
-            # Use request.session to set data
-            session = request.session
-            session["user_id"] = FASTAPI_USER
-            session["is_authenticated"] = True
-            session["issued_at"] = int(datetime.now().timestamp())
-        except Exception as e:
-            LOGGER.error(f"Failed to set auth session: {e}")
-
-def get_session_id(request: Request) -> str:
-    """Get session ID from starsessions."""
-    try:
-        # Use request.session to trigger loading
-        session = request.session
-        return session.get("user_id", "anonymous")
-    except Exception:
-        return "anonymous"
-
 def gen_csrf_token() -> str:
-    """Generate a new CSRF token."""
     return secrets.token_hex(CSRF_TOKEN_SIZE)
 
 def get_csrf_tokens(request: Request) -> list:
-    """Get CSRF tokens from session."""
     try:
-        # Use request.session to trigger loading
-        session = request.session
-        return session.get("csrf_tokens", [])
+        return request.session.get("csrf_tokens", [])
     except Exception:
         return []
 
-def set_csrf_tokens(request: Request, response: Response, tokens: list):
-    """Set CSRF tokens in session."""
-    try:
-        if len(tokens) > MAX_CSRF_TOKENS:
-            tokens = tokens[-MAX_CSRF_TOKENS:]
-        
-        # Use request.session to set data
-        session = request.session
-        session["csrf_tokens"] = tokens
-    except Exception as e:
-        LOGGER.error(f"Failed to set CSRF tokens: {e}")
+def add_csrf_tokens(request: Request, csrf_token: list[str]) -> None:
+    for token in csrf_token:
+        _add_csrf_token(request, token)
 
-def add_csrf_token(request: Request, response: Response, csrf_token: list | str):
-    """Add a new CSRF token to the session's token list."""
-    tokens = get_csrf_tokens(request)
-    if isinstance(csrf_token, list):
-        for token in csrf_token:
-            if token not in tokens:
-                tokens.append(token)
-    elif isinstance(csrf_token, str):
+def update_csrf_headers(request: Request, response: Response) -> Response:
+    new_csrf_token = gen_csrf_token()
+    _add_csrf_token(request, new_csrf_token)
+    response.headers["X-CSRF-Token"] = new_csrf_token
+    return response
+
+def _add_csrf_token(request: Request, csrf_token: str):
+    try:
+        tokens = request.session.get("csrf_tokens", [])
         if csrf_token not in tokens:
             tokens.append(csrf_token)
-    set_csrf_tokens(request, response, tokens)
+            if len(tokens) > MAX_CSRF_TOKENS:
+                tokens = tokens[-MAX_CSRF_TOKENS:]
+            request.session["csrf_tokens"] = tokens
+            return True
+    except Exception as e:
+        LOGGER.error(f"Failed to add CSRF token: {e}")
+    return False
 
 def validate_csrf(request: Request, csrf_token_form: str) -> bool:
-    """Validate CSRF token against the list of valid tokens."""
     if not csrf_token_form:
         return False
-    
-    tokens = get_csrf_tokens(request)
-    return csrf_token_form in tokens
+    try:
+        tokens = request.session.get("csrf_tokens", [])
+        return csrf_token_form in tokens
+    except Exception:
+        return False
 
-def consume_csrf_token(request: Request, response: Response, csrf_token_form: str) -> bool:
-    """Validate and remove a CSRF token (single-use)."""
+def consume_csrf_token(request: Request, csrf_token_form: str) -> bool:
     if not csrf_token_form:
         return False
-    
-    tokens = get_csrf_tokens(request)
-    if csrf_token_form in tokens:
-        tokens.remove(csrf_token_form)
-        set_csrf_tokens(request, response, tokens)
-        return True
+    try:
+        tokens = request.session.get("csrf_tokens", [])
+        if csrf_token_form in tokens:
+            tokens.remove(csrf_token_form)
+            request.session["csrf_tokens"] = tokens
+            return True
+    except Exception:
+        pass
     return False
 
 # Routes
-@dashboard_router.get(f"/", include_in_schema=False)
+@dashboard_router.get(RouteHandler.LOGIN, include_in_schema=False)
 async def login_page(request: Request):
-    # Generate CSRF token
+    # Session is already loaded by SessionAutoloadMiddleware
+    session = request.session
+    
     csrf_token = gen_csrf_token()
+    tokens = session.get("csrf_tokens", [])
+    if csrf_token not in tokens:
+        tokens.append(csrf_token)
+        if len(tokens) > MAX_CSRF_TOKENS:
+            tokens = tokens[-MAX_CSRF_TOKENS:]
+        session["csrf_tokens"] = tokens
+        LOGGER.debug(f"Added CSRF token to session: {csrf_token[:8]}...")
 
     first_time = not KeyStore.is_ready()
     temp_passkey = KeyStore.get_key(ID_NAME) if first_time else ''
@@ -162,9 +145,11 @@ async def login_page(request: Request):
             {error}
         </div>'''
     
-    response = Response(content=page_template(title="Login", content=content, js="js/auth.js"), status_code=status.HTTP_200_OK, media_type="text/html")
-    add_csrf_token(request, response, csrf_token)
-    return response
+    return Response(
+        content=page_template(title="Login", content=content, js="js/auth.js"), 
+        status_code=status.HTTP_200_OK, 
+        media_type="text/html"
+    )
 
 
 router = APIRouter(prefix=RouteHandler.AUTH, tags=["auth"])
@@ -179,7 +164,7 @@ async def login_submit(
 ):
     csrf_token_form = x_csrf_token or csrf_token
     
-    # Validate CSRF token against the list
+    # Validate CSRF token
     if not validate_csrf(request, csrf_token_form):
         LOGGER.warning(f"CSRF validation failed")
         return JSONResponse(
@@ -191,12 +176,12 @@ async def login_submit(
             }
         )
     
-    # Handle first-time setup
+    consume_csrf_token(request, csrf_token_form)
+    
     if not KeyStore.is_ready():
         LOGGER.debug(f"Writing keys to file. passkey: {passkey[:3]}...")
         KeyStore.write_keys(passkey)
     
-    # Validate passkey
     if not validate_passkey(passkey):
         LOGGER.error(f"User authentication failed - invalid passkey")
         return JSONResponse(
@@ -208,11 +193,27 @@ async def login_submit(
             }
         )
     
-    # Authentication successful
     LOGGER.debug(f"User authenticated successfully")
     
-    # Create response with cookies
-    response = JSONResponse(
+    try:
+        session = request.session
+        session["user_id"] = username
+        session["is_authenticated"] = True
+        session["issued_at"] = int(datetime.now().timestamp())
+        if "csrf_tokens" not in session:
+            session["csrf_tokens"] = []
+    except Exception as e:
+        LOGGER.error(f"Failed to set session during login: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "error": "Failed to create session",
+                "code": "SESSION_ERROR"
+            }
+        )
+    
+    return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "success": True,
@@ -220,20 +221,6 @@ async def login_submit(
             "redirect": f"{RouteHandler.DASHBOARD}/home"
         }
     )
-    
-    # Set auth cookies using starsessions
-    try:
-        session = request.session
-        session["user_id"] = username
-        session["is_authenticated"] = True
-        session["issued_at"] = int(datetime.now().timestamp())
-    except Exception as e:
-        LOGGER.error(f"Failed to set session during login: {e}")
-    
-    # Clear all CSRF tokens after successful login
-    set_csrf_tokens(request, response, [])
-    
-    return response
 
 
 @router.post(f"/logout")
@@ -244,23 +231,17 @@ async def logout(
 ):
     csrf_token_form = x_csrf_token or csrf_token
     
-    response = RedirectResponse(url=f"{RouteHandler.DASHBOARD}/", status_code=status.HTTP_303_SEE_OTHER)
+    if not consume_csrf_token(request, csrf_token_form):
+        LOGGER.warning("Logout CSRF validation failed")
     
-    # Validate and consume CSRF token
-    if consume_csrf_token(request, response, csrf_token_form):
-        LOGGER.debug("User logged out with valid CSRF")
-    else:
-        LOGGER.error("Logout CSRF validation failed")
-        return response
-    
-    # Always logout regardless of CSRF (but CSRF protects against forged requests)
-    # Clear session using starsessions
     try:
         session = request.session
         session.clear()
-        response.delete_cookie("session")
-        set_csrf_tokens(request, response, [])  # Clear all CSRF tokens
+        LOGGER.debug("Session cleared during logout")
     except Exception as e:
         LOGGER.error(f"Failed to clear session during logout: {e}")
     
-    return response
+    return RedirectResponse(
+        url=f"{RouteHandler.DASHBOARD}/", 
+        status_code=status.HTTP_303_SEE_OTHER
+    )
