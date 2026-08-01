@@ -42,6 +42,9 @@ app.add_middleware(
     store=InMemoryStore(),
     lifetime=int(timedelta(hours=24).total_seconds()),
     rolling=True,
+    cookie_name="session",
+    cookie_https_only=False,
+    cookie_same_site="lax",
 )
 
 # Include routers

@@ -147,6 +147,7 @@ async function handleLoginSubmit(event) {
             headers: {
                 'X-CSRF-Token': csrfToken
             },
+            credentials: 'include',
             body: formData
         });
         

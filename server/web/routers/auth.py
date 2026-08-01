@@ -90,6 +90,12 @@ def consume_csrf_token(request: Request, csrf_token_form: str) -> bool:
 # Routes
 @dashboard_router.get(RouteHandler.LOGIN, include_in_schema=False)
 async def login_page(request: Request):
+    print(f"=== Session Debug ===")
+    LOGGER.debug(f"Request host: {request.headers.get('host')}")
+    LOGGER.debug(f"Request origin: {request.headers.get('origin')}")
+    LOGGER.debug(f"All cookies: {request.cookies}")
+    LOGGER.debug(f"Session cookie present: {'session' in request.cookies}")
+    LOGGER.debug(f"Session data: {dict(request.session) if request.session else 'Empty'}")
     # Session is already loaded by SessionAutoloadMiddleware
     session = request.session
     
@@ -162,6 +168,41 @@ async def login_submit(
     csrf_token: str = Form(""),
     x_csrf_token: str = Header(None, alias="X-CSRF-Token")
 ):
+    try:
+        session = request.session
+        csrf_token = gen_csrf_token()
+        tokens = session.get("csrf_tokens", [])
+        if csrf_token not in tokens:
+            tokens.append(csrf_token)
+            if len(tokens) > MAX_CSRF_TOKENS:
+                tokens = tokens[-MAX_CSRF_TOKENS:]
+            session["csrf_tokens"] = tokens
+            
+            # Debug logging - session is automatically saved
+            LOGGER.debug(f"Session set, tokens: {tokens}")
+            LOGGER.debug(f"Session ID: {id(session)}")
+            LOGGER.debug(f"Session dict: {dict(session)}")
+        
+        # ✅ Don't assign to request.session
+        
+    except Exception as e:
+        LOGGER.error(f"Session error: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    LOGGER.debug(f"=== Login POST Debug ===")
+    LOGGER.debug(f"CSRF from form: '{csrf_token}'")
+    LOGGER.debug(f"CSRF from header: '{x_csrf_token}'")
+    LOGGER.debug(f"Username: '{username}'")
+    LOGGER.debug(f"Passkey length: {len(passkey) if passkey else 0}")
+    LOGGER.debug(f"All request headers: {dict(request.headers)}")
+    LOGGER.debug(f"Session cookies: {request.cookies}")
+    LOGGER.debug(f"Session data before validation: {dict(request.session)}")
+    LOGGER.debug(f"Session tokens: {request.session.get('csrf_tokens', [])}")
+    
+    csrf_token_form = x_csrf_token or csrf_token
+    LOGGER.debug(f"CSRF token to validate: '{csrf_token_form}'")
+
     csrf_token_form = x_csrf_token or csrf_token
     
     # Validate CSRF token
