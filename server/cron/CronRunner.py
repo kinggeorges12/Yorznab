@@ -128,6 +128,35 @@ class CronRunner:
         return next_run
 
     @classmethod
+    async def wait_refresh_cron(cls, timeout: float) -> bool:
+        """
+        Wait for the RSS refresh cron job to complete.
+        This is useful for testing or when you want to ensure the cron job has finished.
+        Returns False if the cron job was woken up early, True if it completed normally.
+        """
+        with cls._instance._lock: cls._instance._status =  "Sleeping"
+
+        try:
+            # Reset the event before waiting
+            cls._instance._wakeup_event.clear()
+            
+            # Wait with timeout using the event
+            await asyncio.wait_for(
+                cls._instance._wakeup_event.wait(),
+                timeout=timeout
+            )
+            
+            # If we get here, we were woken up early
+            cls._instance.LOGGER.info("🔔 RSS refresh woken up early - recalculating schedule")
+            # Continue loop to recalculate the time
+            return False
+            
+        except asyncio.TimeoutError:
+            cls._instance.LOGGER.debug("⏰ Sleep completed - time to refresh RSS")
+            return True
+
+
+    @classmethod
     async def rss_refresh_cron(cls):
         """
         Background cron job that runs RSS refresh based on cron-like schedule.
@@ -161,6 +190,10 @@ class CronRunner:
                         need_refresh.append(feed_config)
                 if need_refresh:
                     await cls.refresh_rss(feed_configs=need_refresh)
+                    # Wait for the user to input settings for apps
+                    mandatory_wait = 60
+                    cls._instance.LOGGER.debug(f"⌛ Waiting {mandatory_wait} seconds after refreshing new feed to prevent looping")
+                    await cls.wait_refresh_cron(mandatory_wait)
                     # Recheck oldest feed file and continue
                     continue
                 
@@ -180,26 +213,9 @@ class CronRunner:
                 if seconds_until_next > 0:
                     log_time = next_run.strftime('%Y-%m-%d %H:%M:%S %Z')
                     cls._instance.LOGGER.info(f"⏰ Next RSS refresh in {seconds_until_next // 60:.0f} minutes at {log_time}")
-                    with cls._instance._lock: cls._instance._status =  "Sleeping"
-
-                    try:
-                        # Reset the event before waiting
-                        cls._instance._wakeup_event.clear()
-                        
-                        # Wait with timeout using the event
-                        await asyncio.wait_for(
-                            cls._instance._wakeup_event.wait(),
-                            timeout=seconds_until_next
-                        )
-                        
-                        # If we get here, we were woken up early
-                        cls._instance.LOGGER.info("🔔 RSS refresh woken up early - recalculating schedule")
+                    if(not await cls.wait_refresh_cron(seconds_until_next)):
                         # Continue loop to recalculate the time
                         continue
-                        
-                    except asyncio.TimeoutError:
-                        cls._instance.LOGGER.debug("⏰ Sleep completed - time to refresh RSS")
-                        pass
                 else:
                     cls._instance.LOGGER.warning("🔔 Missed an RSS refresh on the schedule - running immediate refresh")
 

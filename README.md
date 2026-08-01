@@ -54,8 +54,9 @@ The section downloads the Github code to your PC or server and installs the basi
 ## Unix \(Shell\)
 ```
 YORZNAB_DIR=/path/to/yorznab
-sudo mkdir -p "${YORZNAB_DIR}/app"
+sudo mkdir -p "${YORZNAB_DIR}"
 cd "${YORZNAB_DIR}"
+sudo mkdir -p app logs
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
