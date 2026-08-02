@@ -112,7 +112,7 @@ async def login_page(request: Request):
 
     login_button = f'''
                 <button type="submit">💾 Save Login Passkey</button>
-                <p class="hint-message">You can save this login passkey in your browser's keychain after clicking this button.</p>
+                <p class="hint-message">You can save the Login Passkey in your browser's keychain after clicking this button.</p>
                 ''' if first_time else f'''
                 <button type="submit">👤 Login</button>'''
 
@@ -132,7 +132,7 @@ async def login_page(request: Request):
                 <input type="text" value="{FASTAPI_USER}" autocomplete="off" name="username" style="display:none">
                 <div class="form-group">
                     <div class="password-wrapper">
-                        <input type="password" value="{temp_passkey}" autocomplete="off" id="{ID_NAME}" name="passkey" placeholder="{ID_NAME}" required>
+                        <input type="password" value="{temp_passkey}" autocomplete="off" id="{ID_NAME}" name="passkey" required>
                         <button type="button" class="toggle-btn" {"onload" if first_time else ""} id="toggleBtn" aria-label="Toggle password visibility">
                             <span class="eye-icon">👁️</span>
                         </button>
@@ -159,7 +159,7 @@ async def login_submit(
     username: str = Form(...),
     passkey: str = Form(...),
     csrf_token: str = Form(""),
-    x_csrf_token: str = Header(None, alias="X-CSRF-Token")
+    x_csrf_token: str = Header(None, alias="X-CSRF-Token") #TODO: add include_in_schema=False and use API_KEY as alternative
 ):
     csrf_token_form = x_csrf_token or csrf_token
     

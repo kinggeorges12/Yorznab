@@ -1,9 +1,9 @@
-############# TAG FILTERS #############
-
-# Tags are compatible with Jackett! Use the name of the tracker in Jackett or qBittorrent, not the website.
+############# TRACKER FILTERS #############
+# Trackers allow for filtering feeds based on the search source.
+# These filter options are compatible with Jackett! Use the name of the tracker in Jackett or qBittorrent, not the website.
 # Any private trackers added through Jackett will show up the same as if they are added to qBittorrent search plugin.
 
-tags:
+Trackers:
   # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett".
   remove_jackett_tags: true
   # Only save torrents that match any tracker_tags entries.
@@ -12,20 +12,18 @@ tags:
   tracker_tags_skip: false
   # Add tags in qBittorrent to downloads from these trackers. Leave blank to apply rules (only or skip) without tagging in qBittorrent.
   tracker_tags:
-    Private Tracker Name 1: tag1
-    Private Tracker Name 2: tag2
+    Private Tracker Name 1: qbit-tag1
+    Private Tracker Name 2: qbit-tag2
     Private Tracker Name 3: 
 
 ############# TORRENT FILTERS #############
+# The built-in optimizer uses the Movie and TV options allow for filtering using a scoring metric and quality requirements.
+# Minimum scores and required MBPS determine which torrents to publish.
 
-# The built-in optimizer uses this filter to create a scoring metric.
-# Minimum scores and sizes to determine which torrents to publish.
-# Torrents are sorted on score (greatest) and pubDate (newest).
-# To convert to file size in mbps, use the formula: (file size in MB) = mbps * (runtime minutes) * 7.5
-
-# Movies/TV category provides mbps estimates for each quality level. Enter the minimum size for the category. Leave one category blank as the lowest quality (default=SD).
+# Movies/TV category provides mbps estimates for each quality level. Enter the minimum size for the category. Leave one category blank as the lowest quality (default=SD). Note: To convert to file size in mbps, use the formula: (file size in MB) = mbps * (runtime minutes) * 7.5
 #   TV categories: WEB-DL, SD, HD, Other. Not supported by mbps filtering: Foreign, Sport, Anime, Documentary.
 #   Movie categories: Other, SD, HD, UHD, BluRay, 3D. Not supported by mbps filtering: Foreign.
+
 # Movies/TV weights provide the aggregate scores for each torrent.
 #   min_score: Drops anything lower than this. Score can be any number, but should be based on the weights.
 #   seeders_10pct: number of seeders is in the top 10% of seeders for this show/movie
@@ -33,11 +31,12 @@ tags:
 #   size_preferred: size is within 10% of the average size for the show/movie
 #   favorite: is marked as a favorite in the config
 #   quality: is marked as a quality in the config
+
 # Movies/TV options provide information for the optimizer
 #   unknown_runtime (Movies default=100, TV default=20): if runtime is unknown in Jellyseerr, use this value for size heuristics
 #   quality_search: any search strings found add the quality score
-#   required_mbps: Drops anything outside this range (in MB/s).
 #   best_mbps: Preferred quality (in MB/s).
+#   required_mbps: Drops anything outside this range (in MB/s).
 
 Movies:
   category: [{WEB-DL: null}, {SD: 3.33}, {HD: 5.33}, {UHD: 8}]
@@ -51,10 +50,10 @@ Movies:
   unknown_runtime: 100
   quality_search: [YTS, 1080p, 2160p]
   favorite_sites: ["https://archive.org", "https://www.publicdomaintorrents.info"]
-  # For 90 minute movie, 1.33 to 16 mbps ~ 900MB to 10.8GB
-  required_mbps: {lower: 1.33, upper: 16}
   # For 90 minute movie, 3.33 to 10 mbps ~ 2.25GB to 6.75GB
   best_mbps: {lower: 3.33, upper: 10}
+  # For 90 minute movie, 1.33 to 16 mbps ~ 900MB to 10.8GB
+  required_mbps: {lower: 1.33, upper: 16}
 
 TV:
   category:
@@ -75,11 +74,11 @@ TV:
   favorite_sites:
     - "https://archive.org"
     - "https://www.publicdomaintorrents.info"
-  required_mbps:
-    # For a 20 minute show, 1.33mbps ~ 200MB to 1.2GB
-    lower: 1.33
-    upper: 8
   best_mbps:
     # For a 20 minute show, 3.33 to 6 mbps ~ 500MB to 900MB
     lower: 3.33
     upper: 6
+  required_mbps:
+    # For a 20 minute show, 1.33mbps ~ 200MB to 1.2GB
+    lower: 1.33
+    upper: 8

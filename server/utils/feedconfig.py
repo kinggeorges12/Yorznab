@@ -43,8 +43,8 @@ class FilterApp:
     unknown_runtime: Optional[float] = None
     quality_search: Optional[list[str]] = field(default_factory=list)
     favorite_sites: Optional[list[str]] = field(default_factory=list)
-    required_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
     best_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
+    required_mbps: Optional[FilterRange] = field(default_factory=FilterRange)
 
 @dataclass
 class FilterTags:
@@ -55,7 +55,7 @@ class FilterTags:
 
 @dataclass
 class FeedFilter:
-    tags: Optional[FilterTags] = field(default_factory=FilterTags)
+    Trackers: Optional[FilterTags] = field(default_factory=FilterTags)
     Movies: Optional[FilterApp] = field(default_factory=FilterApp)
     TV: Optional[FilterApp] = field(default_factory=FilterApp)
 

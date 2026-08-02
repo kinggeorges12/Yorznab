@@ -73,7 +73,7 @@ def navigation(current_route: str = '') -> str:
         active = " active" if current_route == route or current_route in route else ""
         buttons += f'''
             <button class="action-btn {cls}{active}">
-                <a class="plain" href="{route}">
+                <a href="{route}" class="plain">
                     {emoji} <span class="btn-label">{label}</span>
                 </a>
             </button>'''
@@ -82,7 +82,9 @@ def navigation(current_route: str = '') -> str:
         <div class="nav-actions">
             {buttons if current_route else ''}
             <button class="action-btn theme-toggle-btn" onclick="toggleTheme()">
-                <span class="btn-icon">🌙</span>
-                <span class="btn-label">Dark</span>
+                <a href="#" class="plain">
+                    <span class="btn-icon">🌙</span>
+                    <span class="btn-label">Dark</span>
+                </a>
             </button>
         </div>'''

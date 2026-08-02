@@ -65,10 +65,6 @@ async def feeds(request: Request):
                         <span class="info-value" id="delete-icon-{feed_config.feed_name}">🗑️</span>
                     </span>
                 </div>
-                <div class="info-row">
-                    <div class="info-btn" onclick="copyKey('apiPath-{feed_config.feed_name}')">📋 API Path</div>
-                    <div class="key-value" id="apiPath-{feed_config.feed_name}">{f"{RouteHandler.INDEXER}/{feed_config.feed_name}"}</div>
-                </div>
             </div>'''
 
     editor_csrf_token = gen_csrf_token()

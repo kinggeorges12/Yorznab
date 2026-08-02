@@ -54,7 +54,7 @@ app.include_router(webhook.router)
 app.include_router(web_routers)
 
 # Mount default routes for default route to home
-@app.api_route('/', methods=["GET"])
+@app.api_route('/', methods=["GET"], include_in_schema=False)
 async def redirect_to_home(request: Request):
     url = request.url
     new_path = f"{RouteHandler.HOME}"
@@ -62,14 +62,14 @@ async def redirect_to_home(request: Request):
     return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
 
 # Mount default routes for API to indexer
-@app.api_route(RouteHandler.API, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+@app.api_route(RouteHandler.API, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"], include_in_schema=False)
 async def redirect_to_indexer(request: Request):
     url = request.url
     new_path = f"{RouteHandler.INDEXER}"
     print(f"Redirecting request from {url.path} to indexer")
     return RedirectResponse(url=url.replace(path=new_path), status_code=http_status.HTTP_307_TEMPORARY_REDIRECT)
 
-@app.api_route(RouteHandler.API + "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+@app.api_route(RouteHandler.API + "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"], include_in_schema=False)
 async def redirect_to_v1(path: str, request: Request):
     url = request.url
     print(f"Redirecting request from {url.path} to v1")

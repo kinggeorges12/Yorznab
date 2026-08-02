@@ -30,6 +30,7 @@ class BaseClient(ABC, Generic[D]):
         self.Reset()
     
     @property
+    @abstractmethod
     def DefaultUrl(self) -> str:
         """Base URL"""
         pass
@@ -105,7 +106,7 @@ class BaseClient(ABC, Generic[D]):
     @property
     def Url(self) -> str:
         """Full URL with API version"""
-        return self.Config.Url
+        return self.Config.Url.strip('/')
     
     @property
     def UrlPath(self) -> str:

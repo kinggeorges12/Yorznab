@@ -18,11 +18,12 @@ import asyncio
 import sys
 
 # First time message
-from server.cron.CronRunner import CronRunner
-from server.entities.YorznabClient import YorznabClient
 from server.utils.keystore import KeyStore
 HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.exists() else None
 
+# Import modules
+from server.cron.CronRunner import CronRunner
+from server.entities.YorznabClient import YorznabClient
 from server.utils.customlogger import CustomLogger
 from server.utils.timeformatter import TimezoneAware
 import asyncio

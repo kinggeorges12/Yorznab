@@ -113,9 +113,9 @@ async def applications_page(request: Request):
         csrf_token: str
         exceptions: List[str]
     
-    async def init_app(name: str, fn_client: Callable[..., BaseClient], icon_url: str) -> ClientResult:
+    async def init_app(name: str, fn_client: Callable[..., BaseClient], icon_url: str, path_url: str = '') -> ClientResult:
         # Build app items html
-        def build_html_app(name: str, status: str, client_url: str, icon_url: str) -> str:
+        def build_html_app(name: str, status: str, client_url: str, icon_url: str, path_url: str = '') -> str:
             placeholder_image = f' style="background-image: url(\'{RouteHandler.get_static_url("favicon.ico")}\')"' if client_url else ''
             return f'''<!-- {name} -->
                 <div class="app-item">
@@ -127,7 +127,7 @@ async def applications_page(request: Request):
                         <span class="warning-badge" title="{name} app image did not load">⚠️</span>
                     </div>
                     <div class="app-info">
-                        <a href="{client_url if client_url else '#'}" target="_blank" rel="noreferrer">
+                        <a href="{client_url + path_url if client_url else '#'}" target="_blank" rel="noreferrer">
                             <span>
                                 <span class="status-dot { 'healthy' if status else 'unhealthy' }"></span>
                                 <span class="app-name">{name}</span>
@@ -156,7 +156,7 @@ async def applications_page(request: Request):
         if client is not None and client.ServerNameHtml:
             name = client.ServerNameHtml
         client_url = client.Url if client and client.Url else None
-        html_app = build_html_app(name=name, status=status, client_url=client_url, icon_url=icon_url)
+        html_app = build_html_app(name=name, status=status, client_url=client_url, path_url=path_url, icon_url=icon_url)
 
         return ClientResult(
             client=client,
@@ -170,19 +170,19 @@ async def applications_page(request: Request):
     # Create tasks with names
     tasks = [
         asyncio.create_task(
-            init_app('Radarr', lambda: ArrClient(ArrType.Radarr), 'https://avatars.githubusercontent.com/u/25025331'),
+            init_app(name='Radarr', fn_client=lambda: ArrClient(ArrType.Radarr), icon_url='https://avatars.githubusercontent.com/u/25025331', path_url='/settings/indexers'),
             name='Radarr'
         ),
         asyncio.create_task(
-            init_app('Sonarr', lambda: ArrClient(ArrType.Sonarr), 'https://avatars.githubusercontent.com/u/1082903'),
+            init_app(name='Sonarr', fn_client=lambda: ArrClient(ArrType.Sonarr), icon_url='https://avatars.githubusercontent.com/u/1082903', path_url='/settings/indexers'),
             name='Sonarr'
         ),
         asyncio.create_task(
-            init_app('Seerr', lambda: SeerrClient(), 'https://avatars.githubusercontent.com/u/101442446'),
+            init_app(name='Seerr', fn_client=lambda: SeerrClient(), icon_url='https://avatars.githubusercontent.com/u/101442446', path_url='/settings/notifications/webhook'),
             name='Seerr'
         ),
         asyncio.create_task(
-            init_app('qBittorrent', lambda: QBitClient(), 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png'),
+            init_app(name='qBittorrent', fn_client=lambda: QBitClient(), icon_url='https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/1280px-New_qBittorrent_Logo.svg.png'),
             name='qBittorrent'
         ),
     ]    

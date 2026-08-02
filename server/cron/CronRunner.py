@@ -4,10 +4,7 @@ from croniter import croniter
 import asyncio
 from datetime import datetime, timedelta
 
-# First time message
-from server.utils.keystore import KeyStore
-HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.exists() else None
-
+# Import modules
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
 from server.utils.timeformatter import TimezoneAware
@@ -191,7 +188,7 @@ class CronRunner:
                 if need_refresh:
                     await cls.refresh_rss(feed_configs=need_refresh)
                     # Wait for the user to input settings for apps
-                    mandatory_wait = 300 if HELLO_WORLD else 60
+                    mandatory_wait = 60
                     cls._instance.LOGGER.debug(f"⌛ Waiting {mandatory_wait} seconds after refreshing new feed to prevent looping")
                     await cls.wait_refresh_cron(mandatory_wait)
                     # Recheck oldest feed file and continue

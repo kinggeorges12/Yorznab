@@ -38,9 +38,9 @@ class JsonEditor:
         "unknown_runtime": "Default runtime (minutes) when unknown in Jellyseerr",
         "quality_search": "Search terms that trigger quality score",
         "favorite_sites": "List of favorite sites",
-        "required_mbps": "Mbps range - drops torrents outside this",
         "best_mbps": "Preferred Mbps range",
-        "tags": "Tag filtering and processing",
+        "required_mbps": "Mbps range - drops torrents outside this",
+        "Trackers": "Tracker-specific filter settings",
         "Movies": "Movie-specific filter settings",
         "TV": "TV-specific filter settings",
     }

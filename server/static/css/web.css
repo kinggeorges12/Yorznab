@@ -186,7 +186,7 @@ button[type=submit]:active{transform:translateY(0)}
 .key-value:hover{background:var(--key-hover)}
 
 .nav-actions{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap}
-button.action-btn{flex:1;min-width:20px;height:50px;padding:8px 1px;font-size:clamp(1rem, 2.5vw, 1.5rem);font-weight:700;display:flex;align-items:center;justify-content:center;white-space:nowrap;position:relative;transition:all .3s ease;border:none;border-radius:8px;cursor:pointer}
+button.action-btn{flex:1;min-width:20px;height:50px;font-size:clamp(1rem, 2.5vw, 1.5rem);font-weight:700;display:flex;align-items:center;justify-content:center;white-space:nowrap;position:relative;transition:all .3s ease;border:none;border-radius:8px;cursor:pointer}
 button.action-btn .btn-label{font-size:clamp(0.2rem, 2.0vw, 0.9rem);font-weight:600;display:inline-block;max-width:0;overflow:hidden;opacity:0;transition:max-width .3s ease,opacity .3s ease,margin .3s ease;white-space:nowrap;margin:0;padding:0}
 button.action-btn .btn-icon{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
 button.action-btn:hover,button.active{flex:2}
@@ -295,6 +295,19 @@ button:disabled {
 .status-dot.unhealthy{background:var(--border-error)}
 
 /* a href */
+.nav-actions button > a.plain,
+.nav-actions button > a.plain::before,
+.nav-actions button > a.plain::after,
+.nav-actions button > a.plain:hover,
+.nav-actions button > a.plain:hover::after {
+    /* Reset .plain class - remove all decorators */
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
 a {
     color: var(--link-color);
     text-decoration: none;
@@ -327,11 +340,6 @@ a::before {
 a:hover{color:var(--link-hover)}
 a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--link-underline);transition:width .3s ease}
 a:hover::after{width:100%}
-
-/* Reset .plain class - remove all decorators */
-a.plain, a.plain::before, a.plain::after, a.plain:hover, a.plain:hover::after {
-    all: unset;
-}
 
 .ascii-line{
     font-size:clamp(0rem, 1.50vw, 0.75rem);

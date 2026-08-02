@@ -83,6 +83,35 @@ def create_openapi(app):
                 new_paths[path] = item
             openapi_schema["paths"] = new_paths
         
+        # Remove csrf_token from all schema definitions
+        if "components" in openapi_schema and "schemas" in openapi_schema["components"]:
+            schemas = openapi_schema["components"]["schemas"]
+            
+            # Iterate through all schemas
+            for schema_name, schema_content in list(schemas.items()):
+                # Remove csrf_token from properties if it exists
+                if "properties" in schema_content:
+                    if "csrf_token" in schema_content["properties"]:
+                        del schema_content["properties"]["csrf_token"]
+                    
+                    # Also clean up required fields if csrf_token was required
+                    if "required" in schema_content:
+                        if "csrf_token" in schema_content["required"]:
+                            schema_content["required"].remove("csrf_token")
+                            # Remove required entirely if empty
+                            if not schema_content["required"]:
+                                del schema_content["required"]
+                    
+                    # Handle nested schemas (for allOf, anyOf, etc.)
+                    # This is useful if you have schemas that reference other schemas
+                    for field in ["allOf", "anyOf", "oneOf"]:
+                        if field in schema_content:
+                            for sub_schema in schema_content[field]:
+                                if "$ref" in sub_schema:
+                                    # You might want to recursively clean referenced schemas
+                                    # but they'll be handled in the main loop
+                                    pass
+                                
         app.openapi_schema = openapi_schema
         return app.openapi_schema
     

@@ -28,7 +28,7 @@ class YorznabConfig:
     Schedule: Optional[str] = field(
         default='R */7 * * *',
         metadata={
-            "description": "Cron schedule for when to run the job"
+            "description": "Cron schedule for refreshing feeds [min hour day month day_of_week] (*=any, /X=every, R=random, 0-X=range)"
         }
     )
     RetentionDays: Optional[int] = field(

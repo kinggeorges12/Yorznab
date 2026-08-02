@@ -8,7 +8,7 @@
         const element = document.getElementById(elementId);
         if (!element) return;
         
-        // Get the text content, but handle <br> tags properly
+        // Get the text content
         const text = element.innerText || element.textContent;
         
         if (navigator.clipboard) {

@@ -23,7 +23,7 @@ Welcome to Yorznab, the best way to connect your Radarr and Sonarr apps to downl
 These instructions will setup the Python app on your localhost in Docker. Let's get started already!
 1. [Install Yorznab](#install-yorznab): Run the setup script to install Yorznab to the server or localhost.
 2. [Docker Compose](#docker-compose): Build the container to access the Yorznab dashboard on the web.
-3. [Connect Apps](#connect-apps): Grab setup keys from the Yorznab dashboard and copy them into your apps.
+3. [Connect Apps](#connect-apps): Open the Yorznab dashboard and setup your apps.
 
 # Features
 Keep up-to-date using the [Update Yorznab](#update-yorznab) section.
@@ -35,18 +35,18 @@ Keep up-to-date using the [Update Yorznab](#update-yorznab) section.
 - Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested media.
 - Filter through qBittorrent search results to ensure high quality torrents.
 - Generate multiple feeds to handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
-- Dashboard to retrieve credentials for Yorznab, monitor connections to external apps, enter credentials from external apps, and check the status of Yorznab feeds.
+- Dashboard to configure your instance, setup connections to external apps, and create Yorznab feeds.
 
 # Requirements
-Compatible with Windows or Unix-like systems. Requires the following services to fully use this app. All optional apps are recommended! Tested versions shown below:
+Compatible with Windows or Unix (Linux and Mac) systems. Requires the following services to fully use this app. All optional apps are recommended! Tested versions shown below:
 
 - Ubuntu v26
 - Docker v29 \(optional\)
-- [Seerr](https://github.com/seerr-team/seerr) v3 configured with Radarr and Sonarr \(optional\)
 - [Radarr](https://github.com/Radarr/Radarr) v6 configured with a download client
 - [Sonarr](https://github.com/sonarr/sonarr) v4 configured with a download client
 - [qBittorrent](https://github.com/qbittorrent/qBittorrent) v5
-- [Jackett](https://github.com/Jackett/Jackett) v\.24 \(optional\)
+- [Jackett](https://github.com/Jackett/Jackett) v\.24 configured with qBittorrent and Flaresolverr \(optional\)
+- [Seerr](https://github.com/seerr-team/seerr) v3 configured with Radarr and Sonarr \(optional\)
 
 # Install Yorznab
 The section downloads the Github code to your PC or server and installs the basic configuration. Run the following installation commands using the OS-specific application. For upgrading an existing installation, see the [Updates](#updates) section.
@@ -61,8 +61,6 @@ sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/heads/main.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
 cd app
-cp --update=none ./config/yorznab.yaml.demo ./config/yorznab.yaml
-cp --update=none ./config/feed.yaml.demo ./config/feeds/myfeed.yaml # Recommended
 ```
 
 ## Windows \(PowerShell\)
@@ -74,8 +72,6 @@ Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/he
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
 Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
 Set-Location app
-Copy-Item -Confirm -Path ./config/yorznab.yaml.demo -Destination ./config/yorznab.yaml
-Copy-Item -Confirm -Path ./config/feed.yaml.demo -Destination ./config/myfeed.yaml # Recommended
 ```
 
 # Docker Compose
@@ -100,7 +96,7 @@ docker compose -f ./app/docker-compose-run.yml up -d
 ```
 
 ## Login to the Dashboard
-The Yorznab dashboard contains status information and setup help. Authenticate through the dashboard for the first time to create the `LOGIN_PASSKEY`. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9116/`](http://localhost:9116/) or http://myserver.local:9116/.
+The Yorznab dashboard displays status information and connects your apps. Authenticate through the dashboard for the first time to create the Login Passkey. Open a web browser with access to the server and point it at the base url of the Docker container, e.g., [`http://localhost:9116/`](http://localhost:9116/) or http://myserver.local:9116/.
 
 <div align="center">
   <picture>
@@ -110,21 +106,7 @@ The Yorznab dashboard contains status information and setup help. Authenticate t
   </picture>
 </div>
 
-Note: if you lose your passkey, retrieve it from the server in the `config/keys.yml` file.
-
-## Interactive Setup
-The dashboard features an 🖥️ Interactive Setup that helps input your credentials from connected apps. Yorznab needs to communicate with Radarr and Sonarr to process Wanted media, and qBittorrent to search torrents. Click ▶️ Connect and follow the prompts to update your connections.
-
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/InteractiveSetup.png">
-    <source media="(prefers-color-scheme: light)" srcset="Screenshots/InteractiveSetup-2.png">
-    <img src="Screenshots/InteractiveSetup-2.png" alt="Yorznab Interactive Setup" style="max-width: 600px; height:auto;">
-  </picture>
-</div>
-
-# Connect Apps
-Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automatically search for torrents. Setup the Seerr app to begin refreshing the Yorznab feed automatically and provide instant updates when content is requested. Navigate to the 🔐 Credentials page on the Yorznab dashboard to view your keys for the API and webhook.
+After your initial login, the server requires authentication using the Login Passkey. Note: if you lose your passkey, login to the server and retrieve the `LOGIN_PASSKEY` in the `app/config/keys.yaml` file.
 
 <div align="center">
   <picture>
@@ -134,7 +116,29 @@ Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automaticall
   </picture>
 </div>
 
-Note: The 🔑 API Key and 🔗 Webhook Key are randomly generated when Yorznab starts in Docker.
+# Configure Instance
+The ⚙️ Configuration page on the Yorznab dashboard displays the cron (periodic job) status. Click ⚙️ Edit Configuration to change the Instance settings.
+- *Note*: the cron uses [cronitor](https://pypi.org/project/croniter/#user-content-usage) format for the Schedule.
+- *Warning*: the 🔄 Reset All Keys option requires you to refresh all Indexers and the Webhook on the 📻 Feeds page.
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-2.png">
+    <img src="Screenshots/Configuration-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
+  </picture>
+</div>
+
+# Connect Apps
+Navigate to the 📲 Applications page on the Yorznab dashboard to enter credentials for your connected apps. Setup the Radarr and Sonarr apps' Indexer to start using Yorznab to automatically search for torrents. Setup the Seerr app to begin refreshing the Yorznab feed automatically and provide immediate updates when content is requested.
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Applications.png">
+    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Applications-2.png">
+    <img src="Screenshots/Applications-2.png" alt="Yorznab Applications" style="max-width: 600px; height:auto;">
+  </picture>
+</div>
 
 ## Indexer
 Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted media. To access the API key, login to the Yorznab dashboard and navigate to 🔐 Credentials.
@@ -169,10 +173,6 @@ Adding an Indexer allows Radarr and Sonarr to query Yorznab for links to Wanted 
     - \[SONARR\] Maximum Single Episode Age: 730 (any day after will grab season packs)
 5. Click the Test button in each app to ensure that they can reach the Yorznab server.
 
-### Indexer default settings
-- URL: Server Address from App (Radarr/Sonnar server pings Yorznab) and `./app/docker-compose.yml` \(ports\) and  and `./app/config/yorznab.yaml` \(feed → link\)
-- API Path: `./app/config/yorznab.yaml` \(server → api_endpoint\)
-
 ## Webhook
 This allows Seerr to notify Yorznab when new media is requested. To access the Webhook key, login to the Yorznab dashboard and navigate to 🔐 Credentials.
 
@@ -188,22 +188,8 @@ This allows Seerr to notify Yorznab when new media is requested. To access the W
         - ✅ Request Automatically Approved
         - ✅ Request Approved
 
-### Webhook default settings
-- Webhook URL: `./app/docker-compose.yml` \(ports\) and `./app/config/yorznab.yaml` \(feed → link/webhook_endpoint\)
-
-# Testing Yorznab
-The ⚙️ Configuration page on the Yorznab dashboard provides the status of connected apps. Configure the app credentials in the [Install Yorznab](#install-yorznab) section.
-
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Screenshots/Configuration.png">
-    <source media="(prefers-color-scheme: light)" srcset="Screenshots/Configuration-2.png">
-    <img src="Screenshots/Configuration-2.png" alt="Yorznab Configuration" style="max-width: 600px; height:auto;">
-  </picture>
-</div>
-
 # Feeds
-Access the 📻 Feeds page on the Yorznab dashboard to edit and control your feeds. Implement filters in your feeds to allow for curated search results from qBittorrent. By default, the sample feed is loaded when you install Yorznab. Try using the ☁️ YAML Editor to read the configuration hints and customize your feed.
+Access the 📻 Feeds page on the Yorznab dashboard to edit and control your feeds. Implement filters in your feeds to allow for curated search results from qBittorrent. The Indexer will use this feed to find viable torrents, so use each feed like a set of preferences for specific trackers. Click the 🚀 Publish button to create a new Indexer in Radarr and Sonarr for a feed. Click the 🪝 Enable Webhook in Jellyseerr button to start searching qBittorrent when users create a Seerr Request.
 
 <div align="center">
   <picture>
@@ -213,10 +199,8 @@ Access the 📻 Feeds page on the Yorznab dashboard to edit and control your fee
   </picture>
 </div>
 
-To turn off the feed filters: delete all feeds from the 📻 Feeds page on the Yorznab dashboard.
-
-## Tags
-The tags section of feed files allow creating multiple Indexers for Radarr and Sonarr to fulfill your seeding requirements on certain trackers. The tags are also helpful for monitoring progress of torrents in qBittorrent from specific trackers, e.g., private trackers and public trackers.
+## Feed Editor
+Click 🆕 Feed or the name of your feeds to open the ☁️ YAML Editor. Yorznab loads a template file called "myfeed" on the first-run. Click the template name to display more information about feed options. Note: YAML stands for YAML Ain't Markup Language, but more importantly it allows for configuration of the Yorznab instance similar to a Docker compose file.
 
 <div align="center">
   <picture>
@@ -226,14 +210,23 @@ The tags section of feed files allow creating multiple Indexers for Radarr and S
   </picture>
 </div>
 
-1. Navigate to the 📻 Feeds page of the Torznab dashboard.
-2. To open the ☁️ YAML Editor, click New Feed or Edit one of your existing feeds.
-3. Add the tags settings for the feed. The Indexer will use this feed to find viable torrents, so use each feed like a set of preferences for specific trackers.
-4. Create a new Indexer in Radarr and Sonarr using the feed address, see [Indexer](#indexer).
+## Multiple Indexers
+The Trackers section of feed files allow creating multiple Indexers for Radarr and Sonarr to fulfill your seeding requirements on certain trackers. The tags are also helpful for monitoring progress of torrents in qBittorrent from specific trackers, e.g., private trackers and public trackers. The Radarr and Sonarr apps allow you to configure specific rules for seeding based on the Indexer. This setup allows for special seeding requirements for private trackers.
+
+1. Navigate to the 📻 Feeds page on the Yorznab dashboard.
+2. Click the 🆕 Feed button.
+3. Start from the ➕ New file or 📝 Template file.
+4. Add the flag indicating the type of Yorznab feed:
+    - Private trackers: `tracker_tags_only: true` and `tracker_tags_skip: false`
+    - Public trackers: `tracker_tags_only: false` and `tracker_tags_skip: true`
+5. Locate the tracker names in the qBittorrent search or Jackett dashboard and add them to the `tracker_tags` section.
+5. Save the file and reload the 📻 Feeds page.
+6. Click the 🚀 Publish button to create a new Indexer in Radarr and Sonarr for the feed.
+7. Apply rules for the Indexer in Radarr and Sonarr apps to continue seeding after downloading, e.g., Seed Ratio, Seed Time.
 
 Here is an example feed for outputting only torrents matching your private trackers. Locate the tracker names in the qBittorrent search or Jackett dashboard.
 ```
-tags:
+Trackers:
   # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett".
   remove_jackett_tags: true
   # Only save torrents that match any tracker_tags entries.
@@ -247,25 +240,11 @@ tags:
     Private Tracker Name 3: 
 ```
 
-## Multiple Indexers
-The Radarr and Sonarr apps allow you to configure specific rules for seeding based on the Indexer. This setup allows for special seeding requirements for private trackers.
-
-1. Navigate to the 📻 Feeds page on the Yorznab dashboard.
-2. Click the 🆕 Feed button.
-3. Start from the ➕ New file or 📝 Template file.
-4. Add the flag indicating the type of Yorznab feed, e.g. list private trackers in the `tracker_tags` section and set the following:
-    - Private trackers: `tracker_tags_only: true` and `tracker_tags_skip: false`
-    - Public trackers: `tracker_tags_only: false` and `tracker_tags_skip: true`
-5. Save the file and reload the 📻 Feeds page.
-6. Copy the 📋 API Path of your new feed to use in the next step.
-7. Include each Indexer in Radarr and Sonarr apps using the instructions in [Indexer](#indexer).
-8. Apply rules in Radarr and Sonarr apps to continue seeding after downloading, e.g., Seed Ratio, Seed Time.
-
 ## Jackett
 Yorznab looks for Jackett tags in search results automatically. The brackets in search results indicate the tracker, e.g., \[Tracker\] torrent. Use the flag `remove_jackett_tags` to removes those bracketed trackers from the filename.
 
 # Updates
-The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below. If you run into issues connecting to your apps, update your App settings in the new version by running the 🖥️ Interactive Setup on the ⚙️ Configuration page on the Yorznab dashboard.
+The GitHub tagged releases will update the Yorznab installation to a specific version. Run the update steps below.
 
 ## Unix \(Shell\)
 ```
@@ -274,6 +253,7 @@ version=v1.0
 docker stop yorznab
 sudo mkdir -p "${YORZNAB_DIR}/app"
 cd "${YORZNAB_DIR}"
+rm -r app/server
 sudo chown -R $(id -un):$(id -gn) .
 wget -O yorznab-main.tar.gz https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.tar.gz
 tar --strip-components=1 -xvzf yorznab-main.tar.gz -C ./app
@@ -285,11 +265,12 @@ docker start yorznab
 $YORZNAB_DIR='C:\Docker\yorznab'
 $version='v1.0'
 docker stop yorznab
-New-Item -Path "${YORZNAB_DIR}" -ItemType Directory -Force
+New-Item -Path "${YORZNAB_DIR}/app" -ItemType Directory -Force
 Set-Location "${YORZNAB_DIR}"
+Remove-Item -Recurse -Path app/server
 Invoke-WebRequest -Uri "https://github.com/kinggeorges12/Yorznab/archive/refs/tags/$version.zip" -OutFile "yorznab-main.zip"
 Expand-Archive -Path "yorznab-main.zip" -DestinationPath $env:TEMP
-Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination .
+Get-ChildItem "$env:TEMP\yorznab-main\" -Force | Move-Item -Destination ./app
 docker start yorznab
 ```
 
@@ -311,6 +292,13 @@ This allows Yorznab to query the qBittorrent search engine.
 2. Go to **Settings → WebUI → Authentication**.
 3. Copy the **API Key** (`qbt_...`).
 4. If the qBittorrent version does not have API Key option, provide the `Username` and `Password` and DO NOT include the ApiKey.
+
+## Seerr
+This sends a webhook to Yorznab to immediately search for torrents from new Requests in Seerr.
+
+1. Open Seerr in your browser.
+2. Go to **Settings → General**.
+3. Copy the **API Key**.
 
 ## Native Installation
 Docker is not required! To run natively on your operating system, just download, install, build & run:

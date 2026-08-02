@@ -28,8 +28,8 @@ class FeedGenerator:
     def PublishPath(self) -> Path: return self._feed_config.path
 
     @property
-    def Tags(self) -> FilterTags | None:
-        return self.Config.tags if self.Config else None
+    def Trackers(self) -> FilterTags | None:
+        return self.Config.Trackers if self.Config else None
 
     def App(self, server_type: ArrType) -> FilterApp | None: 
         match server_type:
@@ -46,13 +46,13 @@ class FeedGenerator:
 
     def get_tracker_tag(self, tracker_name: str) -> str:
         """Get the tag for a specific tracker name"""
-        return self.Tags.tracker_tags.get(tracker_name) if self.Tags and self.Tags.tracker_tags else None
+        return self.Trackers.tracker_tags.get(tracker_name) if self.Trackers and self.Trackers.tracker_tags else None
 
     # -----------------------------
     # Optimizer
     # -----------------------------
     def optimize_results(self, results: list[dict[str, Any]], server_type: ArrType, request_obj: Any) -> list[dict[str, Any]]:
-        TAGS = self.Tags
+        TRACKERS = self.Trackers
         APP = self.App(server_type=server_type)
         WEIGHTS = APP.weights if APP else FilterWeights()
         REQUIRED_KEYS = ["tags", "category", "lastAdded", "jackett"]
@@ -80,7 +80,7 @@ class FeedGenerator:
                 if jackett_match:
                     jackett_tag = jackett_match.group(1)
                     source_tag = self.get_tracker_tag(jackett_tag)
-                    if TAGS.remove_jackett_tags if TAGS else self._default_remove_jackett_tags:
+                    if TRACKERS.remove_jackett_tags if TRACKERS else self._default_remove_jackett_tags:
                         r["fileName"] = file_name[jackett_match.end():]
                         r["jackett"] = jackett_tag
             r["tracker_tag"] = source_tag # Tags for filtering
@@ -111,9 +111,9 @@ class FeedGenerator:
 
         # Filter and sort
         filtered = results
-        if TAGS and TAGS.tracker_tags_only:
+        if TRACKERS and TRACKERS.tracker_tags_only:
             filtered = [r for r in filtered if r.get("tracker_tag") is not None]
-        elif TAGS and TAGS.tracker_tags_skip:
+        elif TRACKERS and TRACKERS.tracker_tags_skip:
             filtered = [r for r in filtered if r.get("tracker_tag") is None]
         if WEIGHTS and WEIGHTS.min_score:
             filtered = [r for r in filtered if r.get("score", 0.0) >= WEIGHTS.min_score]
