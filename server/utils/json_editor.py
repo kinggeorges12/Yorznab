@@ -52,9 +52,9 @@ class JsonEditor:
         return yaml.safe_dump(blank_dict, sort_keys=False)
 
     @classmethod
-    def get_template(cls) -> str:
+    def get_feed_template(cls) -> str:
         template_content = ''
-        template_file = ConfigFile('feed.yaml.demo')
+        template_file = ConfigFile('feed.yaml.template')
         with open(template_file.path, "r") as file:
             template_content = file.read()
         return template_content

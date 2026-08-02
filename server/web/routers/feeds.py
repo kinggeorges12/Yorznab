@@ -106,7 +106,7 @@ async def feeds(request: Request):
                 data-save="{RouteHandler.FEED}"
                 data-csrf="{editor_csrf_token}">
                 <textarea id="feed-yaml-new" style="display: none;">{JsonEditor.get_blank()}</textarea>
-                <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_template()}</textarea>
+                <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_feed_template()}</textarea>
                 <div id="editor-header">
                     <h2>☁️ YAML Editor:
                         <span id="editor-title" contenteditable="true" spellcheck="false" title="Click to edit filename">feed</span>

@@ -20,7 +20,7 @@ class QBitConfig:
         }
     )
     ApiKey: Optional[str] = field(
-        default=None,
+        default='',
         metadata={
             "name": "API Key",
             "password": True,
@@ -28,14 +28,14 @@ class QBitConfig:
         }
     )
     Username: Optional[str] = field(
-        default=None,
+        default='',
         metadata={
             "name": "Username",
             "description": "Find Username in qBittorrent > Tools > Options > WebUI"
         }
     )
     Password: Optional[str] = field(
-        default=None,
+        default='',
         metadata={
             "name": "Password",
             "password": True,

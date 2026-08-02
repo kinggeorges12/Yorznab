@@ -32,7 +32,7 @@ class BaseArrConfig:
         }
     )
     ApiKey: str = field(
-        default=None,
+        default='',
         metadata={
             "name": "API Key",
             "required": True,

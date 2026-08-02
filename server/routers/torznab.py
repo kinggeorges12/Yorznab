@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import RedirectResponse, Response
 from collections import defaultdict
@@ -10,6 +12,7 @@ import re
 # Import local modules
 from server.entities.YorznabClient import YorznabClient
 from server.routers.handler import RouteHandler
+from server.utils.config import ConfigFile
 from server.utils.customlogger import CustomLogger
 from server.utils.feedconfig import FeedConfig
 from server.utils.keystore import KeyStore
@@ -159,7 +162,6 @@ def generate_rss(items, offset=0, limit=0):
 
     return fg.rss_str(pretty=True)
 
-
 router = APIRouter(prefix=RouteHandler.INDEXER, tags=["indexer"])
 
 # Default feed file
@@ -191,7 +193,7 @@ async def torznab_api(
     offset: int = Query(0, description="Number of results to skip"),
     limit: int = Query(0, description="Maximum number of results to return"),
 ):
-    global YORZNAB, CATEGORIES, CAT_LOOKUP
+    global CATEGORIES, CAT_LOOKUP
     
     INDEXER_KEY = KeyStore.get_key("INDEXER_KEY")
     # API key check
@@ -268,6 +270,10 @@ async def torznab_api(
             lambda x: (season is None or x.get("season") == season),
             lambda x: (ep is None or x.get("episode") == ep),
         ])
+        # Check if we need to return default TV search results
+        if not items and not q:
+            items = [{"pubDate": 0, "fileName": " ", "type": "tvshow", "category": "TV"}]
+            LOGGER.debug("Returning default TV show search results because no items found in empty query")
         return Response(content=generate_rss(items, offset, limit), media_type="application/xml")
 
     elif t == "movie":
@@ -277,6 +283,11 @@ async def torznab_api(
             lambda x: (imdbid is None or x.get("imdbid") == imdbid),
             lambda x: (genre is None or genre in x.get("genre", [])),
         ])
+        # Check if we need to return default movie results
+        if not items and not q:
+            # Load the template torznab json
+            items = items = [{"pubDate": 0, "fileName": " ", "type": "movie", "category": "Movies"}]
+            LOGGER.debug("Returning default movie search results because no items found in empty query")
         return Response(content=generate_rss(items, offset, limit), media_type="application/xml")
 
     elif t == "details":
