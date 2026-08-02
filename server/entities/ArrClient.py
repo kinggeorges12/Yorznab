@@ -224,6 +224,24 @@ class ArrClient(BaseClient):
         # Get cat_ids like: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]
         root_id = next(c["id"] for c in CATEGORIES if c["label"] == self.serve(self.Mapper(Radarr="Movies", Sonarr="TV")))
         category_ids = [c["id"] for c in CATEGORIES if CAT_LOOKUP.get(c["id"]) == root_id]
+        anime_id = next(c["id"] for c in CATEGORIES if c["label"] == 'Anime')
+        anime_category_ids = [anime_id] if anime_id in category_ids else []
+
+        fields = [
+                {"name": "baseUrl", "value": self.Config.UrlFrom},
+                {"name": "apiPath", "value": RouteHandler.INDEXER + '/' + feed_name},
+                {"name": "apiKey", "value": KeyStore.get_key('INDEXER_KEY')},
+                {"name": "minimumSeeders", "value": 1},
+                {"name": "seedCriteria.seedTime", "value": None},
+                {"name": "seedCriteria.seedRatio", "value": None},
+                {"name": "rejectBlocklistedTorrentHashesWhileGrabbing", "value": False}
+            ]
+        # Parse anime ids and remove them from the main category list
+        if anime_category_ids:
+            fields.append({"name": "animeCategories", "value": anime_category_ids})
+            category_ids = [c for c in category_ids if c not in anime_category_ids]
+        fields.append({"name": "categories", "value": category_ids})
+        
         payload = {
             "name": f"{feed_name} ({YorznabClient().ServerName})",
             "implementation": "Torznab",
@@ -235,16 +253,7 @@ class ArrClient(BaseClient):
             "downloadClientId": 0,
             "priority": 25,
             "tags": [],
-            "fields": [
-                {"name": "baseUrl", "value": self.Config.UrlFrom},
-                {"name": "apiPath", "value": RouteHandler.INDEXER + '/' + feed_name},
-                {"name": "apiKey", "value": KeyStore.get_key('INDEXER_KEY')},
-                {"name": "categories", "value": category_ids},
-                {"name": "minimumSeeders", "value": 1},
-                {"name": "seedCriteria.seedTime", "value": None},
-                {"name": "seedCriteria.seedRatio", "value": None},
-                {"name": "rejectBlocklistedTorrentHashesWhileGrabbing", "value": False}
-            ]
+            "fields": fields
         }
         
         self.LOGGER.info(f"🔧 Configuring the indexer for {self.ServerName}: {feed_name}")
