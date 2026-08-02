@@ -272,7 +272,7 @@ async def torznab_api(
         ])
         # Check if we need to return default TV search results
         if not items and not q:
-            items = [{"pubDate": 0, "fileName": " ", "type": "tvshow", "category": "TV"}]
+            items = [{"pubDate": 0, "fileName": " ", "fileUrl": "about:blank", "type": "tvshow", "category": "TV"}]
             LOGGER.debug("Returning default TV show search results because no items found in empty query")
         return Response(content=generate_rss(items, offset, limit), media_type="application/xml")
 
@@ -286,7 +286,7 @@ async def torznab_api(
         # Check if we need to return default movie results
         if not items and not q:
             # Load the template torznab json
-            items = items = [{"pubDate": 0, "fileName": " ", "type": "movie", "category": "Movies"}]
+            items = [{"pubDate": 0, "fileName": " ", "fileUrl": "about:blank", "type": "movie", "category": "Movies"}]
             LOGGER.debug("Returning default movie search results because no items found in empty query")
         return Response(content=generate_rss(items, offset, limit), media_type="application/xml")
 

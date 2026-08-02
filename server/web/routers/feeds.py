@@ -234,13 +234,6 @@ async def set_config(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
     
     try:
-        form_data = await request.form()
-        
-        # Remove csrf_token if present
-        config_data = {k: v for k, v in form_data.items() if k != 'csrf_token'}
-
-        print("Configuration type:", feed_name)
-        print("Configuration data:", config_data)
         # Create tasks with names
         tasks = [
             asyncio.create_task(

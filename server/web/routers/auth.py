@@ -90,13 +90,7 @@ def consume_csrf_token(request: Request, csrf_token_form: str) -> bool:
 # Routes
 @dashboard_router.get(RouteHandler.LOGIN, include_in_schema=False)
 async def login_page(request: Request):
-    print(f"=== Session Debug ===")
-    LOGGER.debug(f"Request host: {request.headers.get('host')}")
-    LOGGER.debug(f"Request origin: {request.headers.get('origin')}")
-    LOGGER.debug(f"All cookies: {request.cookies}")
-    LOGGER.debug(f"Session cookie present: {'session' in request.cookies}")
-    LOGGER.debug(f"Session data: {dict(request.session) if request.session else 'Empty'}")
-    # Session is already loaded by SessionAutoloadMiddleware
+    # Session is already loaded by middleware
     session = request.session
     
     csrf_token = gen_csrf_token()
@@ -106,7 +100,6 @@ async def login_page(request: Request):
         if len(tokens) > MAX_CSRF_TOKENS:
             tokens = tokens[-MAX_CSRF_TOKENS:]
         session["csrf_tokens"] = tokens
-        LOGGER.debug(f"Added CSRF token to session: {csrf_token[:8]}...")
 
     first_time = not KeyStore.is_ready()
     temp_passkey = KeyStore.get_key(ID_NAME) if first_time else ''
@@ -168,41 +161,6 @@ async def login_submit(
     csrf_token: str = Form(""),
     x_csrf_token: str = Header(None, alias="X-CSRF-Token")
 ):
-    try:
-        session = request.session
-        csrf_token = gen_csrf_token()
-        tokens = session.get("csrf_tokens", [])
-        if csrf_token not in tokens:
-            tokens.append(csrf_token)
-            if len(tokens) > MAX_CSRF_TOKENS:
-                tokens = tokens[-MAX_CSRF_TOKENS:]
-            session["csrf_tokens"] = tokens
-            
-            # Debug logging - session is automatically saved
-            LOGGER.debug(f"Session set, tokens: {tokens}")
-            LOGGER.debug(f"Session ID: {id(session)}")
-            LOGGER.debug(f"Session dict: {dict(session)}")
-        
-        # ✅ Don't assign to request.session
-        
-    except Exception as e:
-        LOGGER.error(f"Session error: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    LOGGER.debug(f"=== Login POST Debug ===")
-    LOGGER.debug(f"CSRF from form: '{csrf_token}'")
-    LOGGER.debug(f"CSRF from header: '{x_csrf_token}'")
-    LOGGER.debug(f"Username: '{username}'")
-    LOGGER.debug(f"Passkey length: {len(passkey) if passkey else 0}")
-    LOGGER.debug(f"All request headers: {dict(request.headers)}")
-    LOGGER.debug(f"Session cookies: {request.cookies}")
-    LOGGER.debug(f"Session data before validation: {dict(request.session)}")
-    LOGGER.debug(f"Session tokens: {request.session.get('csrf_tokens', [])}")
-    
-    csrf_token_form = x_csrf_token or csrf_token
-    LOGGER.debug(f"CSRF token to validate: '{csrf_token_form}'")
-
     csrf_token_form = x_csrf_token or csrf_token
     
     # Validate CSRF token
@@ -236,23 +194,12 @@ async def login_submit(
     
     LOGGER.debug(f"User authenticated successfully")
     
-    try:
-        session = request.session
-        session["user_id"] = username
-        session["is_authenticated"] = True
-        session["issued_at"] = int(datetime.now().timestamp())
-        if "csrf_tokens" not in session:
-            session["csrf_tokens"] = []
-    except Exception as e:
-        LOGGER.error(f"Failed to set session during login: {e}")
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "success": False,
-                "error": "Failed to create session",
-                "code": "SESSION_ERROR"
-            }
-        )
+    session = request.session
+    session["user_id"] = username
+    session["is_authenticated"] = True
+    session["issued_at"] = int(datetime.now().timestamp())
+    if "csrf_tokens" not in session:
+        session["csrf_tokens"] = []
     
     return JSONResponse(
         status_code=status.HTTP_200_OK,

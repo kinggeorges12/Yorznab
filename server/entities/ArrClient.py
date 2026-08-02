@@ -224,7 +224,6 @@ class ArrClient(BaseClient):
         # Get cat_ids like: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]
         root_id = next(c["id"] for c in CATEGORIES if c["label"] == self.serve(self.Mapper(Radarr="Movies", Sonarr="TV")))
         category_ids = [c["id"] for c in CATEGORIES if CAT_LOOKUP.get(c["id"]) == root_id]
-        print(f"Creating Torznab indexer '{feed_name}' with categories: {category_ids}")
         payload = {
             "name": f"{feed_name} ({YorznabClient().ServerName})",
             "implementation": "Torznab",
@@ -255,7 +254,7 @@ class ArrClient(BaseClient):
             headers=self.Headers,
             timeout=self.TIMEOUT_DEFAULT
         )
-        print(f"Response status code: {response.status_code}, response body: {response.json()}")
+        self.LOGGER.debug(f"Response from {self.ServerName} (status: {response.status_code}): {response.json()}")
         raise_endpoint_status(response, self.ServerName)
         self.LOGGER.info(f"✅ Configured the indexer successfully")
         
