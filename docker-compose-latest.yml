@@ -25,43 +25,47 @@ services:
       - type: bind
         source: /path/to/yorznab/app
         target: /app
-    command: >
-        bash -c "
+    command:
+      - /bin/bash
+      - -c
+      - |
         export PYTHONUNBUFFERED=1;
         export PYTHONPATH=/app;
-        export PATH=\"$$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$$PATH\";
-        echo \"App directory: $$PYTHONPATH\";
-        VERSION_FILE=\"$$PYTHONPATH/.version\";
+        export PATH="$$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$$PATH";
+        echo "App directory: $$PYTHONPATH";
+        VERSION_FILE="$$PYTHONPATH/.version";
         # Get the current installed version (if any)
-        CURRENT_VERSION=$$(cat \"$$VERSION_FILE\" 2>/dev/null || echo '');
-        echo \"Current installed version: $$CURRENT_VERSION\";
+        ls -al;
+        cat 'app/docker-compose-latest.yml' 2>/dev/null || echo 'hi';
+        CURRENT_VERSION=$$(cat "$$VERSION_FILE" 2>/dev/null || echo '');
+        echo "Current installed version: $$CURRENT_VERSION";
         # Get the target version (from VERSION env var or latest GitHub release)
-        if [ -n \"$$VERSION\" ]; then
-          echo \"Using specified version: $$VERSION\";
+        if [ -n "$$VERSION" ]; then
+          echo "Using specified version: $$VERSION";
         else
-          echo \"Environment variable VERSION not specified, checking GitHub for latest release...\";
-          VERSION=$$(python -c \"import urllib.request, os, re; url = 'https://github.com/kinggeorges12/Yorznab/releases/latest'; resp = urllib.request.urlopen(urllib.request.Request(url, method='HEAD')); final_url = resp.geturl(); tag = re.sub(r'.*/releases/tag/', '', final_url); print(tag)\");
-          if [ -n \"$$VERSION\" ]; then
-            echo \"Latest GitHub release: $$VERSION\";
+          echo "Environment variable VERSION not specified, checking GitHub for latest release...";
+          VERSION=$$(python -c "import urllib.request, os, re; url = 'https://github.com/kinggeorges12/Yorznab/releases/latest'; resp = urllib.request.urlopen(urllib.request.Request(url, method='HEAD')); final_url = resp.geturl(); tag = re.sub(r'.*/releases/tag/', '', final_url); print(tag)");
+          if [ -n "$$VERSION" ]; then
+            echo "Latest GitHub release: $$VERSION";
           else
-            echo \"WARNING: Failed to fetch latest release, using main branch\";
+            echo "WARNING: Failed to fetch latest release, using main branch";
           fi;
         fi;
         # Download only if needed
-        if [ \"$$CURRENT_VERSION\" != \"$$VERSION\" ]; then
-          echo \"Downloading version $$VERSION...\";
-          python -c \"import urllib.request, os; urllib.request.urlretrieve('https://github.com/kinggeorges12/Yorznab/archive/refs/' + ('tags/' + os.environ.get('VERSION') if os.environ.get('VERSION') else 'heads/main') + '.tar.gz', os.path.join(os.environ.get('HOME', '/tmp'), 'yorznab.tar.gz'))\";
-          rm -rf \"$$PYTHONPATH/server\";
-          tar --strip-components=1 --overwrite -xvzf \"$$HOME/yorznab.tar.gz\" -C \"$$PYTHONPATH/\";
-          echo \"$$VERSION\" > \"$$VERSION_FILE\";
-          echo \"Download complete: $$HOME/yorznab.tar.gz\";
+        if [ "$$CURRENT_VERSION" != "$$VERSION" ]; then
+          echo "Downloading version $$VERSION...";
+          python -c "import urllib.request, os; urllib.request.urlretrieve('https://github.com/kinggeorges12/Yorznab/archive/refs/' + ('tags/' + os.environ.get('VERSION') if os.environ.get('VERSION') else 'heads/main') + '.tar.gz', os.path.join(os.environ.get('HOME', '/tmp'), 'yorznab.tar.gz'))";
+          rm -rf "$$PYTHONPATH/server";
+          tar --strip-components=1 --overwrite -xvzf "$$HOME/yorznab.tar.gz" -C "$$PYTHONPATH/";
+          echo "$$VERSION" > "$$VERSION_FILE";
+          echo "Download complete: $$HOME/yorznab.tar.gz";
         else
-          echo \"Already on version $$VERSION, skipping download\";
+          echo "Already on version $$VERSION, skipping download";
         fi;
-        cd \"$$PYTHONPATH\" &&
+        cd "$$PYTHONPATH" &&
         pip install --user --upgrade pip &&
         pip install -e . &&
-        yorznab;"
+        yorznab;
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; exit(0 if urllib.request.urlopen('http://localhost:9116/api/status').getcode() < 400 else 1)\""]
       start_period: 20s
