@@ -28,6 +28,7 @@ These instructions will set up the Python app on your localhost in Docker. Let's
 
 # Features
 
+- Dashboard to configure your instance, connect to external apps, and create Yorznab feeds.
 - Identify the Wanted media from Radarr and Sonarr apps to build search queries.
 - Search the qBittorrent API for Wanted media and build a Yorznab \(Torznab-like\) RSS feed from the search results.
 - Serve the Yorznab feed as an Indexer for Radarr and Sonarr apps.
@@ -35,7 +36,6 @@ These instructions will set up the Python app on your localhost in Docker. Let's
 - Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested media.
 - Filter through qBittorrent search results to ensure high quality torrents.
 - Generate multiple feeds to handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
-- Dashboard to configure your instance, connect to external apps, and create Yorznab feeds.
 
 # Requirements
 Compatible with Windows or Unix (Linux and Mac) systems. Requires the following services to fully use this app. All optional apps are recommended! Tested versions shown below:
@@ -54,7 +54,7 @@ This section contains the OS-specific instructions to create the Yorznab directo
 ## Linux/Mac
 Open the Terminal from Linux or Mac and run the following commands:
 ```
-YORZNAB_DIR=/path/to/yorznab
+YORZNAB_DIR=~/yorznab
 sudo mkdir -p "${YORZNAB_DIR}"
 cd "${YORZNAB_DIR}"
 mkdir -p app logs python
@@ -70,6 +70,7 @@ Open Windows PowerShell and run the following commands:
 $YORZNAB_DIR='C:\Docker\yorznab'
 New-Item -Path "${YORZNAB_DIR}\app" -ItemType Directory -Force
 Set-Location "${YORZNAB_DIR}"
+icacls "${YORZNAB_DIR}" /grant "BUILTIN\Users":F /T
 Invoke-WebRequest -OutFile ".\app\docker-compose-latest.yml" -Uri "https://raw.githubusercontent.com/kinggeorges12/Yorznab/refs/heads/main/docker-compose-latest.yml"
 (Get-Content './app/docker-compose-latest.yml') -replace '/path/to/yorznab/',"${YORZNAB_DIR}\" | Set-Content ./app/docker-compose-run.yml
 docker compose -f ./app/docker-compose-run.yml up -d
@@ -107,8 +108,8 @@ The `⚙️ Configuration` page on the Yorznab dashboard displays the cron (peri
   </picture>
 </div>
 
-## Connect Apps
-Navigate to the `📲 Applications` page on the Yorznab dashboard to enter credentials for your connected apps. Radarr and Sonarr Indexers query Yorznab to automatically search for torrents. Seerr Requests send a Webhook to Yorznab automatically and provide immediate updates for new media. qBittorrent provides the torrent search for Yorznab to grab results and generate the feed.
+## Link Integrations
+Navigate to the `📲 Applications` page on the Yorznab dashboard to enter credentials for your `🧩 Integrations`. After linking to Yorznab, the 🟢 status will display below the app icon. Radarr and Sonarr Indexers query Yorznab to automatically search for torrents. Seerr Requests send a Webhook to Yorznab automatically and provide immediate updates for new media. qBittorrent provides the torrent search for Yorznab to grab results and generate the feed.
 
 <div align="center">
   <picture>
@@ -167,8 +168,8 @@ The `🪝 Enable Webhook in Jellyseerr` button sends the following options to Se
   - ✅ Request Automatically Approved
   - ✅ Request Approved
 
-### Configure Filters
-Configure filters in your feeds to allow for curated search results from qBittorrent. Click `🆕 Feed` or the name of a feed to open the `☁️ YAML Editor`. Click the `📝 Template` button to display information about feed options. On the first-run, Yorznab loads the template feed named "myfeed". *Note*: YAML stands for YAML Ain't Markup Language, but more importantly it allows for configuration of the Yorznab instance similar to a Docker compose file.
+### Apply Filters
+Apply filters in your feeds to allow for curated search results from qBittorrent. Click `🆕 Feed` or the name of a feed to open the `☁️ YAML Editor`. Click the `📝 Template` button to display information about feed options. On the first-run, Yorznab loads the template feed named "myfeed". *Note*: YAML stands for YAML Ain't Markup Language, but more importantly it allows for configuration of the Yorznab instance similar to a Docker compose file.
 
 <div align="center">
   <picture>
@@ -241,12 +242,13 @@ This sends a webhook to Yorznab to immediately search for torrents from new Requ
 ## Native Installation
 Docker is not required! To run natively on your operating system, just download, install, and run:
 
-1. Download: Click `Code > Download Zip` at the top of this page.
-2. Install: Unzip to any folder. Ensure you have prerequisites in your command path: python 3\.11+, pip, etc.
-3. Run: Double-click the `start.bat` or `start.sh` (requires execute permission in Linux).
-4. Startup [Optional]: Create a new entry in the Cron/Task Scheduler that launches `start` from the Yorznab directory.
-5. Configure: Visit the Yorznab dashboard to finish setup, e.g., https://localhost:9116/
-6. Update: Delete the `app/server` directory and begin from Step 1.
+1. Ensure you have prerequisite software in your command path: python \(version 3\.14+\) and pip.
+2. Download: Click `Code > Download Zip` at the top of this page.
+3. Install: Unzip to any folder.
+4. Run: Double-click the `start.bat` or `start.sh` (requires execute permission in Linux).
+5. Startup [Optional]: Create a new entry in the Cron/Task Scheduler that launches `start` from the Yorznab directory.
+6. Configure: Visit the Yorznab dashboard to finish setup, e.g., https://localhost:9116/
+7. Update: Delete the `app/server` directory and begin from Step 1.
 
 # Development
 Set up the local Python environment for contributing to this project.

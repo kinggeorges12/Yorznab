@@ -53,7 +53,7 @@ async def setup(request: Request):
                 </div>
             </div>
             <div class="button-container">
-                <button type="button" class="nav-toggle-button active" data-container="appIconsContainer">📱 Connected Apps</button>
+                <button type="button" class="nav-toggle-button active" data-container="appIconsContainer">📱 Applications</button>
                 <button type="button" class="nav-toggle-button" data-container="terminalConfig">🖥️ Interactive Setup</button>
             </div>
         </div>'''

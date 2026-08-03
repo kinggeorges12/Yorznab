@@ -229,7 +229,7 @@ async def applications_page(request: Request):
 
             <div id="main-menu">
                 <div id="appIconsContainer" class="text-container">
-                    <h2>Connected Apps</h2>
+                    <h2>🧩 Integrations</h2>
                     
                     {html_apps}
                     <div class="error-container" style="display: {'flex' if html_exceptions else 'none'};">

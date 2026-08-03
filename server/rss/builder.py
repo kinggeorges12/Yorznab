@@ -3,9 +3,10 @@ import argparse
 import asyncio
 import os
 import sys
-import time
 from typing import Any
 from threading import Lock
+
+from httpx import ConnectError
 
 # Import classes
 from server.rss.FeedGenerator import FeedGenerator
@@ -13,6 +14,7 @@ from server.entities.QBitClient import QBitClient
 from server.entities.ArrClient import ArrClient, ArrType
 
 # Import utilities
+from server.utils.docs import FASTAPI_HOST
 from server.utils.feedconfig import FeedConfig
 from server.utils.customlogger import CustomLogger
 from server.utils.timeformatter import IsoTimeFormatter
@@ -68,7 +70,7 @@ async def test_connection(name, url, fn_status, pause: int = 10, timeout: int = 
                 LOGGER.error(f"❌ Failed to connect to {name} server after {timeout}s: {e}")
                 return False
             LOGGER.warning(f"⏳ Waiting for {name} server to start for {waited}s. Pausing for {pause}s...")
-            asyncio.sleep(pause)
+            await asyncio.sleep(pause)
             waited += pause
 
 # -----------------------------
@@ -348,6 +350,12 @@ async def main(argv: list[str] | None = None) -> int:
                     await run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
                 else:
                     await run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+
+        except ConnectError as e:
+            # Network unreachable, DNS resolution failed, etc.
+            LOGGER.warning(f"😵‍💫 It looks like some apps are not configured correctly: {e}")
+            LOGGER.warning(f"👀 Try editing your Applications on the dashboard: {FASTAPI_HOST}")
+            LOGGER.info(f"⏳ Retrying in 1 minute...")
         except Exception as e:
             LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
         finally:
