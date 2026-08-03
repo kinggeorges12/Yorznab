@@ -18,6 +18,7 @@ import asyncio
 import sys
 
 # First time message
+from server.utils.docs import FASTAPI_HOST
 from server.utils.keystore import KeyStore
 HELLO_WORLD = 'This is your first run! Welcome to Yorznab 🤗' if not KeyStore.exists() else None
 
@@ -57,10 +58,12 @@ async def main(argv: list[str] | None = None) -> int:
     feed_missing = [f for f in CronRunner.feed_configs() if not f.exists]
 
     # Determine whether we need to refresh the feed
-    force_msg = HELLO_WORLD
     force_msg = 'Command line argument "--force"' if not force_msg and args.force else force_msg
     force_msg = f"RSS Feed(s) missing: {', '.join(str(f.path) for f in feed_missing)}" if not force_msg and feed_missing else force_msg
     
+    if HELLO_WORLD:
+        LOGGER.info(f"👋 {HELLO_WORLD}")
+        LOGGER.info(f"👀 Try editing your Applications on the dashboard: {FASTAPI_HOST}")
     LOGGER.info(f"🚀 RSS Refresh Cron initializing")
     if (feed_configs):
         LOGGER.info(f"🔎 Feed config(s): {', '.join(str(f.feed_name) for f in feed_configs)}")
@@ -71,10 +74,11 @@ async def main(argv: list[str] | None = None) -> int:
     LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
 
     # Force refresh on first run
-    if args.force or HELLO_WORLD:
-        success = await CronRunner.refresh_rss()
-    elif feed_missing:
-        success = await CronRunner.refresh_rss(feed_missing)
+    if not HELLO_WORLD:
+        if args.force:
+            success = await CronRunner.refresh_rss()
+        elif feed_missing:
+            success = await CronRunner.refresh_rss(feed_missing)
 
     if args.daemon:
         # Run as a daemon (continuous background process)
