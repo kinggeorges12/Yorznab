@@ -40,15 +40,6 @@ class YorznabConfig:
             "max": 36500
         }
     )
-    WebhookWait: Optional[int] = field(
-        default=60,
-        metadata={
-            "name": "Webhook Wait",
-            "description": "Seconds to wait for webhook to complete",
-            "min": 0,
-            "max": 3600
-        }
-    )
 
 class YorznabClient(BaseClient[YorznabConfig]):
 

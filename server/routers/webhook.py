@@ -96,14 +96,11 @@ async def webhook(request: Request, authorization: str = Header(None)):
 
     if parsed_payload.is_valid:
 
-        LOGGER.info(f"Webhook received, processing {parsed_payload.arr_type} requests in background after {YorznabClient().Config.WebhookWait} seconds: {payload}")
+        LOGGER.info(f"Webhook received, processing {parsed_payload.arr_type} requests in the background: {payload}")
         
         # Define the background processing function
         async def process_request():
             try:
-                # Wait x seconds before processing
-                await asyncio.sleep(YorznabClient().Config.WebhookWait)
-                
                 # Call the shared run_requests function
                 result = await run_requests(server_type=parsed_payload.arr_type, external_id=parsed_payload.external_param)
                 
