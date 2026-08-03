@@ -59,7 +59,7 @@ class FeedGenerator:
 
         # Calculate max seeders and runtime for size heuristics
         max_seeders = max((r.get("nbSeeders", 0) for r in results), default=0) or 1
-        runtime_default = APP.unknown_runtime if APP else self.get_default_unknown_runtime(server_type=server_type)
+        runtime_default = (APP.unknown_runtime if APP else None) or self.get_default_unknown_runtime(server_type=server_type)
         # Check for series request
         if isinstance(request_obj, list):
             # TV runtime: sum of runtime of episodes in request_obj list

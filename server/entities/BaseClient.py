@@ -59,9 +59,8 @@ class BaseClient(ABC, Generic[D]):
             app_config = AppSettings(filename=self._config_file,
                                      on_change_callback=self.Reset,
                                      prop_type_callback=self.get_property_type)
-            app_config.exists() # Check if the config file exists, will raise AppSettingsUndefined if not
+            app_config.exists(self._name) # Check if the config file exists, will raise AppSettingsUndefined if not
         except AppSettingsUndefined as e:
-            self.LOGGER.warning(f"⚠️ {e}")
             self.LOGGER.warning(f"⚠️ Using default settings for {self._name}.")
             app_config.save()
         try:

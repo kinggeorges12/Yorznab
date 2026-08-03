@@ -35,8 +35,6 @@ services:
         echo "App directory: $$PYTHONPATH";
         VERSION_FILE="$$PYTHONPATH/.version";
         # Get the current installed version (if any)
-        ls -al;
-        cat 'app/docker-compose-latest.yml' 2>/dev/null || echo 'hi';
         CURRENT_VERSION=$$(cat "$$VERSION_FILE" 2>/dev/null || echo '');
         echo "Current installed version: $$CURRENT_VERSION";
         # Get the target version (from VERSION env var or latest GitHub release)

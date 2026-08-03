@@ -117,10 +117,10 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
         external_params = external_id.split(":")
         externaldb_id = str(external_params[0])
         if arr.ServerType is ArrType.Radarr:
-            wanted = [arr.get_video(external_id=externaldb_id)]
+            wanted = [await arr.get_video(external_id=externaldb_id)]
         elif arr.ServerType is ArrType.Sonarr:
             seasons = external_params[1].split(",") if len(external_params) > 1 and external_params[1] else None
-            wanted = arr.get_episodes(external_id=externaldb_id, season_numbers=seasons)
+            wanted = await arr.get_episodes(external_id=externaldb_id, season_numbers=seasons)
     else:
         # Fetch all wanted items
         wanted = await arr.wanted_missing()
@@ -146,7 +146,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
         for rec in wanted:
             by_series.setdefault(rec.get("seriesId"), []).append(rec)
         for series_id, episodes in by_series.items():
-            series = arr.get_video(external_id=str(series_id))
+            series = await arr.get_video(external_id=str(series_id))
             # Filter missing episodes not already queued
             episodes_missing = []
             queued_eps = {q.get("episodeId") for q in queued if q.get("status") != "completed"}
@@ -211,7 +211,9 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
             if matched and (not ignored) and (not errored):
                 filtered.append(r)
 
-        optimized = feedGenerator.optimize_results(results=filtered, server_type=arr.ServerType, request_obj=request_obj)
+
+        if request_obj:
+            optimized = feedGenerator.optimize_results(results=filtered, server_type=arr.ServerType, request_obj=request_obj)
         if optimized:
             # Download top result to qBittorrent
             if do_download and not whatif:
@@ -232,7 +234,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
 
     LOGGER.info(f"📝 Writing {len(all_top)} total records to JSON file: {feedGenerator.PublishPath}")
     publish_results(feed_config=feed_config, retention_days=retention_days, results=all_top, whatif=whatif)
-    arr.update_rss()
+    await arr.update_rss()
 
 # -----------------------------
 # Parser
