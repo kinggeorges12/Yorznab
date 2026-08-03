@@ -57,8 +57,8 @@ Open the Terminal from Linux or Mac and run the following commands:
 YORZNAB_DIR=~/yorznab
 sudo mkdir -p "${YORZNAB_DIR}"
 cd "${YORZNAB_DIR}"
-mkdir -p app logs python
 sudo chown -R $(id -un):$(id -gn) .
+mkdir -p app logs python
 wget -O ./app/docker-compose-latest.yml https://raw.githubusercontent.com/kinggeorges12/Yorznab/refs/heads/main/docker-compose-latest.yml
 sed "s|/path/to/yorznab|${YORZNAB_DIR}|g" ./app/docker-compose-latest.yml > ./app/docker-compose-run.yml
 docker compose -f ./app/docker-compose-run.yml up -d

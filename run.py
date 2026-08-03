@@ -2,6 +2,9 @@ import uvicorn
 import os
 from dotenv import load_dotenv
 
+# Force unbuffered output for Python
+os.environ['PYTHONUNBUFFERED'] = '1'
+
 # Set Docker environment variables in compose file
 not_docker_env = os.getenv("DOCKER_ENV") is None
 if not_docker_env:
