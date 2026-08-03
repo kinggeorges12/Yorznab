@@ -54,7 +54,7 @@ class WebSetup(IWebSetup):
             return
         
         is_windows = os.name == 'nt'
-        directory = PROJECT_ROOT
+        directory = os.path.dirname(os.path.abspath(__file__))
 
         env = os.environ.copy()
         env['PYTHONIOENCODING'] = 'utf-8'
@@ -83,7 +83,6 @@ class WebSetup(IWebSetup):
             prompt = '$'
             newline = '\n'
             args = [file] if file else []
-            filepath = Path(os.path.join(directory, file))
             preload_script_str = f"chmod +x {file}"
             shell_name='Bash'
 

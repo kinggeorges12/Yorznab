@@ -77,8 +77,6 @@ write_delay "╟╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼�
 write_delay "╿                                                                              ╿"
 write_delay "╽       ...a Torznab Indexer that's all YORZ                                   ╽" 1000
 write_delay "╿                                                                              ╿"
-write_delay "╽              Please fill-in the fields below to get started.                 ╽"
-write_delay "╿                                                                              ╿"
 write_delay "╰╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╼╾╯"
 write_delay "This is your command console!"
 
