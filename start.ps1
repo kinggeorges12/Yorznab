@@ -1,3 +1,5 @@
+Set-Location (Split-Path -Parent $MyInvocation.MyCommand.Path)
+
 # 1. Create virtual environment
 python -m venv .venv
 .venv\Scripts\activate

@@ -1,0 +1,71 @@
+services:
+
+  yorznab:
+    image: python:3.14-slim
+    container_name: yorznab
+    user: "1000:1000" # Optional, user:group
+    environment:
+      - TZ=America/New_York
+      - HOME=/tmp # Python installation directory, change to /home for root user (and mount the directory below)
+      - LOG_DIR=/logs # Persist logs on the filesystem, or leave blank to use the temp directory
+      - LOG_LEVEL=INFO # Set logging level (default=DEBUG): DEBUG, INFO, WARNING, ERROR, CRITICAL (no logs)
+      - VERSION= # Yorznab version to install, e.g. the "v1.0" tag (https://github.com/kinggeorges12/Yorznab/releases/tag/v1.0). Leave blank to use the latest release.
+    ports:
+      - "9116:9116" # Default port 9116
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Expose Yorznab to other containers
+    volumes:
+      # Only for root user to persist Python installation
+      # - /path/to/yorznab/python:/home
+      # Logging server output
+      - type: bind
+        source: /path/to/yorznab/logs
+        target: /logs
+      # Mount app directory to download updates
+      - type: bind
+        source: /path/to/yorznab/app
+        target: /app
+    command: >
+        bash -c "
+        export PYTHONUNBUFFERED=1;
+        export PYTHONPATH=/app;
+        export PATH=\"$$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$$PATH\";
+        echo \"App directory: $$PYTHONPATH\";
+        VERSION_FILE=\"$$PYTHONPATH/.version\";
+        # Get the current installed version (if any)
+        CURRENT_VERSION=$$(cat \"$$VERSION_FILE\" 2>/dev/null || echo '');
+        echo \"Current installed version: $$CURRENT_VERSION\";
+        # Get the target version (from VERSION env var or latest GitHub release)
+        if [ -n \"$$VERSION\" ]; then
+          echo \"Using specified version: $$VERSION\";
+        else
+          echo \"Environment variable VERSION not specified, checking GitHub for latest release...\";
+          VERSION=$$(python -c \"import urllib.request, os, re; url = 'https://github.com/kinggeorges12/Yorznab/releases/latest'; resp = urllib.request.urlopen(urllib.request.Request(url, method='HEAD')); final_url = resp.geturl(); tag = re.sub(r'.*/releases/tag/', '', final_url); print(tag)\");
+          if [ -n \"$$VERSION\" ]; then
+            echo \"Latest GitHub release: $$VERSION\";
+          else
+            echo \"WARNING: Failed to fetch latest release, using main branch\";
+          fi;
+        fi;
+        # Download only if needed
+        if [ \"$$CURRENT_VERSION\" != \"$$VERSION\" ]; then
+          echo \"Downloading version $$VERSION...\";
+          python -c \"import urllib.request, os; urllib.request.urlretrieve('https://github.com/kinggeorges12/Yorznab/archive/refs/' + ('tags/' + os.environ.get('VERSION') if os.environ.get('VERSION') else 'heads/main') + '.tar.gz', os.path.join(os.environ.get('HOME', '/tmp'), 'yorznab.tar.gz'))\";
+          rm -rf \"$$PYTHONPATH/server\";
+          tar --strip-components=1 --overwrite -xvzf \"$$HOME/yorznab.tar.gz\" -C \"$$PYTHONPATH/\";
+          echo \"$$VERSION\" > \"$$VERSION_FILE\";
+          echo \"Download complete: $$HOME/yorznab.tar.gz\";
+        else
+          echo \"Already on version $$VERSION, skipping download\";
+        fi;
+        cd \"$$PYTHONPATH\" &&
+        pip install --user --upgrade pip &&
+        pip install -e . &&
+        yorznab;"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; exit(0 if urllib.request.urlopen('http://localhost:9116/api/status').getcode() < 400 else 1)\""]
+      start_period: 20s
+      interval: 300s
+      timeout: 15s
+      retries: 10
+    restart: unless-stopped

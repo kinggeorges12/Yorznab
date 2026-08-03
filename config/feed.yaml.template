@@ -4,7 +4,7 @@
 # Any private trackers added through Jackett will show up the same as if they are added to qBittorrent search plugin.
 
 Trackers:
-  # Remove the Jackett tags in brackets from the torrent title, and move them to a custom field "jackett".
+  # Remove the Jackett tags in brackets from the torrent title (e.g., [Tracker] title of content), and move them to a custom field "jackett".
   remove_jackett_tags: true
   # Only save torrents that match any tracker_tags entries.
   tracker_tags_only: false

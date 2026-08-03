@@ -15,7 +15,7 @@ def server():
         "server.main:app",
         host="0.0.0.0",
         port=os.getenv("PORT", 9116),
-        reload=not_docker_env
+        reload=not_docker_env and os.getenv("DEV_MODE", "false").lower() == "true",
     )
 
 if __name__ == "__main__":

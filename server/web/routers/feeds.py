@@ -105,7 +105,7 @@ async def feeds(request: Request):
                 <textarea id="feed-yaml-template" style="display: none;">{JsonEditor.get_feed_template()}</textarea>
                 <div id="editor-header">
                     <h2>☁️ YAML Editor:
-                        <span id="editor-title" contenteditable="true" spellcheck="false" title="Click to edit filename">feed</span>
+                        <span id="editor-title" contenteditable="true" spellcheck="false" title="Click to edit the feed name">feed</span>
                         <span id="dirty-indicator">*</span>
                     </h2>
                     <button id="close-editor" class="editor-btn-back" type="button" onclick="hideEditor()">❌ Close</button>
