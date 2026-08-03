@@ -58,7 +58,8 @@ async def main(argv: list[str] | None = None) -> int:
     feed_missing = [f for f in CronRunner.feed_configs() if not f.exists]
 
     # Determine whether we need to refresh the feed
-    force_msg = 'Command line argument "--force"' if not force_msg and args.force else force_msg
+    force_msg = None
+    force_msg = 'Command line argument "--force"' if args.force else force_msg
     force_msg = f"RSS Feed(s) missing: {', '.join(str(f.path) for f in feed_missing)}" if not force_msg and feed_missing else force_msg
     
     if HELLO_WORLD:
@@ -73,7 +74,7 @@ async def main(argv: list[str] | None = None) -> int:
     LOGGER.info(f"🕐 Schedule: {refresh_schedule}")
     LOGGER.info(f"🌎 Timezone: {TimezoneAware.TIMEZONE_STR}")
 
-    # Force refresh on first run
+    # Skip refresh on first run
     if not HELLO_WORLD:
         if args.force:
             success = await CronRunner.refresh_rss()
