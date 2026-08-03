@@ -169,7 +169,7 @@ The `🪝 Enable Webhook in Jellyseerr` button sends the following options to Se
   - ✅ Request Approved
 
 ### Apply Filters
-Apply filters in your feeds to allow for curated search results from qBittorrent. Click `🆕 Feed` or the name of a feed to open the `☁️ YAML Editor`. Click the `📝 Template` button to display information about feed options. On the first-run, Yorznab loads the template feed named "myfeed". *Note*: YAML stands for YAML Ain't Markup Language, but more importantly it allows for configuration of the Yorznab instance similar to a Docker compose file.
+Apply filters in your feeds to allow for curated search results from qBittorrent. Click `🆕 Feed` or the name of a feed to open the `☁️ YAML Editor`. Click the `📝 Template` button to display information about feed options. On the first-run, Yorznab loads the default filter for a feed named "myfeed". *Note*: YAML stands for YAML Ain't Markup Language, but more importantly it allows for configuration of the Yorznab instance similar to a Docker compose file.
 
 <div align="center">
   <picture>
