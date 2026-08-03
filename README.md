@@ -36,6 +36,7 @@ These instructions will set up the Python app on your localhost in Docker. Let's
 - Receive webhook requests from Seerr \(Jellyseerr\) to refresh the feed with the requested media.
 - Filter through qBittorrent search results to ensure high quality torrents.
 - Generate multiple feeds to handle private trackers separately to allow seeding requirements for Indexers in Radarr and Sonarr apps.
+- Define the retention time of the downloaded results from feeds and cache results until the invalidation date.
 
 # Requirements
 Compatible with Windows or Unix (Linux and Mac) systems. Requires the following services to fully use this app. All optional apps are recommended! Tested versions shown below:
