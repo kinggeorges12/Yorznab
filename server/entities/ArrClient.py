@@ -258,7 +258,7 @@ class ArrClient(BaseClient):
 
         # Use 1 year for max single episode age for Sonarr, otherwise it will search for season packs
         if self.ServerType == ArrType.Sonarr:
-            payload.append({"seasonSearchMaximumSingleEpisodeAge": 365})
+            payload["seasonSearchMaximumSingleEpisodeAge"] = 365
         
         self.LOGGER.info(f"🔧 Configuring the indexer for {self.ServerName}: {feed_name}")
         response = await self.session.post(
