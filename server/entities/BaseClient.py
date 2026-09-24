@@ -117,6 +117,7 @@ class BaseClient(ABC, Generic[D]):
         """Get or create singleton session"""
         if cls._session is None:
             cls._session = httpx.AsyncClient(
+                verify=False,
                 timeout=cls.TIMEOUT_DEFAULT,
                 limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
             )
