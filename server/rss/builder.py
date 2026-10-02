@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import os
+import re
 import sys
 from typing import Any
 from threading import Lock
@@ -136,11 +137,11 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                 continue
             LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {rec.get('title')}")
             search_requests.append({
-                "string": f"{rec.get('title')} {rec.get('year')}",
+                "query": f"{rec.get('title')} {rec.get('year')}",
                 "match": str(rec.get("year")),
                 "ignore": None,
                 "request": rec,
-                "meta": {"type": arr.TypeName, "imdbid": rec.get("imdbId"), "genres": rec.get("genres")},
+                "meta": {"type": arr.TypeName, "title": rec.get('title'), "imdbid": rec.get("imdbId"), "genres": rec.get("genres")},
             })
     elif arr and arr.ServerType is ArrType.Sonarr:
         # Group by seriesId
@@ -169,12 +170,13 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                 total_eps = (season_info or {}).get("statistics", {}).get("totalEpisodeCount") or 0
                 if total_eps and total_eps == len(eps):
                     season_label = f"S{season_num:02d}"
+                    LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {season_label}")
                     search_requests.append({
-                        "string": f"{series.get('sortTitle')} {season_label}",
+                        "query": f"{series.get('title')} {season_label}",
                         "match": f"({season_label}|Season 0?{season_num})",
                         "ignore": r"E\d{2,3}\D",
                         "request": eps,
-                        "meta": {"type": arr.TypeName, "tvdbid": series.get("tvdbId"), "season": season_num, "ep": 0},
+                        "meta": {"type": arr.TypeName, "title": series.get('title'), "tvdbid": series.get("tvdbId"), "season": season_num, "ep": 0},
                         "series": series,
                     })
                 else:
@@ -182,22 +184,23 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                         label = f"S{ep.get('seasonNumber'):02d}E{ep.get('episodeNumber'):02d}"
                         LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {label}")
                         search_requests.append({
-                            "string": f"{series.get('sortTitle')} {label}",
+                            "query": f"{series.get('title')} {label}",
                             "match": label,
                             "ignore": None,
                             "request": [ep],
-                            "meta": {"type": arr.TypeName, "tvdbid": series.get("tvdbId"), "season": ep.get("seasonNumber"), "ep": ep.get("episodeNumber")},
+                            "meta": {"type": arr.TypeName, "title": series.get('title'), "tvdbid": series.get("tvdbId"), "season": ep.get("seasonNumber"), "ep": ep.get("episodeNumber")},
                             "series": series,
                         })
     
     # Execute searches, optimize, optionally add top torrent
     all_top: list[dict[str, Any]] = []
     for item in search_requests:
-        query = item["string"]
+        query = item["query"]
         match_pat = item.get("match")
         ignore_pat = item.get("ignore")
         request_obj = item.get("request")
         meta = item.get("meta", {})
+        meta["query"] = query
 
         results = await qBit.run_search(query=query, whatif=whatif)
         
@@ -205,12 +208,13 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
         filtered: list[dict[str, Any]] = []
         for r in results:
             name_str = r.get("fileName") or ""
-            matched = (match_pat is None) or (match_pat and (match_pat in name_str or __import__("re").search(match_pat, name_str)))
+            matched = (match_pat is None) or (match_pat and (match_pat in name_str or re.search(match_pat, name_str)))
             ignored = False
             if ignore_pat:
-                ignored = bool(__import__("re").search(ignore_pat, name_str))
+                ignored = bool(re.search(ignore_pat, name_str))
             errored = (r.get("fileSize") == -1)
             if matched and (not ignored) and (not errored):
+                # Add original search query for the title field in the feed
                 filtered.append(r)
 
 

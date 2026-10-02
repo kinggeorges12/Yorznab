@@ -139,6 +139,7 @@ def generate_rss(items, offset=0, limit=0):
         fe = fg.add_entry()
         fe.id(t.get("descrLink"))
         fe.title(t.get("fileName"))
+        fe.description(t.get("title", t.get("fileName")))
         # The link resets the permalink value, so set permalink=True below.
         # The relationship type (rel) must be enclosure for Sonarr to grab torrents.
         fe.link(href=t.get("fileUrl"))
@@ -155,7 +156,7 @@ def generate_rss(items, offset=0, limit=0):
             )
 
         # Required Torznab attributes
-        fe.torrent.filename(t["fileName"])
+        fe.torrent.filename(t.get("fileName"))
         fe.torrent.contentlength(str(t.get("fileSize", 0)))
         fe.torrent.seeds(str(t.get("nbSeeders", 0)))
         fe.torrent.peers(str(t.get("nbLeechers", 0)))
@@ -235,13 +236,13 @@ async def torznab_api(
       email="{YorznabClient().Email}" url="{YorznabClient().Config.Url}"
       image="{YorznabClient().Image}" />
   <limits max="0" default="0" />
-  <retention>{YorznabClient().Config.RetentionDays}</retention>
+  <retention days="{YorznabClient().Config.RetentionDays}" />
   <registration available="yes" open="yes" />
 
   <searching>
-    <search available="yes" supportedParams="q,offset,limit" />
-    <tv-search available="yes" supportedParams="q,tvdbid,season,ep,offset,limit" />
-    <movie-search available="yes" supportedParams="q,imdbid,genre,offset,limit" />
+    <search available="yes" supportedParams="q" />
+    <tv-search available="yes" supportedParams="q,tvdbid,season,ep" />
+    <movie-search available="yes" supportedParams="q,imdbid,genre" />
     <audio-search available="no" supportedParams="q" />
     <book-search available="no" supportedParams="q" />
     <details available="yes" supportedParams="q" />
@@ -268,7 +269,7 @@ async def torznab_api(
             lambda x: ("TV" in x.get("type")),
             lambda x: (tvdbid is None or x.get("tvdbid") == tvdbid),
             lambda x: (season is None or x.get("season") == season),
-            lambda x: (ep is None or x.get("episode") == ep),
+            lambda x: (ep is None or x.get("ep") == ep),
         ])
         # Check if we need to return default TV search results
         if not items and not q:

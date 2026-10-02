@@ -79,7 +79,7 @@ async def feeds(request: Request):
                 <div class="text-container">
                     <div class="header-container">
                         <h2>🗃️ Indexers</h2>
-                        <a href="https://github.com/kinggeorges12/Yorznab#feeds" title="Help" target="_blank" rel="noopener noreferrer">📖❓</a>
+                        <a href="https://github.com/kinggeorges12/Yorznab#create-feeds" title="Help" target="_blank" rel="noopener noreferrer">📖❓</a>
                         <button type="button" class="create-btn" onclick="newYAML('feed-yaml-new'); showEditor();">
                             <span name="new-feed" title="Create New Feed">
                                 🆕 Feed
