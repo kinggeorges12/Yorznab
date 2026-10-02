@@ -345,16 +345,19 @@ async def main(argv: list[str] | None = None) -> int:
     
     for feed_name in args.feed:
         try:
-            LOGGER.info("🔏 Waiting for builder lock...")
-            with _lock:
-                LOGGER.info("🔒 Acquired builder lock")
-                feed_config = FeedConfig(feed_name)
-                if args.server == "Both":
-                    await run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
-                    await run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
-                else:
-                    await run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+            async with asyncio.timeout(3600):  # 1 hour
+                LOGGER.info("🔏 Waiting for builder lock...")
+                with _lock:
+                    LOGGER.info("🔒 Acquired builder lock")
+                    feed_config = FeedConfig(feed_name)
+                    if args.server == "Both":
+                        await run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                        await run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                    else:
+                        await run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
 
+        except asyncio.TimeoutError:
+            LOGGER.error(f"⏰ Feed '{feed_name}' timed out after 1 hour")
         except ConnectError as e:
             # Network unreachable, DNS resolution failed, etc.
             LOGGER.warning(f"😵‍💫 It looks like some apps are not configured correctly: {e}")
