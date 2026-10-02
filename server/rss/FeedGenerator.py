@@ -80,7 +80,7 @@ class FeedGenerator:
                 if jackett_match:
                     jackett_tag = jackett_match.group(1)
                     source_tag = self.get_tracker_tag(jackett_tag)
-                    if TRACKERS.remove_jackett_tags if TRACKERS else self._default_remove_jackett_tags:
+                    if TRACKERS.remove_jackett_tags if TRACKERS and TRACKERS.remove_jackett_tags is not None else self._default_remove_jackett_tags:
                         r["fileName"] = file_name[jackett_match.end():]
                         r["jackett"] = jackett_tag
             r["tracker_tag"] = source_tag # Tags for filtering
