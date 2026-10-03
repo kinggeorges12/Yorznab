@@ -55,7 +55,7 @@ class FeedGenerator:
         TRACKERS = self.Trackers
         APP = self.App(server_type=server_type)
         WEIGHTS = APP.weights if APP else FilterWeights()
-        REQUIRED_KEYS = ["tags", "category", "lastAdded", "jackett"]
+        REQUIRED_KEYS = ["tags", "category", "lastAdded", "jackett", "score"]
 
         # Calculate max seeders and runtime for size heuristics
         max_seeders = max((r.get("nbSeeders", 0) for r in results), default=0) or 1

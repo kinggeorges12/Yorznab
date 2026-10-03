@@ -4,7 +4,7 @@ import asyncio
 import os
 import re
 import sys
-from typing import Any
+from typing import Any, final
 from threading import Lock
 
 from httpx import ConnectError
@@ -47,7 +47,7 @@ def publish_results(feed_config: FeedConfig, retention_days: int, results: list[
 
     final = list(recent.values())
     if whatif:
-        LOGGER.DEBUG(f"Would write {len(results)} new and {len(final)} total items to {feed_config.file}")
+        LOGGER.debug(f"Would write {len(results)} new and {len(final)} total items to {feed_config.file}")
         return
     feed_config.write(final)
 
@@ -78,7 +78,7 @@ async def test_connection(name, url, fn_status, pause: int = 10, timeout: int = 
 # Job Runner
 # -----------------------------
 
-async def run_for_library(server_type: ArrType, feed_config: FeedConfig, external_id: str, retention_days: int, do_download: bool, whatif: bool) -> None:
+async def run_for_library(server_type: ArrType, feed_configs: list[FeedConfig], external_id: str, retention_days: int, do_download: bool, whatif: bool) -> None:
     """
     Main processing function for a specific library (Movies or TV).
     
@@ -106,9 +106,11 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
     except Exception as e:
         LOGGER.error(f"❌ {e}")
         return # TODO: run with Jellyseerr info if ArrClient fails
-
-    LOGGER.info(f"💡 Loading configuration file for feed: {feed_config.config_path}")
-    feedGenerator = FeedGenerator(feed_config=feed_config)
+    
+    feed_generators: dict[str, FeedGenerator] = {}
+    for fc in feed_configs:
+        LOGGER.info(f"💡 Loading configuration file for feed: {fc.config_path}")
+        feed_generators[fc.feed_name] = FeedGenerator(feed_config=fc)
 
     # Collect all search requests
     search_requests: list[dict[str, Any]] = []
@@ -135,7 +137,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
             if queued and rec.get("id") in [q.get("movieId") for q in queued if q.get("status") != "completed"]:
                 LOGGER.debug(f"🚫 Skipping queued {arr.ProperName.lower()} with status=completed: {rec.get('title')}")
                 continue
-            LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {rec.get('title')}")
+            LOGGER.info(f"🧲 Grabbing torrent for {arr.ProperName.lower()}: {rec.get('title')}")
             search_requests.append({
                 "query": f"{rec.get('title')} {rec.get('year')}",
                 "match": str(rec.get("year")),
@@ -170,7 +172,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                 total_eps = (season_info or {}).get("statistics", {}).get("totalEpisodeCount") or 0
                 if total_eps and total_eps == len(eps):
                     season_label = f"S{season_num:02d}"
-                    LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {season_label}")
+                    LOGGER.info(f"🧲 Grabbing torrent for {arr.ProperName.lower()}: {series.get('title')} {season_label}")
                     search_requests.append({
                         "query": f"{series.get('title')} {season_label}",
                         "match": f"({season_label}|Season 0?{season_num})",
@@ -182,7 +184,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                 else:
                     for ep in eps:
                         label = f"S{ep.get('seasonNumber'):02d}E{ep.get('episodeNumber'):02d}"
-                        LOGGER.info(f"🧲 Grabbing {arr.ProperName.lower()}: {label}")
+                        LOGGER.info(f"🧲 Grabbing torrent for {arr.ProperName.lower()}: {series.get('title')} {label}")
                         search_requests.append({
                             "query": f"{series.get('title')} {label}",
                             "match": label,
@@ -191,9 +193,12 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                             "meta": {"type": arr.TypeName, "title": series.get('title'), "tvdbid": series.get("tvdbId"), "season": ep.get("seasonNumber"), "ep": ep.get("episodeNumber")},
                             "series": series,
                         })
-    
+
     # Execute searches, optimize, optionally add top torrent
-    all_top: list[dict[str, Any]] = []
+    all_top: dict[str, list[dict[str, Any]]] = {
+        fc.feed_name: [] for fc in feed_configs
+    }
+
     for item in search_requests:
         query = item["query"]
         match_pat = item.get("match")
@@ -203,7 +208,7 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
         meta["query"] = query
 
         results = await qBit.run_search(query=query, whatif=whatif)
-        
+
         # Filter
         filtered: list[dict[str, Any]] = []
         for r in results:
@@ -217,29 +222,69 @@ async def run_for_library(server_type: ArrType, feed_config: FeedConfig, externa
                 # Add original search query for the title field in the feed
                 filtered.append(r)
 
+        if not request_obj:
+            continue
 
-        if request_obj:
-            optimized = feedGenerator.optimize_results(results=filtered, server_type=arr.ServerType, request_obj=request_obj)
-        if optimized:
-            # Download top result to qBittorrent
-            if do_download and not whatif:
-                top = optimized[0]
-                LOGGER.info(f"🔍 Adding torrent to {qBit.ServerName} server: {top.get('fileName')}")
-                qBit.add_torrent(torrent_url=top.get("fileUrl"), rename=top.get("fileName"), tags=top.get("tags") or "", category=arr.TypeName)
-                LOGGER.info(f"✅ Received torrent response from {qBit.ServerName} server")
-            elif do_download and whatif:
-                LOGGER.info(f"📺 Would add {arr.ProperName.lower()} torrents to {qBit.ServerName} server: {optimized[0].get('fileName')}")
-            # add metadata to each optimized result
+        # Collect each feed's top result (only when we're actually downloading)
+        # so we can pick the single highest-rated one across all feeds.
+        candidate_tops: list[tuple[str, dict[str, Any]]] = []  # (feed_name, top_result)
+
+        for fc in feed_configs:
+            fg = feed_generators[fc.feed_name]
+
+            optimized = fg.optimize_results(
+                results=filtered,
+                server_type=arr.ServerType,
+                request_obj=request_obj,
+            )
+
+            if not optimized:
+                LOGGER.warning(f"🚫 No suitable {arr.ProperName.lower()} torrents found for request: {query} (feed: {fc.feed_name})")
+                continue
+
+            # Track this feed's top pick as a download candidate
+            if do_download:
+                candidate_tops.append((fc.feed_name, optimized[0]))
+
+            # Add metadata to each optimized result
             for k, v in meta.items():
                 for o in optimized:
                     o[k] = v
-            all_top.extend(optimized)
-            LOGGER.info(f"🎯 Found {len(optimized)} suitable torrents on {qBit.ServerName} server for request: {query}")
-        else:
-            LOGGER.warning(f"🚫 No suitable {arr.ProperName.lower()} torrents found for request: {query}")
 
-    LOGGER.info(f"📝 Writing {len(all_top)} total records to JSON file: {feedGenerator.PublishPath}")
-    publish_results(feed_config=feed_config, retention_days=retention_days, results=all_top, whatif=whatif)
+            all_top[fc.feed_name].extend(optimized)
+            LOGGER.info(f"🎯 Found {len(optimized)} suitable torrents on {qBit.ServerName} server for request: {query} (feed: {fc.feed_name})")
+
+        # Pick the single best result across all feeds and download only that one.
+        if candidate_tops:
+            best_feed_name, best = max(
+                candidate_tops,
+                key=lambda pair: pair[1].get("score", 0),
+            )
+            if not whatif:
+                LOGGER.info(f"🔍 Adding top-rated torrent (feed: {best_feed_name}) to {qBit.ServerName} server: {best.get('fileName')}")
+                qBit.add_torrent(
+                    torrent_url=best.get("fileUrl"),
+                    rename=best.get("fileName"),
+                    tags=best.get("tags") or "",
+                    category=arr.TypeName,
+                )
+                LOGGER.info(f"✅ Received torrent response from {qBit.ServerName} server")
+            else:
+                LOGGER.debug(f"Would add top-rated {arr.ProperName.lower()} torrent (feed: {best_feed_name}) to {qBit.ServerName} server: {best.get('fileName')}")
+
+    # Publish per feed
+    for fc in feed_configs:
+        fg = feed_generators[fc.feed_name]
+        records = all_top[fc.feed_name]
+
+        LOGGER.info(f"📝 Writing {len(records)} total records to JSON file: {fg.PublishPath}")
+        publish_results(
+            feed_config=fc,
+            retention_days=retention_days,
+            results=records,
+            whatif=whatif,
+        )
+
     await arr.update_rss()
 
 # -----------------------------
@@ -343,31 +388,27 @@ async def main(argv: list[str] | None = None) -> int:
     script_name = os.path.splitext(os.path.basename(__file__))[0]
     LOGGER = CustomLogger(name=script_name, silent=args.silent, enable_log=args.log)
     
-    for feed_name in args.feed:
-        try:
-            async with asyncio.timeout(3600):  # 1 hour
-                LOGGER.info("🔏 Waiting for builder lock...")
-                with _lock:
-                    LOGGER.info("🔒 Acquired builder lock")
-                    feed_config = FeedConfig(feed_name)
-                    if args.server == "Both":
-                        await run_for_library(server_type=ArrType.Radarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
-                        await run_for_library(server_type=ArrType.Sonarr, feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
-                    else:
-                        await run_for_library(server_type=ArrType(args.server), feed_config=feed_config, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+    try:
+        LOGGER.info("🔏 Waiting for builder lock...")
+        with _lock:
+            LOGGER.info("🔒 Acquired builder lock")
+            feed_configs = [FeedConfig(name) for name in args.feed]
+            if args.server == "Both":
+                await run_for_library(server_type=ArrType.Radarr, feed_configs=feed_configs, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+                await run_for_library(server_type=ArrType.Sonarr, feed_configs=feed_configs, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
+            else:
+                await run_for_library(server_type=ArrType(args.server), feed_configs=feed_configs, external_id=args.external, retention_days=args.retention, do_download=args.download, whatif=args.whatif)
 
-        except asyncio.TimeoutError:
-            LOGGER.error(f"⏰ Feed '{feed_name}' timed out after 1 hour")
-        except ConnectError as e:
-            # Network unreachable, DNS resolution failed, etc.
-            LOGGER.warning(f"😵‍💫 It looks like some apps are not configured correctly: {e}")
-            LOGGER.warning(f"👀 Try editing your Applications on the dashboard: {FASTAPI_HOST}")
-            LOGGER.info(f"⏳ Retrying in 1 minute...")
-        except Exception as e:
-            LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
-        finally:
-            LOGGER.info("🔓 Lock released")
-            LOGGER.info("👋 Finishing RSS build...")
+    except ConnectError as e:
+        # Network unreachable, DNS resolution failed, etc.
+        LOGGER.warning(f"😵‍💫 It looks like some apps are not configured correctly: {e}")
+        LOGGER.warning(f"👀 Try editing your Applications on the dashboard: {FASTAPI_HOST}")
+        LOGGER.info(f"⏳ Retrying in 1 minute...")
+    except Exception as e:
+        LOGGER.error(f"❌ Task runner failed: {e}", exc_info=True)
+    finally:
+        LOGGER.info("🔓 Lock released")
+        LOGGER.info("👋 Finishing RSS build...")
     return 0
 
 
