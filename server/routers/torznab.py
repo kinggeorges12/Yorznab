@@ -130,7 +130,12 @@ def generate_rss(items, offset=0, limit=0):
     fg.language(YorznabClient().Language)
 
     # Sort items first, then apply pagination
-    sorted_items = sorted(items, key=lambda x: (x.get("score"), x.get("pubDate")), reverse=True)
+    sorted_items = sorted(items, reverse=True,
+        key=lambda x: (
+            x.get("score") or 0,
+            x.get("pubDate") or 0
+        )
+    )
     if limit == 0:
         limit = len(sorted_items) - offset
     paginated_items = sorted_items[offset:offset + limit]
